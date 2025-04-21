@@ -1,0 +1,8 @@
+{
+  // Ссылки на конфигурации для приложения и Node.js (Vite)
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" }, // Конфигурация для фронтенд-кода
+    { "path": "./tsconfig.node.json" } // Конфигурация для Vite и Node.js
+  ]
+}
