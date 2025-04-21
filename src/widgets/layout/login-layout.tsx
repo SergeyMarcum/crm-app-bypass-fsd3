@@ -1,14 +1,16 @@
 // src/widgets/layout/login-layout.tsx
 import { Box } from "@mui/material";
+import { ReactNode } from "react";
 
-export const LoginLayout = ({ children }: { children: React.ReactNode }) => {
+export const LoginLayout = ({ children }: { children: ReactNode }) => {
   return (
     <Box
       sx={{
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "100vh",
+        minHeight: "100vh",
+        backgroundColor: (theme) => theme.palette.background.default,
       }}
     >
       {children}
