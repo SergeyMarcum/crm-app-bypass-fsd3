@@ -2,7 +2,7 @@
 import Axios from "axios";
 
 export const axios = Axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: "http://192.168.1.248:8082",
   headers: {
     "Content-Type": "application/json",
   },
