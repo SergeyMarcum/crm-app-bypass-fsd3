@@ -1,49 +1,63 @@
 // src/features/auth/ui/login-form.tsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button, TextField } from "@mui/material";
-import { useAuthStore } from "../model/store";
+import { z } from "zod";
+import { TextField, Button, Box, Typography } from "@mui/material";
+import { useAuthStore } from "@features/auth/model/store";
 
-const schema = z.object({
+const loginSchema = z.object({
   login: z.string().min(1, "Login is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-type FormData = z.infer<typeof schema>;
+type LoginFormData = z.infer<typeof loginSchema>;
 
-export const LoginForm = () => {
+export const LoginForm = ({
+  onSuccess,
+}: {
+  onSuccess: () => void;
+}): JSX.Element => {
   const { login } = useAuthStore();
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: LoginFormData): Promise<void> => {
     await login(data);
+    onSuccess();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <TextField
-        {...register("login")}
-        label="Login"
-        error={!!errors.login}
-        helperText={errors.login?.message}
-      />
-      <TextField
-        {...register("password")}
-        label="Password"
-        type="password"
-        error={!!errors.password}
-        helperText={errors.password?.message}
-      />
-      <Button type="submit" variant="contained">
+    <Box sx={{ maxWidth: 400, mx: "auto", p: 3 }}>
+      <Typography variant="h4" gutterBottom>
         Login
-      </Button>
-    </form>
+      </Typography>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <TextField
+          fullWidth
+          label="Login"
+          margin="normal"
+          {...register("login")}
+          error={!!errors.login}
+          helperText={errors.login?.message}
+        />
+        <TextField
+          fullWidth
+          label="Password"
+          type="password"
+          margin="normal"
+          {...register("password")}
+          error={!!errors.password}
+          helperText={errors.password?.message}
+        />
+        <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
+          Sign In
+        </Button>
+      </form>
+    </Box>
   );
 };

@@ -1,7 +1,6 @@
 // src/shared/lib/error-handler.ts
-import { toast } from "react-toastify";
+import { AxiosError } from "axios";
 
-export const handleError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : "An error occurred";
-  toast.error(message);
+export const handleApiError = (error: AxiosError): string => {
+  return error.response?.data?.message || "An unexpected error occurred";
 };
