@@ -1,2 +1,2 @@
 // src/widgets/sidebar/index.ts
-export { Sidebar } from "./ui";
+export { SidebarNav } from "./ui";
