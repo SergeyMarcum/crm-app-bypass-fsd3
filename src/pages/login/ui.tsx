@@ -14,7 +14,7 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export const LoginPage = () => {
+export const LoginPage = (): JSX.Element => {
   const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const {
@@ -25,11 +25,11 @@ export const LoginPage = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData): Promise<void> => {
     try {
       await login(data);
       navigate("/dashboard");
-    } catch (error) {
+    } catch {
       toast.error("Login failed. Please check your credentials.");
     }
   };

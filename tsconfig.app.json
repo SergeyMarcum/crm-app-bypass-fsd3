@@ -2,51 +2,77 @@
   "compilerOptions": {
     // Целевая версия ECMAScript
     "target": "ES2020",
+
     // Использование define для полей классов
     "useDefineForClassFields": true,
+
     // Библиотеки для работы с DOM и ES2020
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
     // Модульная система
     "module": "ESNext",
+
     // Пропуск проверки библиотек для ускорения компиляции
     "skipLibCheck": true,
 
     /* Bundler mode */
     // Режим разрешения модулей для Vite
     "moduleResolution": "bundler",
+
     // Разрешить импорт TS-расширений
     "allowImportingTsExtensions": true,
+
     // Изолированные модули для совместимости с Vite
     "isolatedModules": true,
+
     // Принудительное определение модулей
     "moduleDetection": "force",
+
     // Отключение генерации JS-файлов (Vite делает это сам)
     "noEmit": true,
+
     // Поддержка JSX для React 19
     "jsx": "react-jsx",
+
     // Базовый путь для абсолютных импортов
     "baseUrl": "src",
-
+    "paths": {
+      "@/*": ["*"],
+      "@app/*": ["app/*"],
+      "@pages/*": ["pages/*"],
+      "@features/*": ["features/*"],
+      "@entities/*": ["entities/*"],
+      "@widgets/*": ["widgets/*"],
+      "@shared/*": ["shared/*"]
+    },
     /* Linting */
     // Строгий режим TypeScript
     "strict": true,
+
     // Запрет неиспользуемых локальных переменных
     "noUnusedLocals": true,
+
     // Запрет неиспользуемых параметров
     "noUnusedParameters": true,
+
     // Запрет пропуска break в switch
     "noFallthroughCasesInSwitch": true,
+
     // Проверка побочных эффектов импортов
     "noUncheckedSideEffectImports": true,
+
     // Запрет неявных any
     "noImplicitAny": true,
+
     // Запрет неявного this
     "noImplicitThis": true,
+
     // Строгая проверка null/undefined
     "strictNullChecks": true,
+
     // Обеспечение согласованности регистра в именах файлов
     "forceConsistentCasingInFileNames": true
   },
   // Включение только исходного кода в src
-  "include": ["src"]
+  "include": ["src", "node_modules/@hookform/resolvers/**/*.d.ts"]
 }

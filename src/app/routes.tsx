@@ -21,7 +21,7 @@ const ProtectedRoute = ({
 }: {
   children: JSX.Element;
   allowedRoles: number[];
-}) => {
+}): JSX.Element => {
   const { user, isAuthenticated } = useAuthStore();
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -32,7 +32,7 @@ const ProtectedRoute = ({
   return children;
 };
 
-export const AppRoutes = () => {
+export const AppRoutes = (): JSX.Element => {
   return (
     <Routes>
       <Route

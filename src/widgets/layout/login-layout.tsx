@@ -2,7 +2,11 @@
 import { Box } from "@mui/material";
 import { ReactNode } from "react";
 
-export const LoginLayout = ({ children }: { children: ReactNode }) => {
+export const LoginLayout = ({
+  children,
+}: {
+  children: ReactNode;
+}): JSX.Element => {
   return (
     <Box
       sx={{

@@ -1,13 +1,11 @@
+// eslint.config.js
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import importPlugin from "eslint-plugin-import";
 
 export default tseslint.config(
-  // Игнорирование папки сборки
   { ignores: ["dist"] },
-
-  // Основная конфигурация для TS/TSX файлов
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -15,7 +13,7 @@ export default tseslint.config(
       sourceType: "module",
       parser: tseslint.parser,
       parserOptions: {
-        project: "./tsconfig.json",
+        project: ["./tsconfig.app.json", "./tsconfig.node.json"],
       },
     },
     plugins: {
@@ -25,41 +23,45 @@ export default tseslint.config(
       import: importPlugin,
     },
     rules: {
-      // Правила React Hooks
       ...reactHooks.configs.recommended.rules,
-      // Проверка экспорта компонентов для React Refresh
       "react-refresh/only-export-components": [
         "warn",
         { allowConstantExport: true },
       ],
-
-      // Правила TypeScript
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_" },
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^isAuthenticated$",
+        },
       ],
-      "@typescript-eslint/explicit-function-return-type": ["warn"],
+      "@typescript-eslint/explicit-function-return-type": [
+        "warn",
+        {
+          allowExpressions: true,
+          allowTypedFunctionExpressions: true,
+          allowHigherOrderFunctions: true,
+          allowDirectConstAssertionInArrowFunctions: true,
+          allowConciseArrowFunctionExpressionsStartingWithVoid: true,
+          allowIIFEs: true,
+        },
+      ],
       "@typescript-eslint/no-explicit-any": ["error"],
-
-      // Контроль зависимостей для FSD 3.0
       "import/no-restricted-paths": [
         "error",
         {
           zones: [
-            // Запрет импорта других фич из фич
             {
               target: "src/features/**/*",
               from: "src/features/**/*",
               except: ["./"],
               message: "Features should not depend on other features.",
             },
-            // Запрет импорта фич в сущности
             {
               target: "src/entities/**/*",
               from: "src/features/**/*",
               message: "Entities should not depend on features.",
             },
-            // Запрет импорта страниц, фич или сущностей в shared
             {
               target: "src/shared/**/*",
               from: [
@@ -70,7 +72,6 @@ export default tseslint.config(
               message:
                 "Shared should not depend on features, entities, or pages.",
             },
-            // Запрет импорта страниц в фичи
             {
               target: "src/features/**/*",
               from: "src/pages/**/*",

@@ -11,7 +11,7 @@ import { useAuthStore } from "@features/auth/model/store";
 import { navigation } from "@shared/config/navigation";
 import { useNavigate } from "react-router-dom";
 
-export const Sidebar = () => {
+export const Sidebar = (): JSX.Element => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -28,7 +28,7 @@ export const Sidebar = () => {
         "& .MuiDrawer-paper": {
           width: 240,
           boxSizing: "border-box",
-          top: 64, // Учет высоты AppBar
+          top: 64,
         },
       }}
     >

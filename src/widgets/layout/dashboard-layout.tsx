@@ -4,7 +4,11 @@ import { Header } from "@widgets/header";
 import { Sidebar } from "@widgets/sidebar";
 import { ReactNode } from "react";
 
-export const DashboardLayout = ({ children }: { children: ReactNode }) => {
+export const DashboardLayout = ({
+  children,
+}: {
+  children: ReactNode;
+}): JSX.Element => {
   return (
     <Box sx={{ display: "flex" }}>
       <Header />
@@ -14,7 +18,7 @@ export const DashboardLayout = ({ children }: { children: ReactNode }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          mt: 8, // Учет высоты AppBar
+          mt: 8,
           backgroundColor: (theme) => theme.palette.background.default,
         }}
       >

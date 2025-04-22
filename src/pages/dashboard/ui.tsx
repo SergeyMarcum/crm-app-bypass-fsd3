@@ -1,5 +1,4 @@
 // src/pages/dashboard/ui.tsx
-import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { PageContainer } from "@toolpad/core/PageContainer";
 import { Typography, Grid } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
@@ -12,8 +11,8 @@ interface DashboardData {
   chartData: { month: string; value: number }[];
 }
 
-export const DashboardPage = () => {
-  const { data, isLoading } = useQuery({
+export const DashboardPage = (): JSX.Element => {
+  const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["dashboard"],
     queryFn: dashboardApi.getDashboardData,
   });
