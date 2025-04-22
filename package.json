@@ -12,6 +12,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@base-ui-components/react": "^1.0.0-alpha.8",
     "@dnd-kit/core": "^6.3.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -26,6 +27,8 @@
     "@tiptap/react": "^2.11.7",
     "@tiptap/starter-kit": "^2.11.7",
     "@toolpad/core": "^0.14.0",
+    "@toolpad/studio-runtime": "^0.13.0",
+    "@toolpad/utils": "^0.14.0",
     "ag-grid-community": "^33.2.4",
     "axios": "^1.8.4",
     "dayjs": "^1.11.13",
