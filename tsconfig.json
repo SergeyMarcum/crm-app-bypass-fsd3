@@ -3,6 +3,7 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" }, // Конфигурация для фронтенд-кода
-    { "path": "./tsconfig.node.json" } // Конфигурация для Vite и Node.js
+    { "path": "./tsconfig.node.json" }, // Конфигурация для Vite и Node.js
+    { "path": "./tsconfig.tests.json" } // Конфигурация для Tests
   ]
 }
