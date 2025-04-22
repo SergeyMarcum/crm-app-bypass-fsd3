@@ -6,8 +6,9 @@ import importPlugin from "eslint-plugin-import";
 
 export default tseslint.config(
   { ignores: ["dist"] },
+  // Конфигурация для исходного кода (src/)
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
       sourceType: "module",
@@ -80,6 +81,31 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  // Конфигурация для тестов (tests/)
+  {
+    files: ["tests/**/*.{ts,tsx}"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: "module",
+      parser: tseslint.parser,
+      parserOptions: {
+        project: ["./tsconfig.tests.json"],
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   }
 );
