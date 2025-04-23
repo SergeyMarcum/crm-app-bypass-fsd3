@@ -1,16 +1,19 @@
 // src/shared/ui/Logo.tsx
-
+import * as React from "react";
 import { Box } from "@mui/material";
-// Замените на путь к вашему логотипу, если он есть
-import logo from "@assets/images/logo.png";
 
-export function Logo(): JSX.Element {
+export function Logo(): React.ReactNode {
+  console.log("Rendering Logo");
   return (
     <Box
       component="img"
-      src={logo}
+      src="/logo.png" // Предполагается, что logo.png находится в public/
       alt="CRM App Logo"
       sx={{ height: 40, mx: 2 }}
+      onError={(e) => {
+        console.error("Logo image failed to load:", e);
+        e.currentTarget.src = "/fallback-logo.png"; // Запасной путь
+      }}
     />
   );
 }

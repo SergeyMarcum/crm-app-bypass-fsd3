@@ -12,12 +12,14 @@
     // Модульная система
     "module": "ESNext",
 
+    "esModuleInterop": true,
+
     // Пропуск проверки библиотек для ускорения компиляции
     "skipLibCheck": true,
 
     /* Bundler mode */
     // Режим разрешения модулей для Vite
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
 
     // Разрешить импорт TS-расширений
     "allowImportingTsExtensions": true,
@@ -46,6 +48,7 @@
       "@widgets/*": ["widgets/*"],
       "@shared/*": ["shared/*"]
     },
+    "types": ["vite/client", "react", "react-dom"], // Явно указываем типы React
     /* Linting */
     // Строгий режим TypeScript
     "strict": true,
@@ -75,5 +78,6 @@
     "forceConsistentCasingInFileNames": true
   },
   // Включение только исходного кода в src
-  "include": ["src", "node_modules/@hookform/resolvers/**/*.d.ts"]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
