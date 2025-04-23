@@ -1,22 +1,44 @@
 // src/app/init.tsx
-import { ReactNode } from "react";
-import { ThemeProvider } from "@mui/material";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { theme } from "@shared/config/theme";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/features/auth";
+import { Outlet, useNavigate } from "react-router-dom";
+import { Box, CircularProgress } from "@mui/material";
+// Temporarily remove ErrorBoundary
+// import { ErrorBoundary } from '@/shared/ui/error-boundary';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+export const AppInit = () => {
+  const { verifySession } = useAuth();
+  const navigate = useNavigate();
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-export const AppInit = ({ children }: { children: ReactNode }): JSX.Element => {
-  return (
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </ThemeProvider>
-  );
+  useEffect(() => {
+    const checkSession = async () => {
+      console.log("Starting session check");
+      try {
+        await verifySession();
+      } catch (error) {
+        console.log("Session check failed:", error);
+        navigate("/login", { replace: true });
+      } finally {
+        console.log("Session check completed, isCheckingSession: false");
+        setIsCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [verifySession, navigate]);
+
+  if (isCheckingSession) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return <Outlet />;
 };

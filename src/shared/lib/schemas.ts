@@ -1,12 +1,9 @@
 // src/shared/lib/schemas.ts
 import { z } from "zod";
 
-export const userSchema = z.object({
-  id: z.number(),
-  full_name: z.string().nullable(),
-  email: z.string().email().nullable(),
-  role_id: z.number(),
-  avatar: z.string().optional(),
+export const loginSchema = z.object({
+  username: z.string().min(1, "Логин обязателен"),
+  password: z.string().min(1, "Пароль обязателен"),
+  domain: z.string().min(1, "Выберите домен"),
+  rememberMe: z.boolean(),
 });
-
-export type User = z.infer<typeof userSchema>;

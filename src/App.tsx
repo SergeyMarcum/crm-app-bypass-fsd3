@@ -1,13 +1,13 @@
 // src/App.tsx
-import { useAuthStore } from "@features/auth/model/store";
+import * as React from "react";
 import { AppRoutes } from "@app/routes";
 import { AppInit } from "@app/init";
 
-export function App(): JSX.Element {
-  const { isAuthenticated } = useAuthStore();
+export function App(): React.ReactNode {
+  console.log("Rendering App component");
   return (
     <AppInit>
-      {isAuthenticated ? <AppRoutes /> : <div>Please log in</div>}
+      <AppRoutes />
     </AppInit>
   );
 }
