@@ -1,5 +1,5 @@
 // src/shared/api/dashboard/client.ts
-import { axios } from "../axios";
+import axios from "../axios";
 import { z } from "zod";
 
 const dashboardSchema = z.object({

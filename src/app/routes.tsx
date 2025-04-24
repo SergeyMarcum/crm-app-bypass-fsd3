@@ -1,4 +1,5 @@
 // src/app/routes.tsx
+import { ReactElement } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@features/auth/model/store";
 import { DashboardLayout, LoginLayout } from "@widgets/layout";
@@ -19,20 +20,23 @@ const ProtectedRoute = ({
   children,
   allowedRoles,
 }: {
-  children: JSX.Element;
+  children: ReactElement;
   allowedRoles: number[];
-}): JSX.Element => {
+}) => {
   const { user, isAuthenticated } = useAuthStore();
   if (!isAuthenticated) {
+    console.log("ProtectedRoute: Redirecting to /login");
     return <Navigate to="/login" replace />;
   }
   if (user && !allowedRoles.includes(user.role_id)) {
+    console.log("ProtectedRoute: Redirecting to /dashboard (role not allowed)");
     return <Navigate to="/dashboard" replace />;
   }
   return children;
 };
 
-export const AppRoutes = (): JSX.Element => {
+export const AppRoutes = () => {
+  console.log("AppRoutes render");
   return (
     <Routes>
       <Route

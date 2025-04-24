@@ -1,12 +1,12 @@
 // src/widgets/layout/login-layout.tsx
-import React from "react";
+import { ReactElement } from "react";
 import { Box } from "@mui/material";
 
 interface LoginLayoutProps {
   children: React.ReactNode;
 }
 
-export function LoginLayout({ children }: LoginLayoutProps): JSX.Element {
+export function LoginLayout({ children }: LoginLayoutProps): ReactElement {
   return (
     <Box
       sx={{

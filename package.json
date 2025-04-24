@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "clean": "rimraf node_modules package-lock.json"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.8",
@@ -67,10 +68,12 @@
     "globals": "^16.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "rimraf": "^6.0.1",
     "ts-jest": "^29.3.2",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.1.2"
   }
 }

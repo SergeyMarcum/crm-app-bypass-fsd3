@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Целевая версия ECMAScript
-    "target": "ES2020",
+    "target": "ESNext",
 
     // Использование define для полей классов
     "useDefineForClassFields": true,
@@ -17,7 +17,7 @@
 
     /* Bundler mode */
     // Режим разрешения модулей для Vite
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
 
     // Разрешить импорт TS-расширений
     "allowImportingTsExtensions": true,
