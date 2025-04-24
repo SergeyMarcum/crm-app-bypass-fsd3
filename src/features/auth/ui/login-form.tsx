@@ -6,8 +6,10 @@ import { TextField, Button, Box, Typography } from "@mui/material";
 import { useAuthStore } from "@features/auth/model/store";
 
 const loginSchema = z.object({
-  login: z.string().min(1, "Login is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  login: z.string().min(1, "Вход в систему обязателен"),
+  password: z
+    .string()
+    .min(6, "Пароль должен состоять не менее чем из 6 символов"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
