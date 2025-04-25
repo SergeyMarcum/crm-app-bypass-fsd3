@@ -4,6 +4,7 @@ import { storage } from "../lib/storage";
 
 const axios = Axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true, // Для поддержки CORS с credentials, если требуется
 });
 
 axios.interceptors.request.use((config) => {

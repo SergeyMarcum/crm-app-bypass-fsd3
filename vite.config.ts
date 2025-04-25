@@ -17,4 +17,33 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "./src/shared"),
     },
   },
+  server: {
+    proxy: {
+      "/domain-list": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/login": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/logout": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/check-session": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/check-auth": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });
