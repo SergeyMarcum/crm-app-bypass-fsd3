@@ -1,12 +1,12 @@
 // src/widgets/layout/login-layout.tsx
-import { Box } from "@mui/material";
-import { ReactNode } from "react";
+import { ReactElement } from "react";
+import { Box, Typography } from "@mui/material";
 
 interface LoginLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-export const LoginLayout = ({ children }: LoginLayoutProps) => {
+export function LoginLayout({ children }: LoginLayoutProps): ReactElement {
   return (
     <Box
       sx={{
@@ -17,7 +17,8 @@ export const LoginLayout = ({ children }: LoginLayoutProps) => {
         bgcolor: "background.default",
       }}
     >
-      {children}
+      <Typography>123</Typography>
+      <main>{children}</main>
     </Box>
   );
-};
+}

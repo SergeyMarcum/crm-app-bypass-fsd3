@@ -1,17 +1,15 @@
 // src/shared/api/axios.ts
 import Axios from "axios";
+import { storage } from "../lib/storage";
 
-export const axios = Axios.create({
-  baseURL: "http://192.168.1.248:8080",
-  headers: {
-    "Content-Type": "application/json",
-  },
+const axios = Axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 axios.interceptors.request.use((config) => {
-  const sessionCode = localStorage.getItem("session_code");
-  if (sessionCode) {
-    config.params = { ...config.params, session_code: sessionCode };
+  const token = storage.get("auth_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -19,7 +17,14 @@ axios.interceptors.request.use((config) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Обработка ошибок
-    throw error;
+    if (error.response?.status === 401) {
+      storage.remove("auth_token");
+      storage.remove("auth_user");
+      storage.remove("auth_domain");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
   }
 );
+
+export default axios;
