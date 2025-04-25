@@ -1,5 +1,6 @@
 // src/widgets/header/ui.tsx
-import React, { useState } from "react";
+import { useState } from "react";
+import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AppBar as MuiAppBar,
@@ -32,21 +33,21 @@ export function Header({ onToggleSidebar }: HeaderProps): JSX.Element {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>): void => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleMenuClose = () => {
+  const handleMenuClose = (): void => {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     logout();
     navigate("/login");
     handleMenuClose();
   };
 
-  const handleProfile = () => {
+  const handleProfile = (): void => {
     navigate("/profile");
     handleMenuClose();
   };

@@ -1,2 +1,3 @@
 // src/widgets/header/index.ts
-export { Header } from "./ui";
+export * from "./ui";
+export * from "./types";
