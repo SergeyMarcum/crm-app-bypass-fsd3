@@ -3,21 +3,31 @@ export interface Credentials {
   username: string;
   password: string;
   domain: string;
+  rememberMe?: boolean;
+  isTestMode?: boolean;
 }
 
 export interface User {
-  username: string;
+  login: string;
+  system_login: string;
+  full_name: string;
+  position: string;
+  email: string;
+  department: string;
+  company: string;
+  phone: string;
+  address: string;
+  photo: string | null;
   role_id: number;
 }
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  domain: string | null;
-  sessionCode: string | null;
+export interface AuthResponse {
+  status: "OK" | "ERROR";
+  token: string;
+  user: User;
 }
 
-export interface ApiError {
-  code: number;
-  message: string;
+export interface Domain {
+  id: string; // Например, "orenburg" или "irf"
+  name: string; // Например, "Оренбургский филиал (тестовый)"
 }

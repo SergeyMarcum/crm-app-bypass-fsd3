@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Целевая версия ECMAScript
-    "target": "ES2020",
+    "target": "ESNext",
 
     // Использование define для полей классов
     "useDefineForClassFields": true,
@@ -11,8 +11,6 @@
 
     // Модульная система
     "module": "ESNext",
-
-    "esModuleInterop": true,
 
     // Пропуск проверки библиотек для ускорения компиляции
     "skipLibCheck": true,
@@ -48,7 +46,6 @@
       "@widgets/*": ["widgets/*"],
       "@shared/*": ["shared/*"]
     },
-    "types": ["vite/client", "react", "react-dom"], // Явно указываем типы React
     /* Linting */
     // Строгий режим TypeScript
     "strict": true,
@@ -78,6 +75,5 @@
     "forceConsistentCasingInFileNames": true
   },
   // Включение только исходного кода в src
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": ["src", "node_modules/@hookform/resolvers/**/*.d.ts"]
 }

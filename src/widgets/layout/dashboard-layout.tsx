@@ -1,5 +1,5 @@
 // src/widgets/layout/dashboard-layout.tsx
-import React, { useState } from "react";
+import { ReactElement, useState } from "react";
 import { Box } from "@mui/material";
 import { Header } from "@widgets/header";
 import { SidebarNav } from "@widgets/sidebar";
@@ -10,7 +10,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({
   children,
-}: DashboardLayoutProps): JSX.Element {
+}: DashboardLayoutProps): ReactElement {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const toggleSidebar = () => {

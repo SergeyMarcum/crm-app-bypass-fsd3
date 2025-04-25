@@ -1,2 +1,2 @@
 // src/pages/login/index.ts
-export * from "./ui";
+export { LoginPage } from "./ui";
