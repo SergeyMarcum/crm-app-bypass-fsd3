@@ -1,26 +1,28 @@
 // src/features/auth/hooks/use-auth.ts
 import { useEffect } from "react";
-import { useAuthStore } from "../model/store";
+import { useAuthStore } from "@features/auth/model/store";
 
-export const useAuth = () => {
+export function useAuth() {
   const {
     user,
     token,
     domains,
     isLoading,
     error,
-    fetchDomains,
     login,
     logout,
     checkSession,
+    fetchDomains,
   } = useAuthStore();
 
   useEffect(() => {
-    console.log("useAuth: Получение доменов");
-    fetchDomains();
-  }, [fetchDomains]);
+    if (domains.length === 0 && !isLoading) {
+      console.log("useAuth: Fetching domains");
+      fetchDomains();
+    }
+  }, [fetchDomains, domains.length, isLoading]);
 
-  console.log("состояние useAuth:", { domains, isLoading, error });
+  console.log("useAuth state:", { domains, isLoading, error });
 
   return {
     user,
@@ -31,5 +33,6 @@ export const useAuth = () => {
     login,
     logout,
     checkSession,
+    fetchDomains,
   };
-};
+}

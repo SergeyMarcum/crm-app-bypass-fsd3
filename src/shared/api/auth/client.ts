@@ -1,35 +1,57 @@
-// src/shared/api/auth/client.ts
+// src/shared/api/auth.ts
 import axios from "../axios";
-import { AuthResponse, Credentials } from "@features/auth/types";
 
 export const authApi = {
-  getDomainList: async (): Promise<Record<string, string>> => {
-    console.log("Получение списка доменов");
-    const response = await axios.get("/domain-list");
-    console.log("Domain list response:", response.data);
-    return response.data;
-  },
-
-  login: async (credentials: Credentials): Promise<AuthResponse> => {
-    console.log("Отправка запроса на вход в систему:", credentials);
-    const response = await axios.post("/login", {
-      username: credentials.username,
-      password: credentials.password,
-      domain: credentials.domain,
-    });
-    console.log("Необработанный ответ API входа в систему:", response.data);
-    return response.data;
-  },
-
-  logout: async (): Promise<void> => {
-    await axios.get("/logout");
-  },
-
-  checkSession: async (params: {
-    domain: string;
+  login: async (credentials: {
     username: string;
-    session_code: string;
-  }): Promise<void> => {
-    await axios.get("/check-session", { params });
+    password: string;
+    domain: string;
+    rememberMe: boolean;
+  }) => {
+    // Временный мок для разработки
+    /*if (credentials.username === 'frontend' && credentials.password === '!QAZxsw2!@3') {
+      return {
+        token: 'mock_token_123',
+        user: {
+          id: 'user1',
+          name: 'Frontend User',
+          role_id: 1,
+        },
+      };
+    }*/
+    // throw new Error("Неверный логин или пароль");
+    // Раскомментируйте для работы с реальным API после настройки CORS
+    const response = await axios.post("/login", credentials);
+    return response.data;
+  },
+  logout: async () => {
+    await axios.post("/logout");
+  },
+  checkSession: async (
+    domain: string,
+    username: string,
+    session_code: string
+  ) => {
+    const response = await axios.post("/check-session", {
+      domain,
+      username,
+      session_code,
+    });
+    return response.data;
+  },
+  getDomainList: async () => {
+    // Мок данных, если используется
+    /*return {
+      domain1: 'Domain One',
+      domain2: 'Domain Two',
+      domain3: 'Domain Three',
+    };*/
+    // Раскомментируйте для работы с реальным API
+    const response = await axios.get("/domain-list");
+    return response.data;
+  },
+  checkAuth: async () => {
+    const response = await axios.get("/check-auth");
+    return response.data;
   },
 };

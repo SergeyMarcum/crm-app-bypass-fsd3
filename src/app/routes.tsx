@@ -1,10 +1,11 @@
 // src/app/routes.tsx
 import { ReactElement } from "react";
+import type { JSX } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@features/auth/model/store";
 import { DashboardLayout, LoginLayout } from "@widgets/layout";
 import { DashboardPage } from "@pages/dashboard";
-import { LoginPage } from "@pages/login/login";
+import { LoginPage } from "@pages/login";
 import { UsersPage } from "@pages/users";
 import { EmployeesPage } from "@pages/employees";
 import { TaskControlPage } from "@pages/tasks/control";
@@ -35,18 +36,13 @@ const ProtectedRoute = ({
   return children;
 };
 
-export const AppRoutes = () => {
+export function AppRoutes(): JSX.Element {
   console.log("AppRoutes render");
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <LoginLayout>
-            <LoginPage />
-          </LoginLayout>
-        }
-      />
+      <Route element={<LoginLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+      </Route>
       <Route
         path="/dashboard"
         element={
@@ -157,7 +153,7 @@ export const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
-};
+}

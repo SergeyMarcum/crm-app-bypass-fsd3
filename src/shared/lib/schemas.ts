@@ -2,9 +2,9 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  username: z.string().min(1, "Имя пользователя обязательно"),
-  password: z.string().min(1, "Требуется пароль"),
-  domain: z.string().min(1, "Требуется домен"),
+  username: z.string().min(1, "Введите логин"),
+  password: z.string().min(1, "Введите пароль"),
+  domain: z.string().min(1, "Выберите домен"),
   rememberMe: z.boolean().optional(),
   isTestMode: z.boolean().optional(),
 });

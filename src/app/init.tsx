@@ -1,8 +1,9 @@
 // src/app/init.tsx
 import { ReactNode } from "react";
+import type { JSX } from "react";
 import { ThemeProvider } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { theme } from "../shared/config/theme";
+import { theme } from "@shared/config/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,10 +14,14 @@ const queryClient = new QueryClient({
   },
 });
 
-export const AppInit = ({ children }: { children: ReactNode }) => {
+export function AppInit({ children }: { children: ReactNode }): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        {/* <ErrorBoundary> */}
+        {children}
+        {/* </ErrorBoundary> */}
+      </QueryClientProvider>
     </ThemeProvider>
   );
-};
+}
