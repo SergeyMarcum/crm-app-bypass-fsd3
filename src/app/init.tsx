@@ -17,11 +17,7 @@ const queryClient = new QueryClient({
 export function AppInit({ children }: { children: ReactNode }): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        {/* <ErrorBoundary> */}
-        {children}
-        {/* </ErrorBoundary> */}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ThemeProvider>
   );
 }

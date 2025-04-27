@@ -1,6 +1,7 @@
 // src/features/auth/model/store.ts
 import { create } from "zustand";
 import { authApi } from "@shared/api/auth";
+import { loginResponseSchema, domainListSchema } from "@shared/lib/schemas";
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ interface AuthState {
   token: string | null;
   domains: Domain[];
   isLoading: boolean;
+  isSessionChecking: boolean;
   error: string | null;
   isAuthenticated: boolean;
   login: (credentials: {
@@ -41,38 +43,43 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   domains: [],
   isLoading: false,
+  isSessionChecking: false,
   error: null,
   isAuthenticated: false,
   login: async (credentials) => {
     set({ isLoading: true, error: null });
     try {
       const response = await authApi.login(credentials);
-      localStorage.setItem("token", response.token);
+      const parsedResponse = loginResponseSchema.parse(response);
+      localStorage.setItem("session_token", parsedResponse.token);
+      if (credentials.rememberMe) {
+        localStorage.setItem("auth_domain", credentials.domain);
+      }
       set({
-        user: response.user,
-        token: response.token,
+        user: parsedResponse.user,
+        token: parsedResponse.token,
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (err: any) {
-      console.error("login error:", err.message);
-      set({
-        isLoading: false,
-        error: err.message.includes("Network Error")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error && err.message.includes("Network Error")
           ? "Сервер недоступен. Проверьте подключение или настройки CORS."
-          : "Ошибка авторизации",
-      });
-      throw err;
+          : "Не удалось войти. Проверьте логин, пароль или настройки сервера.";
+      set({ isLoading: false, error: errorMessage });
+      throw new Error(errorMessage);
     }
   },
   logout: async () => {
     set({ isLoading: true });
     try {
       await authApi.logout();
-      localStorage.removeItem("token");
+      localStorage.removeItem("session_token");
+      localStorage.removeItem("auth_domain");
       set({
         user: null,
         token: null,
+        domains: [],
         isAuthenticated: false,
         isLoading: false,
       });
@@ -89,10 +96,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         username,
         session_code
       );
-      localStorage.setItem("token", response.token);
+      const parsedResponse = loginResponseSchema.parse(response);
+      localStorage.setItem("session_token", parsedResponse.token);
       set({
-        user: response.user,
-        token: response.token,
+        user: parsedResponse.user,
+        token: parsedResponse.token,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -105,7 +113,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const apiResponse = await authApi.getDomainList();
-      const domains: Domain[] = Object.entries(apiResponse).map(
+      const parsedDomains = domainListSchema.parse(apiResponse);
+      const domains: Domain[] = Object.entries(parsedDomains).map(
         ([id, name]) => ({
           id,
           name: String(name),
@@ -114,34 +123,34 @@ export const useAuthStore = create<AuthState>((set) => ({
       const limitedDomains = domains.slice(0, 10);
       console.log("fetchDomains: Transformed domains:", limitedDomains);
       set({ domains: limitedDomains, isLoading: false });
-    } catch (err: any) {
-      console.error("fetchDomains error:", err.message);
-      set({
-        isLoading: false,
-        error: err.message.includes("Network Error")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error && err.message.includes("Network Error")
           ? "Сервер недоступен. Проверьте подключение или настройки CORS."
-          : "Не удалось загрузить домены. Попробуйте позже.",
-      });
-      throw err;
+          : "Не удалось загрузить домены. Попробуйте позже.";
+      set({ isLoading: false, error: errorMessage });
+      throw new Error(errorMessage);
     }
   },
   initAuth: async () => {
-    set({ isLoading: true });
+    set({ isSessionChecking: true });
     try {
-      const storedToken = localStorage.getItem("token");
+      const storedToken = localStorage.getItem("session_token");
       if (storedToken) {
         const response = await authApi.checkAuth();
+        const parsedResponse = loginResponseSchema.parse(response);
         set({
-          user: response.user,
+          user: parsedResponse.user,
           token: storedToken,
           isAuthenticated: true,
-          isLoading: false,
+          isSessionChecking: false,
         });
       } else {
-        set({ isLoading: false });
+        set({ isSessionChecking: false });
       }
     } catch {
-      set({ isLoading: false });
+      localStorage.removeItem("session_token");
+      set({ isSessionChecking: false });
     }
   },
 }));
