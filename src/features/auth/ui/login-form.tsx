@@ -1,5 +1,5 @@
 // src/features/auth/ui/login-form.tsx
-import { ReactElement, useEffect } from "react";
+import { ReactElement } from "react";
 import {
   Box,
   Button,
@@ -12,50 +12,53 @@ import {
   Select,
   TextField,
   Typography,
+  CircularProgress,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@shared/lib/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
+import { toast } from "react-toastify";
 import { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm(): ReactElement {
-  const { domains, isLoading, error, login } = useAuth();
+  const { domains, isLoading, error, login, fetchDomains } = useAuth();
 
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-    resetField,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
-      domain: "",
+      domain: localStorage.getItem("auth_domain") || "",
       rememberMe: false,
       isTestMode: false,
     },
   });
 
-  // Синхронизация начального значения domain после загрузки доменов
-  useEffect(() => {
-    if (domains.length > 0) {
-      console.log("Resetting domain to:", domains[0].id);
-      resetField("domain", { defaultValue: domains[0].id });
-    }
-  }, [domains, resetField]);
+  const handleRetryDomains = () => {
+    console.log("LoginForm: Retrying fetch domains");
+    fetchDomains();
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     console.log("Form submitted:", data);
-    await login({
-      username: data.username,
-      password: data.password,
-      domain: data.domain,
-      rememberMe: data.rememberMe ?? false,
-    });
+    try {
+      await login({
+        username: data.username,
+        password: data.password,
+        domain: data.domain,
+        rememberMe: data.rememberMe ?? false,
+      });
+      toast.success("Успешный вход");
+    } catch {
+      toast.error("Ошибка авторизации");
+    }
   };
 
   console.log("LoginForm render:", {
@@ -92,6 +95,7 @@ export function LoginForm(): ReactElement {
           <Controller
             name="domain"
             control={control}
+            rules={{ required: "Выберите домен" }}
             render={({ field }) => (
               <Select
                 {...field}
@@ -106,7 +110,10 @@ export function LoginForm(): ReactElement {
               >
                 {isLoading ? (
                   <MenuItem value="" disabled>
-                    Загрузка доменов...
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <CircularProgress size={20} />
+                      Загрузка доменов...
+                    </Box>
                   </MenuItem>
                 ) : domains.length > 0 ? (
                   domains.map((domain) => (
@@ -123,7 +130,15 @@ export function LoginForm(): ReactElement {
             )}
           />
           <FormHelperText>
-            {errors.domain?.message || (error && "Не удалось загрузить домены")}
+            {errors.domain?.message ||
+              (error && (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {error}
+                  <Button size="small" onClick={handleRetryDomains}>
+                    Попробовать снова
+                  </Button>
+                </Box>
+              ))}
           </FormHelperText>
         </FormControl>
 
@@ -204,11 +219,9 @@ export function LoginForm(): ReactElement {
           )}
         />
 
-        {error && (
+        {error && !errors.domain && (
           <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-            {error === "Ошибка авторизации"
-              ? "Не удалось войти. Проверьте логин, пароль или настройки сервера."
-              : error}
+            {error}
           </Typography>
         )}
 
@@ -220,7 +233,7 @@ export function LoginForm(): ReactElement {
           sx={{ mt: 2 }}
           disabled={isLoading || isSubmitting || domains.length === 0}
         >
-          Войти
+          {isSubmitting || isLoading ? <CircularProgress size={24} /> : "Войти"}
         </Button>
       </Box>
     </Box>

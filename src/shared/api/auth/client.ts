@@ -1,4 +1,4 @@
-// src/shared/api/auth.ts
+// src/shared/api/client.ts
 import axios from "../axios";
 
 export const authApi = {
