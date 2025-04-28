@@ -46,7 +46,7 @@ export function LoginForm(): ReactElement {
   useEffect(() => {
     const saved = localStorage.getItem("auth_domain");
     if (saved && domains.some((d) => d.id === saved)) {
-      setValue("domain", saved); // теперь setValue доступен
+      setValue("domain", saved);
     }
   }, [domains, setValue]);
 
@@ -95,7 +95,7 @@ export function LoginForm(): ReactElement {
             name="domain"
             control={control}
             render={({ field }) => {
-              // Безопасное значение: если нет в списке domains, сбросить
+              // Безопасное значение: сбрасываем, если значение не в списке доменов
               const safeValue = domains.find((d) => d.id === field.value)
                 ? field.value
                 : "";
@@ -106,7 +106,13 @@ export function LoginForm(): ReactElement {
                   label="Домен"
                   disabled={isLoading || domains.length === 0}
                   value={safeValue}
-                  onChange={(e) => field.onChange(e.target.value)}
+                  onChange={(e) => {
+                    const selectedDomain = e.target.value;
+                    field.onChange(selectedDomain);
+                    // Сохраняем выбранный домен в localStorage
+                    localStorage.setItem("auth_domain", selectedDomain);
+                    console.log("Domain selected and saved:", selectedDomain);
+                  }}
                 >
                   {isLoading ? (
                     <MenuItem value="" disabled>
@@ -132,7 +138,6 @@ export function LoginForm(): ReactElement {
               );
             }}
           />
-          {/* FormHelperText теперь рендерится как div, чтобы не было вложенных div в p */}
           <FormHelperText component="div">
             {errors.domain?.message && (
               <Typography color="error" variant="body2">
