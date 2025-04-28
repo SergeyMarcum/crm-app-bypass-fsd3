@@ -1,27 +1,17 @@
 // src/shared/api/client.ts
 import axios from "../axios";
 
+interface Credentials {
+  username: string;
+  password: string;
+  domain: string;
+  rememberMe?: boolean; // Локальная логика
+}
+
 export const authApi = {
-  login: async (credentials: {
-    username: string;
-    password: string;
-    domain: string;
-    rememberMe: boolean;
-  }) => {
-    // Временный мок для разработки
-    /*if (credentials.username === 'frontend' && credentials.password === '!QAZxsw2!@3') {
-      return {
-        token: 'mock_token_123',
-        user: {
-          id: 'user1',
-          name: 'Frontend User',
-          role_id: 1,
-        },
-      };
-    }*/
-    // throw new Error("Неверный логин или пароль");
-    // Раскомментируйте для работы с реальным API после настройки CORS
-    const response = await axios.post("/login", credentials);
+  login: async (credentials: Credentials) => {
+    const { username, password, domain } = credentials; // Забираем только нужные поля
+    const response = await axios.post("/login", { username, password, domain });
     return response.data;
   },
   logout: async () => {
@@ -40,13 +30,6 @@ export const authApi = {
     return response.data;
   },
   getDomainList: async () => {
-    // Мок данных, если используется
-    /*return {
-      domain1: 'Domain One',
-      domain2: 'Domain Two',
-      domain3: 'Domain Three',
-    };*/
-    // Раскомментируйте для работы с реальным API
     const response = await axios.get("/domain-list");
     return response.data;
   },

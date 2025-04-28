@@ -4,7 +4,6 @@ export interface Credentials {
   password: string;
   domain: string;
   rememberMe?: boolean;
-  isTestMode?: boolean;
 }
 
 export interface User {
