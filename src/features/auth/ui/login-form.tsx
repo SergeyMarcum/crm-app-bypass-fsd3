@@ -1,9 +1,10 @@
 // src/features/auth/ui/login-form.tsx
-import { ReactElement } from "react";
+import { ReactElement, useEffect } from "react";
 import {
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   FormControl,
   FormControlLabel,
   FormHelperText,
@@ -12,7 +13,6 @@ import {
   Select,
   TextField,
   Typography,
-  CircularProgress,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,7 @@ import { useAuth } from "@features/auth/hooks/use-auth";
 import { toast } from "react-toastify";
 import { z } from "zod";
 
+// Типизация формы
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm(): ReactElement {
@@ -30,24 +31,26 @@ export function LoginForm(): ReactElement {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
-      domain: localStorage.getItem("auth_domain") || "",
+      domain: "",
       rememberMe: false,
-      isTestMode: false,
     },
   });
 
-  const handleRetryDomains = () => {
-    console.log("LoginForm: Retrying fetch domains");
-    fetchDomains();
-  };
+  // Подставляем сохранённый домен после загрузки списка, если он валидный
+  useEffect(() => {
+    const saved = localStorage.getItem("auth_domain");
+    if (saved && domains.some((d) => d.id === saved)) {
+      setValue("domain", saved); // теперь setValue доступен
+    }
+  }, [domains, setValue]);
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log("Form submitted:", data);
     try {
       await login({
         username: data.username,
@@ -61,12 +64,7 @@ export function LoginForm(): ReactElement {
     }
   };
 
-  console.log("LoginForm render:", {
-    domains,
-    isLoading,
-    error,
-    formErrors: errors,
-  });
+  const handleRetryDomains = () => fetchDomains();
 
   return (
     <Box
@@ -85,6 +83,7 @@ export function LoginForm(): ReactElement {
       <Typography variant="h5" gutterBottom>
         Авторизация
       </Typography>
+
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
@@ -95,50 +94,61 @@ export function LoginForm(): ReactElement {
           <Controller
             name="domain"
             control={control}
-            rules={{ required: "Выберите домен" }}
-            render={({ field }) => (
-              <Select
-                {...field}
-                labelId="domain-label"
-                label="Домен"
-                disabled={isLoading || domains.length === 0}
-                value={field.value || ""}
-                onChange={(e) => {
-                  console.log("Domain selected:", e.target.value);
-                  field.onChange(e.target.value);
-                }}
-              >
-                {isLoading ? (
-                  <MenuItem value="" disabled>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <CircularProgress size={20} />
-                      Загрузка доменов...
-                    </Box>
-                  </MenuItem>
-                ) : domains.length > 0 ? (
-                  domains.map((domain) => (
-                    <MenuItem key={domain.id} value={domain.id}>
-                      {domain.name}
+            render={({ field }) => {
+              // Безопасное значение: если нет в списке domains, сбросить
+              const safeValue = domains.find((d) => d.id === field.value)
+                ? field.value
+                : "";
+              return (
+                <Select
+                  {...field}
+                  labelId="domain-label"
+                  label="Домен"
+                  disabled={isLoading || domains.length === 0}
+                  value={safeValue}
+                  onChange={(e) => field.onChange(e.target.value)}
+                >
+                  {isLoading ? (
+                    <MenuItem value="" disabled>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <CircularProgress size={20} />
+                        Загрузка доменов...
+                      </Box>
                     </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="" disabled>
-                    Нет доступных доменов
-                  </MenuItem>
-                )}
-              </Select>
-            )}
+                  ) : domains.length > 0 ? (
+                    domains.map((domain) => (
+                      <MenuItem key={domain.id} value={domain.id}>
+                        {domain.name}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem value="" disabled>
+                      Нет доступных доменов
+                    </MenuItem>
+                  )}
+                </Select>
+              );
+            }}
           />
-          <FormHelperText>
-            {errors.domain?.message ||
-              (error && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {/* FormHelperText теперь рендерится как div, чтобы не было вложенных div в p */}
+          <FormHelperText component="div">
+            {errors.domain?.message && (
+              <Typography color="error" variant="body2">
+                {errors.domain.message}
+              </Typography>
+            )}
+            {error && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography color="error" variant="body2">
                   {error}
-                  <Button size="small" onClick={handleRetryDomains}>
-                    Попробовать снова
-                  </Button>
-                </Box>
-              ))}
+                </Typography>
+                <Button size="small" onClick={handleRetryDomains}>
+                  Попробовать снова
+                </Button>
+              </Box>
+            )}
           </FormHelperText>
         </FormControl>
 
@@ -153,10 +163,6 @@ export function LoginForm(): ReactElement {
               margin="normal"
               error={!!errors.username}
               helperText={errors.username?.message}
-              onChange={(e) => {
-                console.log("Username changed:", e.target.value);
-                field.onChange(e.target.value);
-              }}
             />
           )}
         />
@@ -173,10 +179,6 @@ export function LoginForm(): ReactElement {
               margin="normal"
               error={!!errors.password}
               helperText={errors.password?.message}
-              onChange={(e) => {
-                console.log("Password changed:", e.target.value);
-                field.onChange(e.target.value);
-              }}
             />
           )}
         />
@@ -186,44 +188,11 @@ export function LoginForm(): ReactElement {
           control={control}
           render={({ field }) => (
             <FormControlLabel
-              control={
-                <Checkbox
-                  checked={field.value}
-                  onChange={(e) => {
-                    console.log("RememberMe changed:", e.target.checked);
-                    field.onChange(e.target.checked);
-                  }}
-                />
-              }
-              label="Запомни меня"
+              control={<Checkbox {...field} checked={field.value} />}
+              label="Запомнить меня"
             />
           )}
         />
-
-        <Controller
-          name="isTestMode"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={field.value}
-                  onChange={(e) => {
-                    console.log("TestMode changed:", e.target.checked);
-                    field.onChange(e.target.checked);
-                  }}
-                />
-              }
-              label="Для тестирования"
-            />
-          )}
-        />
-
-        {error && !errors.domain && (
-          <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-            {error}
-          </Typography>
-        )}
 
         <Button
           type="submit"
