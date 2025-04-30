@@ -1,40 +1,27 @@
 // src/shared/api/client.ts
-import axios from "../axios";
+import axios from "../axios"; // Используется твой общий настроенный инстанс
 
-interface Credentials {
-  username: string;
-  password: string;
-  domain: string;
-  rememberMe?: boolean; // Локальная логика
-}
+import { Credentials } from "@features/auth/types";
+import { AuthResponse } from "@features/auth/types";
 
 export const authApi = {
-  login: async (credentials: Credentials) => {
-    const { username, password, domain } = credentials; // Забираем только нужные поля
+  login: async (credentials: Credentials): Promise<AuthResponse> => {
+    const { username, password, domain } = credentials;
     const response = await axios.post("/login", { username, password, domain });
     return response.data;
   },
-  logout: async () => {
+
+  logout: async (): Promise<void> => {
     await axios.post("/logout");
   },
-  checkSession: async (
-    domain: string,
-    username: string,
-    session_code: string
-  ) => {
-    const response = await axios.post("/check-session", {
-      domain,
-      username,
-      session_code,
-    });
-    return response.data;
-  },
-  getDomainList: async () => {
-    const response = await axios.get("/domain-list");
-    return response.data;
-  },
-  checkAuth: async () => {
+
+  checkAuth: async (): Promise<AuthResponse> => {
     const response = await axios.get("/check-auth");
+    return response.data;
+  },
+
+  getDomainList: async (): Promise<Record<string, string>> => {
+    const response = await axios.get("/domain-list");
     return response.data;
   },
 };
