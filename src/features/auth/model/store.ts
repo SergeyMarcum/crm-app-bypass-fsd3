@@ -1,18 +1,8 @@
 // src/features/auth/model/store.ts
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { authApi } from "@shared/api/auth";
-import { loginResponseSchema, domainListSchema } from "@shared/lib/schemas";
-
-interface User {
-  id: string;
-  name: string;
-  role_id: number;
-}
-
-interface Domain {
-  id: string;
-  name: string;
-}
+import { AuthResponse, Domain, User, Credentials } from "../types";
 
 interface AuthState {
   user: User | null;
@@ -22,135 +12,108 @@ interface AuthState {
   isSessionChecking: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (credentials: {
-    username: string;
-    password: string;
-    domain: string;
-    rememberMe: boolean;
-  }) => Promise<void>;
+  login: (credentials: Credentials) => Promise<void>;
   logout: () => Promise<void>;
-  checkSession: (
-    domain: string,
-    username: string,
-    session_code: string
-  ) => Promise<void>;
   fetchDomains: () => Promise<void>;
   initAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  domains: [],
-  isLoading: false,
-  isSessionChecking: false,
-  error: null,
-  isAuthenticated: false,
-  login: async (credentials) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await authApi.login(credentials);
-      const parsedResponse = loginResponseSchema.parse(response);
-      localStorage.setItem("session_token", parsedResponse.token);
-      if (credentials.rememberMe) {
-        localStorage.setItem("auth_domain", credentials.domain);
-      }
-      set({
-        user: parsedResponse.user,
-        token: parsedResponse.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error && err.message.includes("Network Error")
-          ? "Сервер недоступен. Проверьте подключение или настройки CORS."
-          : "Не удалось войти. Проверьте логин, пароль или настройки сервера.";
-      set({ isLoading: false, error: errorMessage });
-      throw new Error(errorMessage);
-    }
-  },
-  logout: async () => {
-    set({ isLoading: true });
-    try {
-      await authApi.logout();
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("auth_domain");
-      set({
-        user: null,
-        token: null,
-        domains: [],
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    } catch (err) {
-      set({ isLoading: false, error: "Ошибка при выходе" });
-      throw err;
-    }
-  },
-  checkSession: async (domain, username, session_code) => {
-    set({ isLoading: true });
-    try {
-      const response = await authApi.checkSession(
-        domain,
-        username,
-        session_code
-      );
-      const parsedResponse = loginResponseSchema.parse(response);
-      localStorage.setItem("session_token", parsedResponse.token);
-      set({
-        user: parsedResponse.user,
-        token: parsedResponse.token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    } catch (err) {
-      set({ isLoading: false, error: "Ошибка проверки сессии" });
-      throw err;
-    }
-  },
-  fetchDomains: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const apiResponse = await authApi.getDomainList();
-      const parsedDomains = domainListSchema.parse(apiResponse);
-      const domains: Domain[] = Object.entries(parsedDomains).map(
-        ([id, name]) => ({
-          id,
-          name: String(name),
-        })
-      );
-      const limitedDomains = domains.slice(0, 10);
-      console.log("fetchDomains: Transformed domains:", limitedDomains);
-      set({ domains: limitedDomains, isLoading: false });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error && err.message.includes("Network Error")
-          ? "Сервер недоступен. Проверьте подключение или настройки CORS."
-          : "Не удалось загрузить домены. Попробуйте позже.";
-      set({ isLoading: false, error: errorMessage });
-      throw new Error(errorMessage);
-    }
-  },
-  initAuth: async () => {
-    set({ isSessionChecking: true });
-    try {
-      const storedToken = localStorage.getItem("session_token");
-      if (storedToken) {
-        const response = await authApi.checkAuth();
-        const parsedResponse = loginResponseSchema.parse(response);
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      domains: [],
+      isLoading: false,
+      isSessionChecking: false,
+      error: null,
+      isAuthenticated: false,
+
+      login: async ({ username, password, domain, rememberMe }) => {
+        set({ isLoading: true, error: null });
+        try {
+          const { token, user }: AuthResponse = await authApi.login({
+            username,
+            password,
+            domain,
+          });
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          localStorage.setItem("session_token", token);
+          if (rememberMe) {
+            localStorage.setItem("auth_domain", domain);
+          }
+        } catch (error) {
+          set({ isLoading: false, error: "Ошибка авторизации" });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        try {
+          await authApi.logout();
+        } catch {
+          // Даже при ошибке принудительно очищаем всё
+        }
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("auth_domain");
         set({
-          user: parsedResponse.user,
-          token: storedToken,
-          isAuthenticated: true,
-          isSessionChecking: false,
+          user: null,
+          token: null,
+          domains: [],
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
         });
-      } else {
-        set({ isSessionChecking: false });
-      }
-    } catch {
-      localStorage.removeItem("session_token");
-      set({ isSessionChecking: false });
+      },
+
+      fetchDomains: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const raw = await authApi.getDomainList();
+          const domains = Object.entries(raw).map(([id, name]) => ({
+            id,
+            name: String(name),
+          }));
+          set({ domains, isLoading: false });
+        } catch {
+          set({ isLoading: false, error: "Ошибка загрузки доменов" });
+          throw new Error("Ошибка загрузки доменов");
+        }
+      },
+
+      initAuth: async () => {
+        set({ isSessionChecking: true });
+        try {
+          const storedToken = localStorage.getItem("session_token");
+          if (storedToken) {
+            const { user }: AuthResponse = await authApi.checkAuth();
+            set({
+              user,
+              token: storedToken,
+              isAuthenticated: true,
+              isSessionChecking: false,
+            });
+          } else {
+            set({ isSessionChecking: false });
+          }
+        } catch {
+          localStorage.removeItem("session_token");
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isSessionChecking: false,
+          });
+        }
+      },
+    }),
+    {
+      name: "auth-storage",
+      partialize: (state) => ({
+        token: state.token,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
-  },
-}));
+  )
+);

@@ -1,10 +1,32 @@
 // src/pages/login/ui.tsx
-import { ReactElement } from "react";
+import { ReactElement, useEffect } from "react";
+import { Container, Typography, CircularProgress } from "@mui/material";
 import { LoginForm } from "@features/auth/ui/login-form";
-import { Container, Typography } from "@mui/material";
+import { useAuth } from "@features/auth/hooks/use-auth";
 
 export function LoginPage(): ReactElement {
-  console.log("Rendering LoginPage");
+  const { isSessionChecking, initAuth } = useAuth();
+
+  useEffect(() => {
+    initAuth(); // Проверка токена при монтировании
+  }, [initAuth]);
+
+  if (isSessionChecking) {
+    return (
+      <Container
+        maxWidth="sm"
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="sm">
       <Typography variant="h4" gutterBottom align="center">
