@@ -1,181 +1,162 @@
-// src/widgets/sidebar/ui.tsx
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Drawer,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Collapse,
+  Box,
+  Divider,
 } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import PeopleIcon from "@mui/icons-material/People";
-import ListAltIcon from "@mui/icons-material/ListAlt";
-import BuildIcon from "@mui/icons-material/Build";
-import MessageIcon from "@mui/icons-material/Message";
-import HelpIcon from "@mui/icons-material/Help";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
+import {
+  Dashboard as DashboardIcon,
+  CalendarToday as CalendarIcon,
+  Assignment as AssignmentIcon,
+  People as PeopleIcon,
+  ListAlt as ListAltIcon,
+  Build as BuildIcon,
+  Message as MessageIcon,
+  Help as HelpIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  ExpandLess,
+  ExpandMore,
+} from "@mui/icons-material";
 import { useUser } from "@shared/hooks/use-user";
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
-  const navigate = useNavigate();
-  const { logout } = useUser();
-  const [tasksExpanded, setTasksExpanded] = useState(false);
-  const [logsExpanded, setLogsExpanded] = useState(false);
+const linkStyle = {
+  color: "inherit",
+  textDecoration: "none",
+};
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+const activeStyle = {
+  backgroundColor: "rgba(25, 118, 210, 0.08)",
+  borderRadius: "4px",
+  "& .MuiListItemIcon-root": {
+    color: "primary.main",
+  },
+};
+
+export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
+  const { pathname } = useLocation();
+  const { logout } = useUser();
+
+  const [tasksOpen, setTasksOpen] = useState(pathname.startsWith("/tasks"));
+  const [logsOpen, setLogsOpen] = useState(pathname.startsWith("/logs"));
+
+  const handleLogout = () => logout();
+
+  const NavItem = ({
+    to,
+    icon,
+    text,
+  }: {
+    to: string;
+    icon: React.ReactElement;
+    text: string;
+  }) => (
+    <NavLink to={to} style={linkStyle}>
+      {({ isActive }) => (
+        <ListItemButton sx={isActive ? activeStyle : undefined}>
+          <ListItemIcon>{icon}</ListItemIcon>
+          <ListItemText primary={text} />
+        </ListItemButton>
+      )}
+    </NavLink>
+  );
+
+  const NestedNavItem = ({ to, text }: { to: string; text: string }) => (
+    <NavLink to={to} style={linkStyle}>
+      {({ isActive }) => (
+        <ListItemButton sx={{ pl: 4, ...(isActive ? activeStyle : {}) }}>
+          <ListItemText primary={text} />
+        </ListItemButton>
+      )}
+    </NavLink>
+  );
 
   return (
     <Drawer
       variant="persistent"
       open={isOpen}
       sx={{
-        width: isOpen ? 240 : 0,
+        width: 240,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
           width: 240,
           boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
         },
       }}
     >
-      <List>
-        <ListItem component="button" onClick={() => navigate("/dashboard")}>
-          <ListItemIcon>
-            <DashboardIcon />
-          </ListItemIcon>
-          <ListItemText primary="Главная" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/calendar")}>
-          <ListItemIcon>
-            <CalendarTodayIcon />
-          </ListItemIcon>
-          <ListItemText primary="Календарь работ" />
-        </ListItem>
-        <ListItem
-          component="button"
-          onClick={() => setTasksExpanded(!tasksExpanded)}
-        >
-          <ListItemIcon>
-            <AssignmentIcon />
-          </ListItemIcon>
-          <ListItemText primary="Задания" />
-          {tasksExpanded ? <ExpandLess /> : <ExpandMore />}
-        </ListItem>
-        <Collapse in={tasksExpanded} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItem
-              component="button"
-              sx={{ pl: 4 }}
-              onClick={() => navigate("/tasks/create")}
-            >
-              <ListItemText primary="Создать" />
-            </ListItem>
-            <ListItem
-              component="button"
-              sx={{ pl: 4 }}
-              onClick={() => navigate("/tasks/view")}
-            >
-              <ListItemText primary="Просмотр" />
-            </ListItem>
-            <ListItem
-              component="button"
-              sx={{ pl: 4 }}
-              onClick={() => navigate("/tasks/control")}
-            >
-              <ListItemText primary="Контроль" />
-            </ListItem>
-          </List>
-        </Collapse>
-        <ListItem component="button" onClick={() => navigate("/employees")}>
-          <ListItemIcon>
-            <PeopleIcon />
-          </ListItemIcon>
-          <ListItemText primary="Сотрудники" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/users")}>
-          <ListItemIcon>
-            <PeopleIcon />
-          </ListItemIcon>
-          <ListItemText primary="Пользователи" />
-        </ListItem>
-        <ListItem
-          component="button"
-          onClick={() => setLogsExpanded(!logsExpanded)}
-        >
-          <ListItemIcon>
-            <ListAltIcon />
-          </ListItemIcon>
-          <ListItemText primary="Журналы" />
-          {logsExpanded ? <ExpandLess /> : <ExpandMore />}
-        </ListItem>
-        <Collapse in={logsExpanded} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItem
-              component="button"
-              sx={{ pl: 4 }}
-              onClick={() => navigate("/logs/checks")}
-            >
-              <ListItemText primary="Проверки" />
-            </ListItem>
-            <ListItem
-              component="button"
-              sx={{ pl: 4 }}
-              onClick={() => navigate("/logs/defects")}
-            >
-              <ListItemText primary="Дефекты" />
-            </ListItem>
-          </List>
-        </Collapse>
-        <ListItem component="button" onClick={() => navigate("/objects")}>
-          <ListItemIcon>
-            <BuildIcon />
-          </ListItemIcon>
-          <ListItemText primary="Объекты" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/messages")}>
-          <ListItemIcon>
-            <MessageIcon />
-          </ListItemIcon>
-          <ListItemText primary="Сообщения" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/instructions")}>
-          <ListItemIcon>
-            <HelpIcon />
-          </ListItemIcon>
-          <ListItemText primary="Инструкции" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/settings")}>
-          <ListItemIcon>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Настройки" />
-        </ListItem>
-        <ListItem component="button" onClick={() => navigate("/help")}>
-          <ListItemIcon>
-            <HelpIcon />
-          </ListItemIcon>
-          <ListItemText primary="Нужна помощь?" />
-        </ListItem>
-        <ListItem component="button" onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText primary="Выход" />
-        </ListItem>
-      </List>
+      {/* Главное меню */}
+      <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
+        <List>
+          <NavItem to="/dashboard" icon={<DashboardIcon />} text="Главная" />
+          <NavItem to="/calendar" icon={<CalendarIcon />} text="Календарь" />
+
+          <ListItemButton onClick={() => setTasksOpen((prev) => !prev)}>
+            <ListItemIcon>
+              <AssignmentIcon />
+            </ListItemIcon>
+            <ListItemText primary="Задания" />
+            {tasksOpen ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+          <Collapse in={tasksOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <NestedNavItem to="/tasks/create" text="Создать" />
+              <NestedNavItem to="/tasks/view" text="Просмотр" />
+              <NestedNavItem to="/tasks/control" text="Контроль" />
+            </List>
+          </Collapse>
+
+          <NavItem to="/employees" icon={<PeopleIcon />} text="Сотрудники" />
+          <NavItem to="/users" icon={<PeopleIcon />} text="Пользователи" />
+
+          <ListItemButton onClick={() => setLogsOpen((prev) => !prev)}>
+            <ListItemIcon>
+              <ListAltIcon />
+            </ListItemIcon>
+            <ListItemText primary="Журналы" />
+            {logsOpen ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+          <Collapse in={logsOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <NestedNavItem to="/logs/checks" text="Проверки" />
+              <NestedNavItem to="/logs/defects" text="Дефекты" />
+            </List>
+          </Collapse>
+
+          <NavItem to="/objects" icon={<BuildIcon />} text="Объекты" />
+          <NavItem to="/messages" icon={<MessageIcon />} text="Сообщения" />
+        </List>
+      </Box>
+
+      {/* Разделитель */}
+      <Divider />
+
+      {/* Дополнительное меню */}
+      <Box>
+        <List>
+          <NavItem to="/instructions" icon={<HelpIcon />} text="Инструкции" />
+          <NavItem to="/settings" icon={<SettingsIcon />} text="Настройки" />
+          <NavItem to="/help" icon={<HelpIcon />} text="Нужна помощь?" />
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Выход" />
+          </ListItemButton>
+        </List>
+      </Box>
     </Drawer>
   );
 }
