@@ -28,6 +28,14 @@ export const DashboardPage = (): JSX.Element => {
       />
 
       <AppButton
+        type="simple"
+        label="Default"
+        variant="contained"
+        color="secondary"
+        size="medium"
+      />
+
+      <AppButton
         type="group"
         buttons={[
           { type: "simple", label: "One" },
