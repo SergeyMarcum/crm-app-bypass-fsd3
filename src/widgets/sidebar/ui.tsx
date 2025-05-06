@@ -1,3 +1,4 @@
+// src/widgets/sidebar/ui.tsx
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -9,6 +10,7 @@ import {
   Collapse,
   Box,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -29,6 +31,10 @@ import { useUser } from "@shared/hooks/use-user";
 interface SidebarProps {
   isOpen: boolean;
 }
+
+const DRAWER_WIDTH = 240;
+const MINI_WIDTH = 60;
+const HEADER_HEIGHT = 64;
 
 const linkStyle = {
   color: "inherit",
@@ -63,10 +69,26 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
   }) => (
     <NavLink to={to} style={linkStyle}>
       {({ isActive }) => (
-        <ListItemButton sx={isActive ? activeStyle : undefined}>
-          <ListItemIcon>{icon}</ListItemIcon>
-          <ListItemText primary={text} />
-        </ListItemButton>
+        <Tooltip title={isOpen ? "" : text} placement="right">
+          <ListItemButton
+            sx={{
+              ...(isActive ? activeStyle : {}),
+              justifyContent: isOpen ? "initial" : "center",
+              px: 2.5,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: isOpen ? 2 : "auto",
+                justifyContent: "center",
+              }}
+            >
+              {icon}
+            </ListItemIcon>
+            {isOpen && <ListItemText primary={text} />}
+          </ListItemButton>
+        </Tooltip>
       )}
     </NavLink>
   );
@@ -74,8 +96,14 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
   const NestedNavItem = ({ to, text }: { to: string; text: string }) => (
     <NavLink to={to} style={linkStyle}>
       {({ isActive }) => (
-        <ListItemButton sx={{ pl: 4, ...(isActive ? activeStyle : {}) }}>
-          <ListItemText primary={text} />
+        <ListItemButton
+          sx={{
+            pl: isOpen ? 4 : 2,
+            ...(isActive ? activeStyle : {}),
+            justifyContent: isOpen ? "initial" : "center",
+          }}
+        >
+          {isOpen && <ListItemText primary={text} />}
         </ListItemButton>
       )}
     </NavLink>
@@ -83,17 +111,23 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
 
   return (
     <Drawer
-      variant="persistent"
+      variant="permanent"
       open={isOpen}
       sx={{
-        width: 240,
+        width: isOpen ? DRAWER_WIDTH : MINI_WIDTH,
         flexShrink: 0,
+        whiteSpace: "nowrap",
         "& .MuiDrawer-paper": {
-          width: 240,
+          width: isOpen ? DRAWER_WIDTH : MINI_WIDTH,
+          mt: `${HEADER_HEIGHT}px`,
+          overflowX: "hidden",
+          transition: (theme) =>
+            theme.transitions.create("width", {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.standard,
+            }),
           boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
+          borderRight: "1px solid rgba(0,0,0,0.12)",
         },
       }}
     >
@@ -103,12 +137,15 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
           <NavItem to="/dashboard" icon={<DashboardIcon />} text="Главная" />
           <NavItem to="/calendar" icon={<CalendarIcon />} text="Календарь" />
 
-          <ListItemButton onClick={() => setTasksOpen((prev) => !prev)}>
-            <ListItemIcon>
+          <ListItemButton
+            onClick={() => setTasksOpen((prev) => !prev)}
+            sx={{ justifyContent: isOpen ? "initial" : "center" }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isOpen ? 2 : "auto" }}>
               <AssignmentIcon />
             </ListItemIcon>
-            <ListItemText primary="Задания" />
-            {tasksOpen ? <ExpandLess /> : <ExpandMore />}
+            {isOpen && <ListItemText primary="Задания" />}
+            {isOpen && (tasksOpen ? <ExpandLess /> : <ExpandMore />)}
           </ListItemButton>
           <Collapse in={tasksOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
@@ -121,12 +158,15 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
           <NavItem to="/employees" icon={<PeopleIcon />} text="Сотрудники" />
           <NavItem to="/users" icon={<PeopleIcon />} text="Пользователи" />
 
-          <ListItemButton onClick={() => setLogsOpen((prev) => !prev)}>
-            <ListItemIcon>
+          <ListItemButton
+            onClick={() => setLogsOpen((prev) => !prev)}
+            sx={{ justifyContent: isOpen ? "initial" : "center" }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isOpen ? 2 : "auto" }}>
               <ListAltIcon />
             </ListItemIcon>
-            <ListItemText primary="Журналы" />
-            {logsOpen ? <ExpandLess /> : <ExpandMore />}
+            {isOpen && <ListItemText primary="Журналы" />}
+            {isOpen && (logsOpen ? <ExpandLess /> : <ExpandMore />)}
           </ListItemButton>
           <Collapse in={logsOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
@@ -143,17 +183,20 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
       {/* Разделитель */}
       <Divider />
 
-      {/* Дополнительное меню */}
+      {/* Нижнее меню */}
       <Box>
         <List>
           <NavItem to="/instructions" icon={<HelpIcon />} text="Инструкции" />
           <NavItem to="/settings" icon={<SettingsIcon />} text="Настройки" />
           <NavItem to="/help" icon={<HelpIcon />} text="Нужна помощь?" />
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{ justifyContent: isOpen ? "initial" : "center" }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isOpen ? 2 : "auto" }}>
               <LogoutIcon />
             </ListItemIcon>
-            <ListItemText primary="Выход" />
+            {isOpen && <ListItemText primary="Выход" />}
           </ListItemButton>
         </List>
       </Box>
