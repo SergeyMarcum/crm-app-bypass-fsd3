@@ -10,7 +10,10 @@ import {
   Box,
 } from "@mui/material";
 import { Link } from "react-router-dom";
-import { AppButton, AppButtonProps } from "@shared/ui/app-button";
+import {
+  AppButton,
+  AppButtonProps,
+} from "@/shared/ui/custom-component/app-button";
 
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";

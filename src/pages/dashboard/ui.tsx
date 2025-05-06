@@ -2,7 +2,7 @@
 import { PageContainer } from "@toolpad/core/PageContainer";
 import { Typography } from "@mui/material";
 import type { JSX } from "react";
-import { AppButton } from "@/shared/ui/app-button";
+import { AppButton } from "@/shared/ui/custom-component/app-button";
 import SaveIcon from "@mui/icons-material/Save";
 import DeleteIcon from "@mui/icons-material/Delete";
 
