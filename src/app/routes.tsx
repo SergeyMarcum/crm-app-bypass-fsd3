@@ -16,6 +16,7 @@ import { HelpPage } from "@pages/help";
 import { SettingsPage } from "@pages/settings";
 import { CheckLogsPage } from "@pages/logs/checks";
 import { DefectLogsPage } from "@pages/logs/defects";
+import { ButtonsPage } from "@pages/ui-kit/button";
 
 const ProtectedRoute = ({
   children,
@@ -153,6 +154,8 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+      <Route path="/ui-kit/buttons" element={<ButtonsPage />} />
+
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
