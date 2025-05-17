@@ -1,8 +1,9 @@
-import { AgGridReact } from "ag-grid-react"; // React Data Grid Component
-import { useMemo, useRef } from "react";
+// src/widgets/table/ui.tsx
+import { useMemo, useRef, useState } from "react";
+import { AgGridReact } from "ag-grid-react";
 import { AgGridReactProps } from "ag-grid-react";
-import "@ag-grid-community/styles/ag-grid.css";
-import "@ag-grid-community/styles/ag-theme-alpine.css";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
 
 import {
   Button,
@@ -16,18 +17,26 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTableStore } from "./model/store";
 
+// Тип фильтров для формы и Zustand
+type TableFilterState = {
+  email?: string;
+  department?: string;
+  phone?: string;
+};
+
+// Тип строки данных таблицы
 type RowData = {
-  id: string;
-  full_name: string;
-  company: string;
-  email: string;
+  id: number;
+  full_name: string | null;
+  email: string | null;
+  department: string | null;
+  phone: string | null;
   role_id: number;
-  status_id: number;
-  domain: string;
-  name: string;
-  position: string;
-  department: string;
-  phone: string;
+  status_id: number | null;
+  company: string | null;
+  domain: string | null;
+  name: string | null;
+  position: string | null;
 };
 
 type Props = {
@@ -55,10 +64,15 @@ export const CustomTable = ({
     defaultValues: filters,
   });
 
+  const [filterField, setFilterField] = useState<keyof TableFilterState | null>(
+    null
+  );
+
   const onApplyFilters = handleSubmit((values) => {
     Object.entries(values).forEach(([key, value]) => {
-      if (value) setFilter(key as keyof typeof filters, value);
+      if (value) setFilter(key as keyof TableFilterState, value);
     });
+    setFilterField(null); // Закрыть окно после применения
   });
 
   const onResetFilters = () => {
@@ -82,36 +96,54 @@ export const CustomTable = ({
   return (
     <div className="ag-theme-alpine" style={{ height: 600 }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <Button onClick={onResetFilters}>Сбросить фильтры</Button>
-        <Dialog open={true}>
-          <DialogTitle>Фильтры</DialogTitle>
-          <DialogContent>
-            <form onSubmit={onApplyFilters}>
+        <Button onClick={() => setFilterField("email")} variant="outlined">
+          Фильтр по Email
+        </Button>
+        <Button onClick={() => setFilterField("phone")} variant="outlined">
+          Фильтр по Телефону
+        </Button>
+        <Button onClick={() => setFilterField("department")} variant="outlined">
+          Фильтр по Отделу
+        </Button>
+        <Button onClick={onResetFilters} variant="outlined" color="secondary">
+          Сбросить фильтры
+        </Button>
+      </div>
+
+      <Dialog open={filterField !== null} onClose={() => setFilterField(null)}>
+        <DialogTitle>Фильтрация</DialogTitle>
+        <DialogContent>
+          <form onSubmit={onApplyFilters}>
+            {filterField === "email" && (
               <TextField
                 label="Email"
                 {...register("email")}
                 fullWidth
                 margin="dense"
               />
+            )}
+            {filterField === "phone" && (
               <TextField
                 label="Телефон"
                 {...register("phone")}
                 fullWidth
                 margin="dense"
               />
+            )}
+            {filterField === "department" && (
               <TextField
                 label="Отдел"
                 {...register("department")}
                 fullWidth
                 margin="dense"
               />
-              <Button type="submit" variant="contained">
-                Применить
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            )}
+            <Button type="submit" variant="contained" sx={{ mt: 2 }}>
+              Применить
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AgGridReact
         ref={gridRef}
