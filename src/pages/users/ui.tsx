@@ -1,119 +1,144 @@
 // src/pages/users/ui.tsx
-import { Box, Typography } from "@mui/material";
-import { AppTables } from "@shared/ui/custom-component/app-tables";
-import { ColDef } from "ag-grid-community";
-import { useUserList } from "@features/user-list";
-import { useUser } from "@shared/hooks/use-user";
-import { userApi } from "@shared/api/user";
-import { NormalizedUser, EditUserPayload } from "@entities/user/types";
-import { roleMap, statusMap } from "@entities/user";
+import { useEffect, useState, useMemo } from "react";
+import {
+  Tabs,
+  Tab,
+  Typography,
+  Box,
+  MenuItem,
+  Select,
+  Button,
+} from "@mui/material";
+import { CustomTable } from "@/widgets/table";
+import { userApi } from "@/shared/api/user";
+import { User } from "@/entities/user/types";
+import { useTableStore } from "@/widgets/table/model/store";
+import {
+  mapRoleIdToLabel,
+  mapStatusIdToLabel,
+} from "@/entities/user/model/normalize";
+import { EditButton } from "@/features/user-list/ui/edit-button";
 
-const columns: ColDef<NormalizedUser>[] = [
-  { headerName: "№", field: "id", width: 80 },
-  { headerName: "ФИО", field: "fullName" },
-  { headerName: "Отдел", field: "department" },
-  { headerName: "Email", field: "email" },
-  { headerName: "Телефон", field: "phone" },
-  { headerName: "Права доступа", field: "accessRights" },
-  { headerName: "Статус", field: "status" },
+const statusTabs = [
+  { label: "Все", value: null },
+  { label: "Работает", value: 1 },
+  { label: "Больничный", value: 5 },
+  { label: "Командировка", value: 4 },
+  { label: "Отпуск", value: 3 },
+  { label: "Уволены", value: 2 },
 ];
 
-const tabLabels = [
-  "Все",
-  "Работает",
-  "Больничный",
-  "Командировка",
-  "Отпуск",
-  "Уволен(а)",
-];
+export const UsersPage = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [statusFilter, setStatusFilter] = useState<number | null>(null);
+  const [sortDirection, setSortDirection] = useState<"new" | "old">("new");
+  const { filters } = useTableStore();
 
-const UsersPage = () => {
-  const { users, departments, isLoading, error } = useUserList();
-  const { user } = useUser();
-  const canEdit = [
-    "Администратор ИТЦ",
-    "Администратор Общества",
-    "Администратор Филиала",
-  ].includes(user?.accessRights || "");
+  useEffect(() => {
+    userApi.getCompanyUsers().then((res) => setUsers(res.users));
+  }, []);
 
-  const tabData = [
-    users,
-    users.filter((row) => row.status === "Работает"),
-    users.filter((row) => row.status === "Больничный"),
-    users.filter((row) => row.status === "Командировка"),
-    users.filter((row) => row.status === "Отпуск"),
-    users.filter((row) => row.status === "Уволен(а)"),
+  const filtered = useMemo(() => {
+    let data = [...users];
+
+    if (statusFilter !== null) {
+      data = data.filter((u) => u.status_id === statusFilter);
+    }
+
+    Object.entries(filters).forEach(([field, value]) => {
+      data = data.filter((u) =>
+        String(u[field as keyof User] ?? "")
+          .toLowerCase()
+          .includes(value.toLowerCase())
+      );
+    });
+
+    if (sortDirection === "new") {
+      data.sort((a, b) => b.id - a.id);
+    } else {
+      data.sort((a, b) => a.id - b.id);
+    }
+
+    return data;
+  }, [users, filters, statusFilter, sortDirection]);
+
+  const columns = [
+    {
+      headerName: "",
+      checkboxSelection: true,
+      width: 40,
+    },
+    {
+      headerName: "#",
+      valueGetter: "node.rowIndex + 1",
+      width: 60,
+    },
+    {
+      headerName: "ФИО / Email",
+      valueGetter: (params: { data: User }) =>
+        `${params.data.full_name || ""} / ${params.data.email || ""}`,
+    },
+    {
+      headerName: "Отдел",
+      field: "department",
+    },
+    {
+      headerName: "Телефон",
+      field: "phone",
+    },
+    {
+      headerName: "Права доступа",
+      valueGetter: (params: { data: User }) =>
+        mapRoleIdToLabel(params.data.role_id),
+    },
+    {
+      headerName: "Статус",
+      valueGetter: (params: { data: User }) =>
+        mapStatusIdToLabel(params.data.status_id ?? -1),
+    },
+    {
+      headerName: "Действия",
+      cellRenderer: (params: { data: User }) => (
+        <EditButton user={params.data} />
+      ),
+    },
   ];
 
-  const handleEdit = async (row: NormalizedUser) => {
-    const roleId = Object.entries(roleMap).find(
-      ([_, value]) => value === row.accessRights
-    )?.[0];
-    const statusId = Object.entries(statusMap).find(
-      ([_, value]) => value === row.status
-    )?.[0];
-
-    if (!roleId || !statusId) {
-      console.error("Invalid role or status:", row.accessRights, row.status);
-      return;
-    }
-
-    const payload: EditUserPayload = {
-      user_id: row.id,
-      name: row.name,
-      full_name: row.fullName,
-      position: row.position,
-      company: row.company,
-      department: row.department,
-      email: row.email,
-      phone: row.phone,
-      role_id: Number(roleId),
-      status_id: Number(statusId),
-    };
-
-    try {
-      await userApi.editUser(payload);
-      console.log("User updated:", row);
-    } catch (error) {
-      console.error("Failed to update user:", error);
-    }
-  };
-
-  if (isLoading) return <Typography>Загрузка...</Typography>;
-  if (error) {
-    const errorMessage =
-      error instanceof Error
-        ? error.message.includes("Network Error")
-          ? "Не удалось подключиться к серверу. Проверьте соединение или попробуйте позже."
-          : error.message
-        : "Произошла неизвестная ошибка";
-    return <Typography color="error">{errorMessage}</Typography>;
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
+    <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Список пользователей
       </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+      <Typography variant="subtitle1" gutterBottom>
         Информация по пользователям данного филиала
       </Typography>
-      <AppTables
-        tableType="with-tabs"
-        columns={columns}
-        data={users}
-        tabLabels={tabLabels}
-        tabData={tabData}
-        onEdit={canEdit ? handleEdit : undefined}
-        filters={{
-          email: true,
-          department: departments,
-          phone: true,
-        }}
-        paginationOptions={[10, 25, 50]}
-      />
+
+      <Tabs
+        value={statusFilter}
+        onChange={(_, v) => setStatusFilter(v)}
+        sx={{ my: 2 }}
+      >
+        {statusTabs.map((tab) => (
+          <Tab key={tab.label} label={tab.label} value={tab.value} />
+        ))}
+      </Tabs>
+
+      <Box display="flex" gap={2} alignItems="center" mb={2}>
+        <Button variant="outlined">Фильтр по Email</Button>
+        <Button variant="outlined">Фильтр по отделу</Button>
+        <Button variant="outlined">Фильтр по телефону</Button>
+
+        <Select
+          value={sortDirection}
+          onChange={(e) => setSortDirection(e.target.value as "new" | "old")}
+          size="small"
+        >
+          <MenuItem value="new">Сначала новые записи</MenuItem>
+          <MenuItem value="old">Сначала старые записи</MenuItem>
+        </Select>
+      </Box>
+
+      <CustomTable rowData={filtered} columnDefs={columns} />
     </Box>
   );
 };
-
-export { UsersPage };
