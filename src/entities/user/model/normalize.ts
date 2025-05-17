@@ -35,3 +35,9 @@ export const normalizeUser = (user: User): NormalizedUser => ({
 
 export const normalizeUsers = (users: User[]): NormalizedUser[] =>
   users.map(normalizeUser);
+
+export const mapRoleIdToLabel = (roleId: number): string =>
+  roleMap[roleId] || "Неизвестно";
+
+export const mapStatusIdToLabel = (statusId: number): string =>
+  statusMap[statusId] || "Неизвестно";
