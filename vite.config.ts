@@ -39,7 +39,23 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+
+      "/all-users-company": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/current-user": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
       "/check-auth": {
+        target: "http://192.168.1.248:8080",
+        changeOrigin: true,
+        secure: false,
+      },
+      "/edit-user": {
         target: "http://192.168.1.248:8080",
         changeOrigin: true,
         secure: false,

@@ -35,7 +35,10 @@ export const UsersPage = () => {
   const { filters } = useTableStore();
 
   useEffect(() => {
-    userApi.getCompanyUsers().then((res) => setUsers(res.users));
+    userApi.getCompanyUsers().then((res) => {
+      console.log("✅ USERS LOADED:", res.users); // проверить в консоли
+      setUsers(res.users);
+    });
   }, []);
 
   const filtered = useMemo(() => {

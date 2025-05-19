@@ -2,6 +2,14 @@
 import { useMemo, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AgGridReactProps } from "ag-grid-react";
+
+import {
+  ModuleRegistry,
+  ClientSideRowModelModule,
+  RowSelectionModule,
+  PaginationModule,
+} from "ag-grid-community";
+
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
@@ -12,20 +20,26 @@ import {
   DialogContent,
   TextField,
 } from "@mui/material";
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTableStore } from "./model/store";
 
-// Тип фильтров для формы и Zustand
+// ✅ Регистрируем необходимые модули
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  RowSelectionModule,
+  PaginationModule,
+]);
+
 type TableFilterState = {
   email?: string;
   department?: string;
   phone?: string;
 };
 
-// Тип строки данных таблицы
-type RowData = {
+export type RowData = {
   id: number;
   full_name: string | null;
   email: string | null;
@@ -72,7 +86,7 @@ export const CustomTable = ({
     Object.entries(values).forEach(([key, value]) => {
       if (value) setFilter(key as keyof TableFilterState, value);
     });
-    setFilterField(null); // Закрыть окно после применения
+    setFilterField(null);
   });
 
   const onResetFilters = () => {
@@ -151,6 +165,8 @@ export const CustomTable = ({
         columnDefs={columnDefs}
         pagination={pagination}
         rowSelection="multiple"
+        animateRows
+        domLayout="autoHeight"
       />
     </div>
   );

@@ -24,7 +24,7 @@ import { z } from "zod";
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm(): ReactElement {
-  const { domains, isLoading, error, login, fetchDomains } = useAuth();
+  const { domains, isLoading, login } = useAuth();
 
   const {
     control,
@@ -41,16 +41,28 @@ export function LoginForm(): ReactElement {
     },
   });
 
+  // 🧠 Восстановление домена из localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("auth_domain");
-    if (saved && domains.some((d) => d.id === saved)) {
-      setValue("domain", saved);
+    const savedDomain = localStorage.getItem("auth_domain");
+    if (savedDomain && domains.some((d) => d.id === savedDomain)) {
+      setValue("domain", savedDomain);
     }
   }, [domains, setValue]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login(data);
+      // 🔐 Вызов логина
+      const response = await login(data);
+
+      // ✅ Сохраняем ключевые данные (предотвращает ошибки на protected pages)
+      localStorage.setItem("auth_domain", data.domain);
+      localStorage.setItem("username", data.username);
+      //localStorage.setItem("session_token", response.session_token);
+
+      if (data.rememberMe) {
+        // можно добавить куку или персистентное хранилище
+      }
+
       toast.success("Успешный вход");
     } catch {
       toast.error("Ошибка авторизации");
@@ -80,7 +92,7 @@ export function LoginForm(): ReactElement {
         onSubmit={handleSubmit(onSubmit)}
         sx={{ width: "100%" }}
       >
-        {/* DOMAIN */}
+        {/* DOMAIN SELECT */}
         <FormControl fullWidth margin="normal" error={!!errors.domain}>
           <InputLabel id="domain-label">Домен</InputLabel>
           <Controller
@@ -115,7 +127,7 @@ export function LoginForm(): ReactElement {
                   ))
                 ) : (
                   <MenuItem value="" disabled>
-                    Нет доменов
+                    Нет доступных доменов
                   </MenuItem>
                 )}
               </Select>
@@ -175,7 +187,7 @@ export function LoginForm(): ReactElement {
           variant="contained"
           fullWidth
           sx={{ mt: 2 }}
-          disabled={isLoading || isSubmitting}
+          disabled={isSubmitting || isLoading}
         >
           {isSubmitting || isLoading ? <CircularProgress size={24} /> : "Войти"}
         </Button>
