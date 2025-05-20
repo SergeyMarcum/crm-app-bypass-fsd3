@@ -26,17 +26,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTableStore } from "./model/store";
 
-// ✅ Регистрируем необходимые модули
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   RowSelectionModule,
   PaginationModule,
 ]);
 
-type TableFilterState = {
-  email?: string;
-  department?: string;
-  phone?: string;
+export type FilterDefinition = {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
 };
 
 export type RowData = {
@@ -57,34 +56,38 @@ type Props = {
   rowData: RowData[];
   columnDefs: AgGridReactProps["columnDefs"];
   pagination?: boolean;
+  filters?: FilterDefinition[];
 };
-
-const filterSchema = z.object({
-  email: z.string().optional(),
-  department: z.string().optional(),
-  phone: z.string().optional(),
-});
 
 export const CustomTable = ({
   rowData,
   columnDefs,
   pagination = true,
+  filters = [],
 }: Props) => {
   const gridRef = useRef<AgGridReact>(null);
-  const { filters, resetFilters, setFilter } = useTableStore();
+  const { filters: globalFilters, resetFilters, setFilter } = useTableStore();
+
+  const schemaShape = filters.reduce(
+    (acc, f) => {
+      acc[f.key] = z.string().optional();
+      return acc;
+    },
+    {} as Record<string, z.ZodTypeAny>
+  );
+
+  const formSchema = z.object(schemaShape);
 
   const { register, handleSubmit, reset } = useForm({
-    resolver: zodResolver(filterSchema),
-    defaultValues: filters,
+    resolver: zodResolver(formSchema),
+    defaultValues: globalFilters,
   });
 
-  const [filterField, setFilterField] = useState<keyof TableFilterState | null>(
-    null
-  );
+  const [filterField, setFilterField] = useState<string | null>(null);
 
   const onApplyFilters = handleSubmit((values) => {
     Object.entries(values).forEach(([key, value]) => {
-      if (value) setFilter(key as keyof TableFilterState, value);
+      if (value) setFilter(key, value);
     });
     setFilterField(null);
   });
@@ -94,9 +97,18 @@ export const CustomTable = ({
     resetFilters();
   };
 
+  const handleFilterClick = (key: string) => {
+    const isActive = !!globalFilters[key];
+    if (isActive) {
+      setFilter(key, "");
+    } else {
+      setFilterField(key);
+    }
+  };
+
   const filteredData = useMemo(() => {
     return rowData.filter((row) => {
-      return Object.entries(filters).every(([field, value]) => {
+      return Object.entries(globalFilters).every(([field, value]) => {
         return (
           !value ||
           String(row[field as keyof RowData] ?? "")
@@ -105,21 +117,31 @@ export const CustomTable = ({
         );
       });
     });
-  }, [filters, rowData]);
+  }, [globalFilters, rowData]);
 
   return (
     <div className="ag-theme-alpine" style={{ height: 600 }}>
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <Button onClick={() => setFilterField("email")} variant="outlined">
-          Фильтр по Email
-        </Button>
-        <Button onClick={() => setFilterField("phone")} variant="outlined">
-          Фильтр по Телефону
-        </Button>
-        <Button onClick={() => setFilterField("department")} variant="outlined">
-          Фильтр по Отделу
-        </Button>
-        <Button onClick={onResetFilters} variant="outlined" color="secondary">
+        {filters.map((filter) => {
+          const isActive = !!globalFilters[filter.key];
+          return (
+            <Button
+              key={filter.key}
+              onClick={() => handleFilterClick(filter.key)}
+              variant={isActive ? "outlined" : "contained"}
+              size="medium"
+              startIcon={filter.icon}
+            >
+              {filter.label}
+            </Button>
+          );
+        })}
+        <Button
+          onClick={onResetFilters}
+          variant="outlined"
+          color="secondary"
+          size="medium"
+        >
           Сбросить фильтры
         </Button>
       </div>
@@ -128,26 +150,10 @@ export const CustomTable = ({
         <DialogTitle>Фильтрация</DialogTitle>
         <DialogContent>
           <form onSubmit={onApplyFilters}>
-            {filterField === "email" && (
+            {filterField && (
               <TextField
-                label="Email"
-                {...register("email")}
-                fullWidth
-                margin="dense"
-              />
-            )}
-            {filterField === "phone" && (
-              <TextField
-                label="Телефон"
-                {...register("phone")}
-                fullWidth
-                margin="dense"
-              />
-            )}
-            {filterField === "department" && (
-              <TextField
-                label="Отдел"
-                {...register("department")}
+                label={filters.find((f) => f.key === filterField)?.label || ""}
+                {...register(filterField)}
                 fullWidth
                 margin="dense"
               />

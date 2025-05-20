@@ -1,14 +1,6 @@
 // src/pages/users/ui.tsx
 import { useEffect, useState, useMemo } from "react";
-import {
-  Tabs,
-  Tab,
-  Typography,
-  Box,
-  MenuItem,
-  Select,
-  Button,
-} from "@mui/material";
+import { Tabs, Tab, Typography, Box } from "@mui/material";
 import { CustomTable } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User } from "@/entities/user/types";
@@ -18,6 +10,9 @@ import {
   mapStatusIdToLabel,
 } from "@/entities/user/model/normalize";
 import { EditButton } from "@/features/user-list/ui/edit-button";
+import EmailIcon from "@mui/icons-material/Email";
+import PhoneIcon from "@mui/icons-material/Phone";
+import ApartmentIcon from "@mui/icons-material/Apartment";
 
 const statusTabs = [
   { label: "Все", value: null },
@@ -31,9 +26,13 @@ const statusTabs = [
 export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  const [sortDirection, setSortDirection] = useState<"new" | "old">("new");
+  const [sortDirection] = useState<"new" | "old">("new");
   const { filters } = useTableStore();
-
+  const filterDefinitions = [
+    { key: "email", label: "Email", icon: <EmailIcon /> },
+    { key: "phone", label: "Телефон", icon: <PhoneIcon /> },
+    { key: "department", label: "Отдел", icon: <ApartmentIcon /> },
+  ];
   useEffect(() => {
     userApi.getCompanyUsers().then((res) => {
       console.log("✅ USERS LOADED:", res.users); // проверить в консоли
@@ -126,22 +125,11 @@ export const UsersPage = () => {
         ))}
       </Tabs>
 
-      <Box display="flex" gap={2} alignItems="center" mb={2}>
-        <Button variant="outlined">Фильтр по Email</Button>
-        <Button variant="outlined">Фильтр по отделу</Button>
-        <Button variant="outlined">Фильтр по телефону</Button>
-
-        <Select
-          value={sortDirection}
-          onChange={(e) => setSortDirection(e.target.value as "new" | "old")}
-          size="small"
-        >
-          <MenuItem value="new">Сначала новые записи</MenuItem>
-          <MenuItem value="old">Сначала старые записи</MenuItem>
-        </Select>
-      </Box>
-
-      <CustomTable rowData={filtered} columnDefs={columns} />
+      <CustomTable
+        rowData={filtered}
+        columnDefs={columns}
+        filters={filterDefinitions}
+      />
     </Box>
   );
 };
