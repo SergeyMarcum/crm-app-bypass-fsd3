@@ -1,15 +1,17 @@
 // src/shared/api/user/client.ts
-
 import axios from "../axios";
 import { userSchema, editUserSchema } from "@shared/lib/schemas";
 import { EditUserPayload } from "@entities/user/types";
 import { z } from "zod";
 
-const getAuthParams = () => ({
-  domain: localStorage.getItem("auth_domain") || "",
-  username: localStorage.getItem("username") || "",
-  session_code: localStorage.getItem("session_token") || "",
-});
+const getAuthParams = () => {
+  const domain = localStorage.getItem("auth_domain") || "";
+  const username = localStorage.getItem("username") || "";
+  const session_code = localStorage.getItem("session_token") || "";
+
+  console.log("📦 Auth Params:", { domain, username, session_code });
+  return { domain, username, session_code };
+};
 
 export const userApi = {
   getCurrentUser: async () => {
