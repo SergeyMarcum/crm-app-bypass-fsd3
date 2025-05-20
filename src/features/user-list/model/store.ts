@@ -2,12 +2,28 @@
 import { create } from "zustand";
 import { User } from "@entities/user/types";
 
-interface UserListState {
-  users: User[];
-  setUsers: (users: User[]) => void;
+interface TableFilterState {
+  [key: string]: string | undefined;
 }
 
-export const useUserListStore = create<UserListState>((set) => ({
+interface UserListState {
+  users: User[];
+  filters: TableFilterState;
+  setUsers: (users: User[]) => void;
+  setFilter: (field: string, value?: string) => void;
+  resetFilters: () => void;
+}
+
+export const useTableStore = create<UserListState>((set) => ({
   users: [],
-  setUsers: (users: User[]): void => set({ users }),
+  filters: {},
+  setUsers: (users: User[]) => set({ users }),
+  setFilter: (field, value) =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        [field]: value,
+      },
+    })),
+  resetFilters: () => set({ filters: {} }),
 }));

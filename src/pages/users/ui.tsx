@@ -1,6 +1,7 @@
-// src/pages/users/ui.tsx
+// ✅ src/pages/users/ui.tsx
+
 import { useEffect, useState, useMemo } from "react";
-import { Tabs, Tab, Typography, Box } from "@mui/material";
+import { Tabs, Tab, Typography, Box, MenuItem, Select } from "@mui/material";
 import { CustomTable } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User } from "@/entities/user/types";
@@ -33,9 +34,9 @@ export const UsersPage = () => {
     { key: "phone", label: "Телефон", icon: <PhoneIcon /> },
     { key: "department", label: "Отдел", icon: <ApartmentIcon /> },
   ];
+
   useEffect(() => {
     userApi.getCompanyUsers().then((res) => {
-      console.log("✅ USERS LOADED:", res.users); // проверить в консоли
       setUsers(res.users);
     });
   }, []);
