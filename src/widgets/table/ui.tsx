@@ -1,18 +1,13 @@
 // src/widgets/table/ui.tsx
-import { useMemo, useRef, useState } from "react";
+import { forwardRef, useMemo, useState, ForwardedRef } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AgGridReactProps } from "ag-grid-react";
-
 import {
-  ModuleRegistry,
   ClientSideRowModelModule,
-  RowSelectionModule,
+  ModuleRegistry,
   PaginationModule,
+  RowSelectionModule,
 } from "ag-grid-community";
-
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-alpine.css";
-
 import {
   Button,
   Dialog,
@@ -20,10 +15,9 @@ import {
   DialogContent,
   TextField,
 } from "@mui/material";
-
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { useTableStore } from "./model/store";
 
 ModuleRegistry.registerModules([
@@ -59,121 +53,122 @@ type Props = {
   filters?: FilterDefinition[];
 };
 
-export const CustomTable = ({
-  rowData,
-  columnDefs,
-  pagination = true,
-  filters = [],
-}: Props) => {
-  const gridRef = useRef<AgGridReact>(null);
-  const { filters: globalFilters, resetFilters, setFilter } = useTableStore();
+export const CustomTable = forwardRef<AgGridReact, Props>(
+  ({ rowData, columnDefs, pagination = true, filters = [] }, ref) => {
+    const { filters: globalFilters, resetFilters, setFilter } = useTableStore();
 
-  const schemaShape = filters.reduce(
-    (acc, f) => {
-      acc[f.key] = z.string().optional();
-      return acc;
-    },
-    {} as Record<string, z.ZodTypeAny>
-  );
+    const schemaShape = filters.reduce(
+      (acc, f) => {
+        acc[f.key] = z.string().optional();
+        return acc;
+      },
+      {} as Record<string, z.ZodTypeAny>
+    );
 
-  const formSchema = z.object(schemaShape);
-
-  const { register, handleSubmit, reset } = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: globalFilters,
-  });
-
-  const [filterField, setFilterField] = useState<string | null>(null);
-
-  const onApplyFilters = handleSubmit((values) => {
-    Object.entries(values).forEach(([key, value]) => {
-      if (value) setFilter(key, value);
+    const formSchema = z.object(schemaShape);
+    const { register, handleSubmit, reset } = useForm({
+      resolver: zodResolver(formSchema),
+      defaultValues: globalFilters,
     });
-    setFilterField(null);
-  });
 
-  const onResetFilters = () => {
-    reset();
-    resetFilters();
-  };
+    const [filterField, setFilterField] = useState<string | null>(null);
 
-  const handleFilterClick = (key: string) => {
-    const isActive = !!globalFilters[key];
-    if (isActive) {
-      setFilter(key, "");
-    } else {
-      setFilterField(key);
-    }
-  };
-
-  const filteredData = useMemo(() => {
-    return rowData.filter((row) => {
-      return Object.entries(globalFilters).every(([field, value]) => {
-        return (
-          !value ||
-          String(row[field as keyof RowData] ?? "")
-            .toLowerCase()
-            .includes(value.toLowerCase())
-        );
+    const onApplyFilters = handleSubmit((values) => {
+      Object.entries(values).forEach(([key, value]) => {
+        if (value) setFilter(key, value);
       });
+      setFilterField(null);
     });
-  }, [globalFilters, rowData]);
 
-  return (
-    <div className="ag-theme-alpine" style={{ height: 600 }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        {filters.map((filter) => {
-          const isActive = !!globalFilters[filter.key];
+    const onResetFilters = () => {
+      reset();
+      resetFilters();
+    };
+
+    const handleFilterClick = (key: string) => {
+      const isActive = !!globalFilters[key];
+      if (isActive) {
+        setFilter(key, "");
+      } else {
+        setFilterField(key);
+      }
+    };
+
+    const filteredData = useMemo(() => {
+      return rowData.filter((row) => {
+        return Object.entries(globalFilters).every(([field, value]) => {
           return (
-            <Button
-              key={filter.key}
-              onClick={() => handleFilterClick(filter.key)}
-              variant={isActive ? "outlined" : "contained"}
-              size="medium"
-              startIcon={filter.icon}
-            >
-              {filter.label}
-            </Button>
+            !value ||
+            String(row[field as keyof RowData] ?? "")
+              .toLowerCase()
+              .includes(value.toLowerCase())
           );
-        })}
-        <Button
-          onClick={onResetFilters}
-          variant="outlined"
-          color="secondary"
-          size="medium"
+        });
+      });
+    }, [globalFilters, rowData]);
+
+    return (
+      <div className="ag-theme-alpine" style={{ height: 600 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          {filters.map((filter) => {
+            const isActive = !!globalFilters[filter.key];
+            return (
+              <Button
+                key={filter.key}
+                onClick={() => handleFilterClick(filter.key)}
+                variant={isActive ? "outlined" : "contained"}
+                size="medium"
+                startIcon={filter.icon}
+              >
+                {filter.label}
+              </Button>
+            );
+          })}
+          <Button
+            onClick={onResetFilters}
+            variant="outlined"
+            color="secondary"
+            size="medium"
+          >
+            Сбросить фильтры
+          </Button>
+        </div>
+
+        <Dialog
+          open={filterField !== null}
+          onClose={() => setFilterField(null)}
         >
-          Сбросить фильтры
-        </Button>
+          <DialogTitle>Фильтрация</DialogTitle>
+          <DialogContent>
+            <form onSubmit={onApplyFilters}>
+              {filterField && (
+                <TextField
+                  label={
+                    filters.find((f) => f.key === filterField)?.label || ""
+                  }
+                  {...register(filterField)}
+                  fullWidth
+                  margin="dense"
+                />
+              )}
+              <Button type="submit" variant="contained" sx={{ mt: 2 }}>
+                Применить
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AgGridReact
+          ref={ref as ForwardedRef<AgGridReact>}
+          rowData={filteredData}
+          columnDefs={columnDefs}
+          pagination={pagination}
+          rowSelection="multiple"
+          animateRows
+          domLayout="autoHeight"
+          editType="fullRow" // 🔥 ключевая строка
+        />
       </div>
-
-      <Dialog open={filterField !== null} onClose={() => setFilterField(null)}>
-        <DialogTitle>Фильтрация</DialogTitle>
-        <DialogContent>
-          <form onSubmit={onApplyFilters}>
-            {filterField && (
-              <TextField
-                label={filters.find((f) => f.key === filterField)?.label || ""}
-                {...register(filterField)}
-                fullWidth
-                margin="dense"
-              />
-            )}
-            <Button type="submit" variant="contained" sx={{ mt: 2 }}>
-              Применить
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <AgGridReact
-        ref={gridRef}
-        rowData={filteredData}
-        columnDefs={columnDefs}
-        pagination={pagination}
-        rowSelection="multiple"
-        animateRows
-        domLayout="autoHeight"
-      />
-    </div>
-  );
-};
+    );
+  }
+);
