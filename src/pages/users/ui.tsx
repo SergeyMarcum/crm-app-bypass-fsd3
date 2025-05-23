@@ -1,7 +1,7 @@
-// ✅ src/pages/users/ui.tsx
-
-import { useEffect, useState, useMemo } from "react";
-import { Tabs, Tab, Typography, Box, MenuItem, Select } from "@mui/material";
+// src/pages/users/ui.tsx
+import { useEffect, useState, useMemo, useRef } from "react";
+import { Tabs, Tab, Typography, Box } from "@mui/material";
+import { AgGridReact } from "ag-grid-react";
 import { CustomTable } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User } from "@/entities/user/types";
@@ -14,6 +14,7 @@ import { EditButton } from "@/features/user-list/ui/edit-button";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import ApartmentIcon from "@mui/icons-material/Apartment";
+import type { ICellRendererParams } from "ag-grid-community";
 
 const statusTabs = [
   { label: "Все", value: null },
@@ -26,9 +27,12 @@ const statusTabs = [
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
   const [sortDirection] = useState<"new" | "old">("new");
   const { filters } = useTableStore();
+  const gridRef = useRef<AgGridReact<User>>(null);
+
   const filterDefinitions = [
     { key: "email", label: "Email", icon: <EmailIcon /> },
     { key: "phone", label: "Телефон", icon: <PhoneIcon /> },
@@ -38,6 +42,13 @@ export const UsersPage = () => {
   useEffect(() => {
     userApi.getCompanyUsers().then((res) => {
       setUsers(res.users);
+      setDepartments(
+        Array.from(
+          new Set(
+            res.users.map((u) => u.department).filter((d): d is string => !!d)
+          )
+        )
+      );
     });
   }, []);
 
@@ -66,44 +77,59 @@ export const UsersPage = () => {
   }, [users, filters, statusFilter, sortDirection]);
 
   const columns = [
+    { headerName: "", checkboxSelection: true, width: 40 },
+    { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
     {
-      headerName: "",
-      checkboxSelection: true,
-      width: 40,
+      headerName: "ФИО",
+      field: "full_name",
+      editable: true,
+      cellEditor: "agTextCellEditor",
     },
     {
-      headerName: "#",
-      valueGetter: "node.rowIndex + 1",
-      width: 60,
-    },
-    {
-      headerName: "ФИО / Email",
-      valueGetter: (params: { data: User }) =>
-        `${params.data.full_name || ""} / ${params.data.email || ""}`,
-    },
-    {
-      headerName: "Отдел",
-      field: "department",
+      headerName: "Email",
+      field: "email",
+      editable: true,
+      cellEditor: "agTextCellEditor",
     },
     {
       headerName: "Телефон",
       field: "phone",
+      editable: true,
+      cellEditor: "agTextCellEditor",
+    },
+    {
+      headerName: "Отдел",
+      field: "department",
+      editable: true,
+      cellEditor: "agSelectCellEditor",
+      cellEditorParams: { values: departments },
     },
     {
       headerName: "Права доступа",
-      valueGetter: (params: { data: User }) =>
-        mapRoleIdToLabel(params.data.role_id),
+      field: "role_id",
+      editable: true,
+      cellEditor: "agSelectCellEditor",
+      cellEditorParams: { values: [1, 2, 3, 4, 5, 6, 7, 8] },
+      valueFormatter: (params: { value: number }) =>
+        mapRoleIdToLabel(params.value),
     },
     {
       headerName: "Статус",
-      valueGetter: (params: { data: User }) =>
-        mapStatusIdToLabel(params.data.status_id ?? -1),
+      field: "status_id",
+      editable: true,
+      cellEditor: "agSelectCellEditor",
+      cellEditorParams: { values: [1, 2, 3, 4, 5] },
+      valueFormatter: (params: { value: number }) =>
+        mapStatusIdToLabel(params.value),
     },
     {
       headerName: "Действия",
-      cellRenderer: (params: { data: User }) => (
-        <EditButton user={params.data} />
-      ),
+      field: "actions",
+      cellRenderer: EditButton,
+      cellRendererParams: (params: ICellRendererParams<User>) => ({
+        user: params.data,
+        api: params.api,
+      }),
     },
   ];
 
@@ -127,6 +153,7 @@ export const UsersPage = () => {
       </Tabs>
 
       <CustomTable
+        ref={gridRef}
         rowData={filtered}
         columnDefs={columns}
         filters={filterDefinitions}
