@@ -1,31 +1,48 @@
-// ✅ src/features/user-list/ui/edit-button.tsx
-
+// src/features/user-list/ui/edit-button.tsx
 import { IconButton, Tooltip } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
-import { useState } from "react";
-import { userApi } from "@shared/api/user";
+import { GridApi, IRowNode } from "ag-grid-community";
 import { User } from "@/entities/user/types";
+import { userApi } from "@/shared/api/user";
 
-export const EditButton = ({ user }: { user: User }) => {
-  const [isEditing, setIsEditing] = useState(false);
+type EditButtonProps = {
+  user: User;
+  api: GridApi<User>;
+};
+
+export const EditButton = ({ user, api }: EditButtonProps) => {
+  const node: IRowNode<User> | undefined = api.getRowNode(user.id.toString());
+  if (!node || !node.data) return null;
+
+  const isEditing = api
+    .getEditingCells()
+    .some((cell) => cell.rowIndex === node.rowIndex);
+
+  const handleEdit = () => {
+    api.startEditingCell({ rowIndex: node.rowIndex!, colKey: "full_name" });
+  };
 
   const handleSave = async () => {
-    try {
-      const payload = {
-        user_id: user.id,
-        full_name: user.full_name ?? "",
-        email: user.email ?? "",
-        phone: user.phone ?? "",
-        department: user.department ?? "",
-        role_id: user.role_id,
-        status_id: user.status_id ?? 1,
-      };
+    api.stopEditing(false);
+    const updated = node.data;
+    if (!updated) return;
 
-      await userApi.editUser(payload);
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Ошибка при сохранении:", error);
+    try {
+      await userApi.editUser({
+        user_id: updated.id,
+        full_name: updated.full_name ?? "",
+        email: updated.email ?? "",
+        phone: updated.phone ?? "",
+        department: updated.department ?? "",
+        role_id: updated.role_id,
+        status_id: updated.status_id ?? 1,
+        name: updated.name,
+        position: updated.position ?? "",
+        company: updated.company ?? "",
+      });
+    } catch (err) {
+      console.error("Ошибка при сохранении", err);
     }
   };
 
@@ -34,7 +51,7 @@ export const EditButton = ({ user }: { user: User }) => {
       <IconButton
         size="small"
         color={isEditing ? "success" : "primary"}
-        onClick={isEditing ? handleSave : () => setIsEditing(true)}
+        onClick={isEditing ? handleSave : handleEdit}
       >
         {isEditing ? (
           <SaveIcon fontSize="small" />
