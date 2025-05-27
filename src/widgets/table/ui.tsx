@@ -166,7 +166,7 @@ export const CustomTable = forwardRef<AgGridReact, Props>(
           rowSelection="multiple"
           animateRows
           domLayout="autoHeight"
-          editType="fullRow" // 🔥 ключевая строка
+          getRowId={(params) => params.data.id.toString()}
         />
       </div>
     );

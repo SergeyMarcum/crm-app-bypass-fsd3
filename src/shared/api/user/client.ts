@@ -40,7 +40,19 @@ export const userApi = {
     const response = await axios.put("/edit-user", payload, {
       params: getAuthParams(),
     });
-    return editUserSchema.parse(response.data);
+    // New parsing logic:
+    if (response.data && response.data.user) {
+      return editUserSchema.parse(response.data.user);
+    } else {
+      // Log the problematic response for easier debugging if this case is hit
+      console.error(
+        "Server response did not contain expected 'user' object:",
+        response.data
+      );
+      throw new Error(
+        "User data not found or invalid structure in server response."
+      );
+    }
   },
 
   dismissUser: async (userId: number) => {
