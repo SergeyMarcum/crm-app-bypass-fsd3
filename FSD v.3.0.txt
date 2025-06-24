@@ -405,4 +405,3 @@ crm-app-bypass/
 - vite.config.ts: Настройки Vite, включая алиасы.
 - package.json: Зависимости и скрипты.
 - README.md: Документация проекта.
-
