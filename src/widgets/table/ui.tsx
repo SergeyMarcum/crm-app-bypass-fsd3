@@ -1,7 +1,6 @@
 // src/widgets/table/ui.tsx
-import { forwardRef, useMemo, useState, ForwardedRef } from "react";
-import { AgGridReact } from "ag-grid-react";
-import { AgGridReactProps } from "ag-grid-react";
+import { forwardRef, useMemo, useState, ReactNode, ForwardedRef } from "react";
+import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import {
   ClientSideRowModelModule,
   ModuleRegistry,
@@ -11,14 +10,15 @@ import {
 import {
   Button,
   Dialog,
-  DialogTitle,
   DialogContent,
+  DialogTitle,
   TextField,
 } from "@mui/material";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useTableStore } from "./model/store";
+import type { JSX } from "react";
 
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
@@ -26,149 +26,135 @@ ModuleRegistry.registerModules([
   PaginationModule,
 ]);
 
-export type FilterDefinition = {
-  key: string;
+export type FilterDefinition<TRow extends object> = {
+  key: keyof TRow;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 };
 
-export type RowData = {
-  id: number;
-  full_name: string | null;
-  email: string | null;
-  department: string | null;
-  phone: string | null;
-  role_id: number;
-  status_id: number | null;
-  company: string | null;
-  domain: string | null;
-  name: string | null;
-  position: string | null;
-};
-
-type Props = {
-  rowData: RowData[];
+type Props<TRow extends object> = {
+  rowData: TRow[];
   columnDefs: AgGridReactProps["columnDefs"];
+  getRowId: (row: TRow) => string;
   pagination?: boolean;
-  filters?: FilterDefinition[];
+  filters?: FilterDefinition<TRow>[];
 };
 
-export const CustomTable = forwardRef<AgGridReact, Props>(
-  ({ rowData, columnDefs, pagination = true, filters = [] }, ref) => {
-    const { filters: globalFilters, resetFilters, setFilter } = useTableStore();
+function CustomTableInner<T extends object>(
+  { rowData, columnDefs, getRowId, pagination = true, filters = [] }: Props<T>,
+  ref: ForwardedRef<AgGridReact>
+): JSX.Element {
+  const { filters: globalFilters, setFilter, resetFilters } = useTableStore();
+  const [filterField, setFilterField] = useState<keyof T | null>(null);
 
-    const schemaShape = filters.reduce(
-      (acc, f) => {
-        acc[f.key] = z.string().optional();
-        return acc;
-      },
-      {} as Record<string, z.ZodTypeAny>
-    );
+  const schemaShape = filters.reduce(
+    (acc, filter) => {
+      acc[filter.key as string] = z.string().optional();
+      return acc;
+    },
+    {} as Record<string, z.ZodTypeAny>
+  );
 
-    const formSchema = z.object(schemaShape);
-    const { register, handleSubmit, reset } = useForm({
-      resolver: zodResolver(formSchema),
-      defaultValues: globalFilters,
+  const formSchema = z.object(schemaShape);
+  const { register, handleSubmit, reset } = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: globalFilters,
+  });
+
+  const onApplyFilters = handleSubmit((values) => {
+    Object.entries(values).forEach(([key, value]) => {
+      if (value) setFilter(key, value);
     });
+    setFilterField(null);
+  });
 
-    const [filterField, setFilterField] = useState<string | null>(null);
+  const onResetFilters = () => {
+    reset();
+    resetFilters();
+  };
 
-    const onApplyFilters = handleSubmit((values) => {
-      Object.entries(values).forEach(([key, value]) => {
-        if (value) setFilter(key, value);
-      });
-      setFilterField(null);
-    });
+  const handleFilterClick = (key: keyof T) => {
+    const isActive = !!globalFilters[key as string];
+    if (isActive) {
+      setFilter(key as string, "");
+    } else {
+      setFilterField(key);
+    }
+  };
 
-    const onResetFilters = () => {
-      reset();
-      resetFilters();
-    };
-
-    const handleFilterClick = (key: string) => {
-      const isActive = !!globalFilters[key];
-      if (isActive) {
-        setFilter(key, "");
-      } else {
-        setFilterField(key);
-      }
-    };
-
-    const filteredData = useMemo(() => {
-      return rowData.filter((row) => {
-        return Object.entries(globalFilters).every(([field, value]) => {
-          return (
-            !value ||
-            String(row[field as keyof RowData] ?? "")
+  const filteredData = useMemo(() => {
+    return rowData.filter((row) =>
+      Object.entries(globalFilters).every(([field, value]) =>
+        !value
+          ? true
+          : String(row[field as keyof T] ?? "")
               .toLowerCase()
               .includes(value.toLowerCase())
-          );
-        });
-      });
-    }, [globalFilters, rowData]);
-
-    return (
-      <div className="ag-theme-alpine" style={{ height: 600 }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          {filters.map((filter) => {
-            const isActive = !!globalFilters[filter.key];
-            return (
-              <Button
-                key={filter.key}
-                onClick={() => handleFilterClick(filter.key)}
-                variant={isActive ? "outlined" : "contained"}
-                size="medium"
-                startIcon={filter.icon}
-              >
-                {filter.label}
-              </Button>
-            );
-          })}
-          <Button
-            onClick={onResetFilters}
-            variant="outlined"
-            color="secondary"
-            size="medium"
-          >
-            Сбросить фильтры
-          </Button>
-        </div>
-
-        <Dialog
-          open={filterField !== null}
-          onClose={() => setFilterField(null)}
-        >
-          <DialogTitle>Фильтрация</DialogTitle>
-          <DialogContent>
-            <form onSubmit={onApplyFilters}>
-              {filterField && (
-                <TextField
-                  label={
-                    filters.find((f) => f.key === filterField)?.label || ""
-                  }
-                  {...register(filterField)}
-                  fullWidth
-                  margin="dense"
-                />
-              )}
-              <Button type="submit" variant="contained" sx={{ mt: 2 }}>
-                Применить
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <AgGridReact
-          ref={ref as ForwardedRef<AgGridReact>}
-          rowData={filteredData}
-          columnDefs={columnDefs}
-          pagination={pagination}
-          rowSelection="multiple"
-          animateRows
-          domLayout="autoHeight"
-          getRowId={(params) => params.data.id.toString()}
-        />
-      </div>
+      )
     );
-  }
-);
+  }, [rowData, globalFilters]);
+
+  return (
+    <div className="ag-theme-alpine" style={{ height: 600 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {filters.map((filter) => {
+          const isActive = !!globalFilters[filter.key as string];
+          return (
+            <Button
+              key={String(filter.key)}
+              onClick={() => handleFilterClick(filter.key)}
+              variant={isActive ? "outlined" : "contained"}
+              size="medium"
+              startIcon={filter.icon}
+            >
+              {filter.label}
+            </Button>
+          );
+        })}
+        <Button
+          onClick={onResetFilters}
+          variant="outlined"
+          color="secondary"
+          size="medium"
+        >
+          Сбросить фильтры
+        </Button>
+      </div>
+
+      <Dialog open={filterField !== null} onClose={() => setFilterField(null)}>
+        <DialogTitle>Фильтрация</DialogTitle>
+        <DialogContent>
+          <form onSubmit={onApplyFilters}>
+            {filterField && (
+              <TextField
+                label={filters.find((f) => f.key === filterField)?.label || ""}
+                {...register(filterField as string)}
+                fullWidth
+                margin="dense"
+              />
+            )}
+            <Button type="submit" variant="contained" sx={{ mt: 2 }}>
+              Применить
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AgGridReact
+        ref={ref}
+        rowData={filteredData}
+        columnDefs={columnDefs}
+        pagination={pagination}
+        rowSelection="multiple"
+        animateRows
+        domLayout="autoHeight"
+        getRowId={({ data }) => getRowId(data)}
+      />
+    </div>
+  );
+}
+
+// ✅ Типизированный экспорт с generic <T>
+export const CustomTable = forwardRef(CustomTableInner) as <T extends object>(
+  props: Props<T> & { ref?: ForwardedRef<AgGridReact> }
+) => JSX.Element;
