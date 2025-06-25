@@ -1,0 +1,10 @@
+// src/widgets/add-parameter-modal/types.ts
+export type ParameterOption = {
+  id: number;
+  name: string;
+};
+
+export type Incongruity = {
+  id: number;
+  name: string;
+};
