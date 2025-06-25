@@ -10,33 +10,51 @@ import {
   DialogContent,
   TextField,
   Stack,
+  Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import { AgGridReact } from "ag-grid-react";
+
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { useTableStore } from "@/widgets/table/model/store";
-import { objectTypeApi } from "@/shared/api/object-type"; // заглушка
-import type { ObjectParameter } from "@/widgets/object-type-table/types"; // интерфейс строки
-import { AddParameterModal } from "@/widgets/add-parameter-modal"; // пока-заглушка
+import { objectTypeApi } from "@/shared/api/object-type";
+import { AddParameterModal } from "@/widgets/add-parameter-modal";
+import { EditParameterModal } from "@/widgets/edit-parameter-modal";
+import type { ObjectParameter } from "@/widgets/object-type-table/types";
 import type { JSX } from "react";
 
 export const ObjectTypePage = (): JSX.Element => {
   const [parameters, setParameters] = useState<ObjectParameter[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [parameterFilterValue, setParameterFilterValue] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editParam, setEditParam] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const { filters, setFilter, resetFilters } = useTableStore();
   const gridRef = useRef<AgGridReact<ObjectParameter>>(null);
 
-  useEffect(() => {
-    // Заглушка под реальный API
-    objectTypeApi.getObjectTypeParameters().then((res) => {
-      setParameters(res);
-    });
-  }, []);
-
   const filterKey = "parameter";
+
+  const fetchParameters = async () => {
+    setLoading(true);
+    try {
+      const res = await objectTypeApi.getObjectTypeParameters();
+      setParameters(res);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchParameters();
+  }, []);
 
   const handleFilterClick = () => {
     if (filters[filterKey]) {
@@ -55,6 +73,18 @@ export const ObjectTypePage = (): JSX.Element => {
   const handleResetFilters = () => {
     resetFilters();
     setParameterFilterValue("");
+  };
+
+  const handleEdit = (param: { id: number; parameter: string }) => {
+    setEditParam({ id: param.id, name: param.parameter });
+    setEditModalOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setEditModalOpen(false);
+    setEditParam(null);
+    fetchParameters();
+    setSnackbarOpen(true);
   };
 
   const filterDefinitions: FilterDefinition<ObjectParameter>[] = [
@@ -79,14 +109,17 @@ export const ObjectTypePage = (): JSX.Element => {
     {
       headerName: "Действия",
       field: "actions",
-      cellRenderer: () => <Button size="small">✏️</Button>, // TODO: modal open
+      cellRenderer: (params: any) => (
+        <Button size="small" onClick={() => handleEdit(params.data)}>
+          ✏️
+        </Button>
+      ),
       width: 120,
     },
   ];
 
   return (
     <Box p={3}>
-      {/* Хлебные крошки */}
       <Breadcrumbs separator="›" sx={{ mb: 2 }}>
         <Typography color="text.secondary">Главная</Typography>
         <Typography color="text.secondary">Объекты</Typography>
@@ -94,12 +127,10 @@ export const ObjectTypePage = (): JSX.Element => {
         <Typography color="text.primary">Тип объекта</Typography>
       </Breadcrumbs>
 
-      {/* Заголовок */}
       <Typography variant="h4" gutterBottom>
         Тип объекта
       </Typography>
 
-      {/* Блок фильтров и кнопка добавления */}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <Button
           variant={filters[filterKey] ? "outlined" : "contained"}
@@ -125,16 +156,20 @@ export const ObjectTypePage = (): JSX.Element => {
         </Button>
       </Stack>
 
-      {/* Таблица */}
-      <CustomTable<ObjectParameter>
-        ref={gridRef}
-        rowData={parameters}
-        columnDefs={columns}
-        getRowId={(row) => row.id.toString()}
-        filters={filterDefinitions}
-      />
+      {loading ? (
+        <Box display="flex" justifyContent="center" mt={4}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <CustomTable<ObjectParameter>
+          ref={gridRef}
+          rowData={parameters}
+          columnDefs={columns}
+          getRowId={(row) => row.id.toString()}
+          filters={filterDefinitions}
+        />
+      )}
 
-      {/* Модалка фильтра */}
       <Dialog
         open={filterDialogOpen}
         onClose={() => setFilterDialogOpen(false)}
@@ -158,10 +193,28 @@ export const ObjectTypePage = (): JSX.Element => {
         </DialogContent>
       </Dialog>
 
-      {/* Модалка добавления (заглушка) */}
       <AddParameterModal
         open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
+        onClose={() => {
+          setAddModalOpen(false);
+          fetchParameters();
+        }}
+      />
+
+      {editParam && (
+        <EditParameterModal
+          open={editModalOpen}
+          onClose={handleEditClose}
+          parameterId={editParam.id}
+          parameterName={editParam.name}
+        />
+      )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message="Изменения сохранены"
       />
     </Box>
   );
