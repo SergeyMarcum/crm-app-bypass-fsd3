@@ -1,5 +1,5 @@
 // src/shared/api/object-type/client.ts
-import { axiosInstance } from "@/shared/lib/axios";
+import axiosInstance from "@/shared/api/axios";
 import type {
   Incongruity,
   ParameterOption,
@@ -15,7 +15,11 @@ export const objectTypeApi = {
     { id: number; parameter: string }[]
   > {
     const res = await axiosInstance.get(`/object-type-parameters${BASE}&id=1`);
-    return res.data.map((item: any) => ({
+    console.log("getObjectTypeParameters response", res.data);
+    if (!Array.isArray(res.data)) {
+      throw new Error("Invalid response format: expected array");
+    }
+    return res.data.map((item: { id: number; name: string }) => ({
       id: item.id,
       parameter: item.name,
     }));

@@ -2,8 +2,10 @@
 import { ReactElement } from "react";
 import type { JSX } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import { useAuthStore } from "@features/auth/model/store";
 import { DashboardLayout, LoginLayout } from "@widgets/layout";
+
 import { DashboardPage } from "@pages/dashboard";
 import { LoginPage } from "@pages/login";
 import { UsersPage } from "@pages/users";
@@ -17,6 +19,7 @@ import { SettingsPage } from "@pages/settings";
 import { CheckLogsPage } from "@pages/logs/checks";
 import { DefectLogsPage } from "@pages/logs/defects";
 import { ButtonsPage } from "@pages/ui-kit/button";
+import { ObjectTypePage } from "@pages/object-type"; // 👈 Новая страница
 
 const ProtectedRoute = ({
   children,
@@ -26,24 +29,19 @@ const ProtectedRoute = ({
   allowedRoles: number[];
 }) => {
   const { user, isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) {
-    console.log("ProtectedRoute: Redirecting to /login");
-    return <Navigate to="/login" replace />;
-  }
-  if (user && !allowedRoles.includes(user.role_id)) {
-    console.log("ProtectedRoute: Redirecting to /dashboard (role not allowed)");
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user && !allowedRoles.includes(user.role_id))
     return <Navigate to="/dashboard" replace />;
-  }
   return children;
 };
 
 export function AppRoutes(): JSX.Element {
-  console.log("AppRoutes render");
   return (
     <Routes>
       <Route element={<LoginLayout />}>
         <Route path="/login" element={<LoginPage />} />
       </Route>
+
       <Route
         path="/dashboard"
         element={
@@ -54,6 +52,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/users"
         element={
@@ -64,6 +63,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/employees"
         element={
@@ -74,6 +74,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/tasks/control"
         element={
@@ -84,6 +85,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/tasks/create"
         element={
@@ -94,6 +96,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/tasks/view"
         element={
@@ -104,6 +107,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/calendar"
         element={
@@ -114,6 +118,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/help"
         element={
@@ -124,6 +129,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/settings"
         element={
@@ -134,6 +140,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/logs/checks"
         element={
@@ -144,6 +151,7 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/logs/defects"
         element={
@@ -154,8 +162,19 @@ export function AppRoutes(): JSX.Element {
           </ProtectedRoute>
         }
       />
-      <Route path="/ui-kit/buttons" element={<ButtonsPage />} />
 
+      <Route
+        path="/objects/types"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2]}>
+            <DashboardLayout>
+              <ObjectTypePage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="/ui-kit/buttons" element={<ButtonsPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

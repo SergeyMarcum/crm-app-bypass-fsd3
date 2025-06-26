@@ -18,15 +18,16 @@ import {
   Assignment as AssignmentIcon,
   People as PeopleIcon,
   ListAlt as ListAltIcon,
-  Build as BuildIcon,
   Message as MessageIcon,
   Help as HelpIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   ExpandLess,
   ExpandMore,
+  Layers as LayersIcon,
 } from "@mui/icons-material";
-import { useUser } from "@shared/hooks/use-user";
+//import { useUser } from "@shared/hooks/use-user";
+import { useAuthStore } from "@features/auth/model/store";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -51,10 +52,13 @@ const activeStyle = {
 
 export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
   const { pathname } = useLocation();
-  const { logout } = useUser();
+  const logout = useAuthStore((state) => state.logout);
 
   const [tasksOpen, setTasksOpen] = useState(pathname.startsWith("/tasks"));
   const [logsOpen, setLogsOpen] = useState(pathname.startsWith("/logs"));
+  const [objectsOpen, setObjectsOpen] = useState(
+    pathname.startsWith("/objects")
+  );
 
   const handleLogout = () => logout();
 
@@ -131,7 +135,6 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
         },
       }}
     >
-      {/* Главное меню */}
       <Box sx={{ overflowY: "auto", flexGrow: 1 }}>
         <List>
           <NavItem to="/dashboard" icon={<DashboardIcon />} text="Главная" />
@@ -175,15 +178,33 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
             </List>
           </Collapse>
 
-          <NavItem to="/objects" icon={<BuildIcon />} text="Объекты" />
+          <ListItemButton
+            onClick={() => setObjectsOpen((prev) => !prev)}
+            sx={{ justifyContent: isOpen ? "initial" : "center" }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isOpen ? 2 : "auto" }}>
+              <LayersIcon />
+            </ListItemIcon>
+            {isOpen && <ListItemText primary="Объекты" />}
+            {isOpen && (objectsOpen ? <ExpandLess /> : <ExpandMore />)}
+          </ListItemButton>
+          <Collapse in={objectsOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <NestedNavItem to="/objects" text="Список объектов" />
+              <NestedNavItem to="/objects/types" text="Типы объектов" />
+              <NestedNavItem
+                to="/objects/parameters"
+                text="Список параметров"
+              />
+            </List>
+          </Collapse>
+
           <NavItem to="/messages" icon={<MessageIcon />} text="Сообщения" />
         </List>
       </Box>
 
-      {/* Разделитель */}
       <Divider />
 
-      {/* Нижнее меню */}
       <Box>
         <List>
           <NavItem to="/instructions" icon={<HelpIcon />} text="Инструкции" />
