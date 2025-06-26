@@ -4,64 +4,72 @@ import {
   DialogTitle,
   DialogContent,
   IconButton,
-  TextField,
-  Button,
-  MenuItem,
   Typography,
   Stack,
+  Button,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
-import { objectTypeApi } from "@/shared/api/object-type"; // заглушка
-import { Incongruity, ParameterOption } from "./types";
-import { useIncongruityStore } from "./model/store";
+import { objectTypeApi } from "@/shared/api/object-type";
+import { useAddParameterStore } from "./model/store";
+import type {
+  ParameterOption,
+  Incongruity,
+  AddParameterModalProps,
+} from "./types";
 import type { JSX } from "react";
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
-};
-
-export const AddParameterModal = ({ open, onClose }: Props): JSX.Element => {
+export const AddParameterModal = ({
+  open,
+  onClose,
+}: AddParameterModalProps): JSX.Element => {
   const [parameters, setParameters] = useState<ParameterOption[]>([]);
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
-  const [selectedParamId, setSelectedParamId] = useState<number | "">("");
-  const [newIncongruityId, setNewIncongruityId] = useState<number | "">("");
-  const { selected, add, remove, reset } = useIncongruityStore();
+  const [selectedParam, setSelectedParam] = useState<ParameterOption | null>(
+    null
+  );
+  const [newInc, setNewInc] = useState<Incongruity | null>(null);
+  const { list, add, remove, reset } = useAddParameterStore();
 
   useEffect(() => {
-    if (open) {
-      objectTypeApi.getAllParameters().then(setParameters);
-      objectTypeApi.getAllIncongruities().then(setIncongruities);
-      reset();
-      setSelectedParamId("");
-    }
+    if (!open) return;
+    reset();
+    setSelectedParam(null);
+    setNewInc(null);
+    objectTypeApi.getAllParameters().then(setParameters);
+    objectTypeApi.getAllIncongruities().then(setIncongruities);
   }, [open]);
 
-  const availableIncongruities = incongruities.filter(
-    (inc) => !selected.find((sel) => sel.id === inc.id)
-  );
-
-  const handleAddRow = () => {
-    if (newIncongruityId === "") return;
-    const inc = incongruities.find((i) => i.id === newIncongruityId);
-    if (inc) {
-      add(inc);
-      setNewIncongruityId("");
-    }
-  };
-
   const handleSave = async () => {
-    if (typeof selectedParamId !== "number") return;
+    if (!selectedParam) return;
+    const parameterId = selectedParam.id;
+
     await objectTypeApi.saveObjectTypeParam({
-      name: "",
-      id: 0,
-      parameter_ids: [selectedParamId],
+      id: 1, // пока захардкожено, уточнить по API
+      name: selectedParam.name,
+      parameter_ids: [parameterId],
     });
+
+    await Promise.all(
+      list.map((i) =>
+        objectTypeApi.addParameterIncongruity({
+          id: 0,
+          parameter_id: parameterId,
+          incongruity_id: i.id,
+        })
+      )
+    );
+
     onClose();
   };
+
+  const availableIncs = incongruities.filter(
+    (i) => !list.some((l) => l.id === i.id)
+  );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -69,60 +77,64 @@ export const AddParameterModal = ({ open, onClose }: Props): JSX.Element => {
         Параметр проверки объекта
         <IconButton
           onClick={onClose}
-          sx={{ position: "absolute", right: 8, top: 8 }}
+          sx={{ position: "absolute", top: 8, right: 8 }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
+
       <DialogContent dividers>
         <Stack spacing={2}>
-          <TextField
-            select
-            fullWidth
-            label="Выберите параметр"
-            value={selectedParamId}
-            onChange={(e) => setSelectedParamId(Number(e.target.value))}
-          >
-            <MenuItem value="">Не выбрано</MenuItem>
-            {parameters.map((param) => (
-              <MenuItem key={param.id} value={param.id}>
-                {param.name}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={parameters}
+            getOptionLabel={(o) => o.name}
+            value={selectedParam}
+            onChange={(_, val) => setSelectedParam(val)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Выберите параметр проверки"
+                fullWidth
+              />
+            )}
+          />
 
           <Typography variant="subtitle1">Список несоответствий</Typography>
-          {selected.map((row, i) => (
-            <Stack key={row.id} direction="row" spacing={1} alignItems="center">
-              <Typography>{i + 1}.</Typography>
-              <Typography sx={{ flex: 1 }}>{row.name}</Typography>
-              <IconButton onClick={() => remove(row.id)}>
+          {list.map((i, idx) => (
+            <Stack key={i.id} direction="row" alignItems="center" spacing={1}>
+              <Typography>{idx + 1}.</Typography>
+              <Typography sx={{ flex: 1 }}>{i.name}</Typography>
+              <IconButton onClick={() => remove(i.id)}>
                 <DeleteIcon />
               </IconButton>
             </Stack>
           ))}
 
-          <Stack direction="row" spacing={1} mt={1} alignItems="center">
-            <TextField
-              select
-              label="Добавить несоответствие"
-              value={newIncongruityId}
-              onChange={(e) => setNewIncongruityId(Number(e.target.value))}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Autocomplete
+              options={availableIncs}
+              getOptionLabel={(o) => o.name}
+              value={newInc}
+              onChange={(_, val) => setNewInc(val)}
               sx={{ flex: 1 }}
+              renderInput={(params) => (
+                <TextField {...params} label="Добавить несоответствие" />
+              )}
+            />
+            <IconButton
+              onClick={() => {
+                if (newInc) {
+                  add(newInc);
+                  setNewInc(null);
+                }
+              }}
+              color="primary"
             >
-              <MenuItem value="">Не выбрано</MenuItem>
-              {availableIncongruities.map((inc) => (
-                <MenuItem key={inc.id} value={inc.id}>
-                  {inc.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <IconButton onClick={handleAddRow} color="primary">
               <AddIcon />
             </IconButton>
           </Stack>
 
-          <Button variant="contained" onClick={handleSave}>
+          <Button onClick={handleSave} variant="contained">
             Сохранить
           </Button>
         </Stack>

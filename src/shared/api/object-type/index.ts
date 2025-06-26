@@ -1,2 +1,4 @@
 // src/shared/api/object-type/index.ts
-export { objectTypeApi } from "./client";
+import { objectTypeApi } from "./client";
+
+export { objectTypeApi };

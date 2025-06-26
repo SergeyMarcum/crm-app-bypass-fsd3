@@ -8,3 +8,8 @@ export type Incongruity = {
   id: number;
   name: string;
 };
+
+export type AddParameterModalProps = {
+  open: boolean;
+  onClose: () => void;
+};

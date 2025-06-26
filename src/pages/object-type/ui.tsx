@@ -1,5 +1,5 @@
 // src/pages/object-type/ui.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -15,14 +15,12 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import { AgGridReact } from "ag-grid-react";
 
-import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { useTableStore } from "@/widgets/table/model/store";
 import { objectTypeApi } from "@/shared/api/object-type";
 import { AddParameterModal } from "@/widgets/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
-import type { ObjectParameter } from "@/widgets/object-type-table/types";
+import { ObjectTypeTable, ObjectParameter } from "@/widgets/object-type-table";
 import type { JSX } from "react";
 
 export const ObjectTypePage = (): JSX.Element => {
@@ -38,7 +36,6 @@ export const ObjectTypePage = (): JSX.Element => {
   } | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const { filters, setFilter, resetFilters } = useTableStore();
-  const gridRef = useRef<AgGridReact<ObjectParameter>>(null);
 
   const filterKey = "parameter";
 
@@ -75,7 +72,7 @@ export const ObjectTypePage = (): JSX.Element => {
     setParameterFilterValue("");
   };
 
-  const handleEdit = (param: { id: number; parameter: string }) => {
+  const handleEdit = (param: ObjectParameter) => {
     setEditParam({ id: param.id, name: param.parameter });
     setEditModalOpen(true);
   };
@@ -86,37 +83,6 @@ export const ObjectTypePage = (): JSX.Element => {
     fetchParameters();
     setSnackbarOpen(true);
   };
-
-  const filterDefinitions: FilterDefinition<ObjectParameter>[] = [
-    {
-      key: "parameter",
-      label: "Параметр проверки",
-      icon: <FilterAltIcon />,
-    },
-  ];
-
-  const columns = [
-    {
-      headerName: "#",
-      valueGetter: "node.rowIndex + 1",
-      width: 60,
-    },
-    {
-      headerName: "Наименование параметра",
-      field: "parameter",
-      flex: 1,
-    },
-    {
-      headerName: "Действия",
-      field: "actions",
-      cellRenderer: (params: any) => (
-        <Button size="small" onClick={() => handleEdit(params.data)}>
-          ✏️
-        </Button>
-      ),
-      width: 120,
-    },
-  ];
 
   return (
     <Box p={3}>
@@ -161,13 +127,7 @@ export const ObjectTypePage = (): JSX.Element => {
           <CircularProgress />
         </Box>
       ) : (
-        <CustomTable<ObjectParameter>
-          ref={gridRef}
-          rowData={parameters}
-          columnDefs={columns}
-          getRowId={(row) => row.id.toString()}
-          filters={filterDefinitions}
-        />
+        <ObjectTypeTable data={parameters} onEdit={handleEdit} />
       )}
 
       <Dialog
