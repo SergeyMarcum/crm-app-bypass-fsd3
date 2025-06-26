@@ -1,6 +1,6 @@
 // src/widgets/edit-parameter-modal/model/store.ts
 import { create } from "zustand";
-import { Incongruity } from "../types";
+import type { Incongruity } from "../types";
 
 interface State {
   list: Incongruity[];

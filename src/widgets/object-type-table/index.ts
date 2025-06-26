@@ -1,2 +1,3 @@
-export { CustomTable } from "./ui";
-export type { FilterDefinition } from "./ui";
+// src/widgets/object-type-table/index.ts
+export * from "./ui";
+export * from "./types";
