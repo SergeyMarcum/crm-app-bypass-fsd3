@@ -3,179 +3,176 @@ import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
-  Breadcrumbs,
+  Select,
+  MenuItem,
   Button,
   Dialog,
   DialogTitle,
   DialogContent,
   TextField,
-  Stack,
-  Snackbar,
-  CircularProgress,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-
-import { useTableStore } from "@/widgets/table/model/store";
 import { objectTypeApi } from "@/shared/api/object-type";
+import { ObjectTypeTable } from "@/widgets/object-type-table";
 import { AddParameterModal } from "@/widgets/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
-import { ObjectTypeTable, ObjectParameter } from "@/widgets/object-type-table";
-import type { JSX } from "react";
+import type { ObjectParameter } from "@/widgets/object-type-table/types";
 
-export const ObjectTypePage = (): JSX.Element => {
+export function ObjectTypePage() {
   const [parameters, setParameters] = useState<ObjectParameter[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [parameterFilterValue, setParameterFilterValue] = useState("");
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [types, setTypes] = useState<{ id: number; name: string }[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState<number | "">("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [editParam, setEditParam] = useState<{
     id: number;
     name: string;
   } | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const { filters, setFilter, resetFilters } = useTableStore();
 
-  const filterKey = "parameter";
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [filterParam, setFilterParam] = useState("");
+  const [filterActive, setFilterActive] = useState(false);
+
+  const fetchTypes = async () => {
+    try {
+      const res = await objectTypeApi.getAllObjectTypes();
+      setTypes(res);
+      if (res.length > 0) {
+        setSelectedTypeId(res[0].id);
+      }
+    } catch (err) {
+      console.error("Ошибка при загрузке типов объектов", err);
+    }
+  };
 
   const fetchParameters = async () => {
-    setLoading(true);
+    if (!selectedTypeId || typeof selectedTypeId !== "number") return;
     try {
-      const res = await objectTypeApi.getObjectTypeParameters();
+      const res = await objectTypeApi.getObjectTypeParameters(selectedTypeId);
       setParameters(res);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error("Ошибка при загрузке параметров", err);
     }
   };
 
   useEffect(() => {
-    fetchParameters();
+    fetchTypes();
   }, []);
 
-  const handleFilterClick = () => {
-    if (filters[filterKey]) {
-      setFilter(filterKey, "");
-      setParameterFilterValue("");
-    } else {
-      setFilterDialogOpen(true);
-    }
-  };
-
-  const handleApplyFilter = () => {
-    setFilter(filterKey, parameterFilterValue);
-    setFilterDialogOpen(false);
-  };
-
-  const handleResetFilters = () => {
-    resetFilters();
-    setParameterFilterValue("");
-  };
+  useEffect(() => {
+    fetchParameters();
+  }, [selectedTypeId]);
 
   const handleEdit = (param: ObjectParameter) => {
     setEditParam({ id: param.id, name: param.parameter });
-    setEditModalOpen(true);
+    setEditOpen(true);
   };
 
-  const handleEditClose = () => {
-    setEditModalOpen(false);
-    setEditParam(null);
-    fetchParameters();
-    setSnackbarOpen(true);
-  };
+  const filtered = filterActive
+    ? parameters.filter((p) => p.parameter.includes(filterParam))
+    : parameters;
 
   return (
     <Box p={3}>
-      <Breadcrumbs separator="›" sx={{ mb: 2 }}>
-        <Typography color="text.secondary">Главная</Typography>
-        <Typography color="text.secondary">Объекты</Typography>
-        <Typography color="text.secondary">Типы объектов</Typography>
-        <Typography color="text.primary">Тип объекта</Typography>
-      </Breadcrumbs>
-
       <Typography variant="h4" gutterBottom>
         Тип объекта
       </Typography>
 
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <Button
-          variant={filters[filterKey] ? "outlined" : "contained"}
-          onClick={handleFilterClick}
-          startIcon={<FilterAltIcon />}
+      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        Главная / Объекты / Типы Объектов / Тип объекта
+      </Typography>
+
+      <Box display="flex" gap={2} my={2}>
+        <Select
+          value={selectedTypeId}
+          onChange={(e) => setSelectedTypeId(Number(e.target.value))}
+          size="small"
+          displayEmpty
         >
-          Параметр проверки
-        </Button>
+          <MenuItem value="">Выберите тип</MenuItem>
+          {types.map((t) => (
+            <MenuItem key={t.id} value={t.id}>
+              {t.name}
+            </MenuItem>
+          ))}
+        </Select>
+
         <Button
-          onClick={handleResetFilters}
+          variant={filterActive ? "outlined" : "contained"}
+          onClick={() => {
+            if (filterActive) {
+              setFilterParam("");
+              setFilterActive(false);
+            } else {
+              setFilterModalOpen(true);
+            }
+          }}
+        >
+          Параметры проверки
+        </Button>
+
+        <Button
           variant="outlined"
-          color="secondary"
+          onClick={() => {
+            setFilterParam("");
+            setFilterActive(false);
+            if (types.length > 0) setSelectedTypeId(types[0].id);
+          }}
         >
           Сбросить фильтры
         </Button>
-        <Box flexGrow={1} />
+
         <Button
           variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setAddModalOpen(true)}
+          onClick={() => setAddOpen(true)}
+          disabled={!selectedTypeId}
         >
-          Добавить
+          + Добавить
         </Button>
-      </Stack>
+      </Box>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <ObjectTypeTable data={parameters} onEdit={handleEdit} />
-      )}
+      <ObjectTypeTable parameters={filtered} onEdit={handleEdit} />
 
-      <Dialog
-        open={filterDialogOpen}
-        onClose={() => setFilterDialogOpen(false)}
-      >
+      <AddParameterModal
+        open={addOpen}
+        onClose={() => {
+          setAddOpen(false);
+          fetchParameters();
+        }}
+        objectTypeId={Number(selectedTypeId)}
+      />
+
+      <EditParameterModal
+        open={editOpen}
+        onClose={() => {
+          setEditOpen(false);
+          fetchParameters();
+        }}
+        parameterId={editParam?.id ?? 0}
+        parameterName={editParam?.name ?? ""}
+      />
+
+      <Dialog open={filterModalOpen} onClose={() => setFilterModalOpen(false)}>
         <DialogTitle>Фильтрация по параметрам проверки</DialogTitle>
         <DialogContent>
           <TextField
             label="Параметр проверки"
-            value={parameterFilterValue}
-            onChange={(e) => setParameterFilterValue(e.target.value)}
             fullWidth
-            margin="dense"
+            value={filterParam}
+            onChange={(e) => setFilterParam(e.target.value)}
+            sx={{ mt: 1 }}
           />
           <Button
-            onClick={handleApplyFilter}
             variant="contained"
             sx={{ mt: 2 }}
+            onClick={() => {
+              setFilterActive(true);
+              setFilterModalOpen(false);
+            }}
           >
             Применить
           </Button>
         </DialogContent>
       </Dialog>
-
-      <AddParameterModal
-        open={addModalOpen}
-        onClose={() => {
-          setAddModalOpen(false);
-          fetchParameters();
-        }}
-      />
-
-      {editParam && (
-        <EditParameterModal
-          open={editModalOpen}
-          onClose={handleEditClose}
-          parameterId={editParam.id}
-          parameterName={editParam.name}
-        />
-      )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        message="Изменения сохранены"
-      />
     </Box>
   );
-};
+}

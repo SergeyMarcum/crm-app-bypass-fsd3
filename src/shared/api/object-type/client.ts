@@ -4,34 +4,63 @@ import type {
   Incongruity,
   ParameterOption,
 } from "@/widgets/add-parameter-modal/types";
+import { AxiosError } from "axios";
 
-const DOMAIN = import.meta.env.VITE_DOMAIN;
-const USERNAME = import.meta.env.VITE_USERNAME;
-const SESSION = import.meta.env.VITE_SESSION;
-const BASE = `?domain=${DOMAIN}&username=${USERNAME}&session_code=${SESSION}`;
+function getAuthParams() {
+  const domain = localStorage.getItem("auth_domain") || "";
+  const username = localStorage.getItem("username") || "";
+  const session_code = localStorage.getItem("session_token") || "";
+
+  return `?domain=${domain}&username=${username}&session_code=${session_code}`;
+}
 
 export const objectTypeApi = {
-  async getObjectTypeParameters(): Promise<
-    { id: number; parameter: string }[]
-  > {
-    const res = await axiosInstance.get(`/object-type-parameters${BASE}&id=1`);
-    console.log("getObjectTypeParameters response", res.data);
-    if (!Array.isArray(res.data)) {
-      throw new Error("Invalid response format: expected array");
+  async getObjectTypeParameters(
+    objectTypeId: number
+  ): Promise<{ id: number; parameter: string }[]> {
+    try {
+      const res = await axiosInstance.get(
+        `/object-type-parameters${getAuthParams()}&id=${objectTypeId}`
+      );
+      if (!Array.isArray(res.data)) {
+        throw new Error("Invalid response format: expected array");
+      }
+      return res.data.map((item: { id: number; name: string }) => ({
+        id: item.id,
+        parameter: item.name,
+      }));
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error(
+        "Ошибка при получении параметров типа объекта:",
+        err.message
+      );
+      throw err;
     }
-    return res.data.map((item: { id: number; name: string }) => ({
-      id: item.id,
-      parameter: item.name,
-    }));
+  },
+
+  async getAllObjectTypes(): Promise<{ id: number; name: string }[]> {
+    try {
+      const res = await axiosInstance.get(
+        `/all-object-types${getAuthParams()}`
+      );
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("Ошибка при получении всех типов объектов:", err.message);
+      throw err;
+    }
   },
 
   async getAllParameters(): Promise<ParameterOption[]> {
-    const res = await axiosInstance.get(`/parameters${BASE}`);
+    const res = await axiosInstance.get(`/parameters${getAuthParams()}`);
     return res.data;
   },
 
   async getAllIncongruities(): Promise<Incongruity[]> {
-    const res = await axiosInstance.get(`/cases-of-non-compliance${BASE}`);
+    const res = await axiosInstance.get(
+      `/cases-of-non-compliance${getAuthParams()}`
+    );
     return res.data;
   },
 
@@ -40,26 +69,48 @@ export const objectTypeApi = {
     name: string;
     parameter_ids: number[];
   }): Promise<void> {
-    await axiosInstance.put(`/edit-object-type${BASE}`, data);
+    await axiosInstance.put(`/edit-object-type${getAuthParams()}`, data);
   },
 
   async editParameter(data: { id: number; name: string }): Promise<void> {
-    await axiosInstance.put(`/edit-parameter${BASE}`, data);
+    await axiosInstance.put(`/edit-parameter${getAuthParams()}`, data);
   },
 
   async getParameterIncongruities(paramId: number): Promise<Incongruity[]> {
-    const res = await axiosInstance.get(
-      `/all-cases-of-parameter-non-compliance${BASE}&param_id=${paramId}`
-    );
-    return res.data;
+    try {
+      const res = await axiosInstance.get(
+        `/all-cases-of-parameter-non-compliance${getAuthParams()}&param_id=${paramId}`
+      );
+      return res.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      if (err.response?.status === 404) {
+        console.warn(`Несоответствия не найдены для параметра ${paramId}`);
+        return [];
+      }
+      throw err;
+    }
   },
 
   async addParameterIncongruity(data: {
-    id: number;
+    id?: number;
     parameter_id: number;
     incongruity_id: number;
   }): Promise<void> {
-    await axiosInstance.put(`/edit-parameter-non-compliance${BASE}`, data);
+    try {
+      await axiosInstance.put(
+        `/edit-parameter-non-compliance${getAuthParams()}`,
+        data
+      );
+    } catch (error) {
+      const err = error as AxiosError;
+      if (err.response?.status === 404) {
+        console.error(
+          "❌ Сервер не нашёл ресурс при добавлении несоответствия"
+        );
+      }
+      throw err;
+    }
   },
 
   async deleteParameterIncongruity(data: {
@@ -67,8 +118,11 @@ export const objectTypeApi = {
     parameter_id: number;
     incongruity_id: number;
   }): Promise<void> {
-    await axiosInstance.delete(`/delete-parameter-non-compliance${BASE}`, {
-      data,
-    });
+    await axiosInstance.delete(
+      `/delete-parameter-non-compliance${getAuthParams()}`,
+      {
+        data,
+      }
+    );
   },
 };
