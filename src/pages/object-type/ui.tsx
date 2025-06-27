@@ -1,21 +1,16 @@
 // src/pages/object-type/ui.tsx
-import { useEffect, useState } from "react";
-import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-} from "@mui/material";
+import { useEffect, useState, useRef } from "react";
+import { Box, Typography, Select, MenuItem, Button } from "@mui/material";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import { AgGridReact } from "ag-grid-react";
+
 import { objectTypeApi } from "@/shared/api/object-type";
 import { ObjectTypeTable } from "@/widgets/object-type-table";
 import { AddParameterModal } from "@/widgets/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
+//import { useTableStore } from "@/widgets/table/model/store";
 import type { ObjectParameter } from "@/widgets/object-type-table/types";
+import type { FilterDefinition } from "@/widgets/table";
 
 export function ObjectTypePage() {
   const [parameters, setParameters] = useState<ObjectParameter[]>([]);
@@ -27,18 +22,15 @@ export function ObjectTypePage() {
     id: number;
     name: string;
   } | null>(null);
+  const gridRef = useRef<AgGridReact<ObjectParameter>>(null);
 
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [filterParam, setFilterParam] = useState("");
-  const [filterActive, setFilterActive] = useState(false);
+  //const { resetFilters } = useTableStore();
 
   const fetchTypes = async () => {
     try {
       const res = await objectTypeApi.getAllObjectTypes();
       setTypes(res);
-      if (res.length > 0) {
-        setSelectedTypeId(res[0].id);
-      }
+      if (res.length > 0) setSelectedTypeId(res[0].id);
     } catch (err) {
       console.error("Ошибка при загрузке типов объектов", err);
     }
@@ -67,9 +59,13 @@ export function ObjectTypePage() {
     setEditOpen(true);
   };
 
-  const filtered = filterActive
-    ? parameters.filter((p) => p.parameter.includes(filterParam))
-    : parameters;
+  const filterDefinitions: FilterDefinition<ObjectParameter>[] = [
+    {
+      key: "parameter",
+      label: "Параметры проверки",
+      icon: <FilterAltIcon />,
+    },
+  ];
 
   return (
     <Box p={3}>
@@ -81,56 +77,44 @@ export function ObjectTypePage() {
         Главная / Объекты / Типы Объектов / Тип объекта
       </Typography>
 
-      <Box display="flex" gap={2} my={2}>
-        <Select
-          value={selectedTypeId}
-          onChange={(e) => setSelectedTypeId(Number(e.target.value))}
-          size="small"
-          displayEmpty
-        >
-          <MenuItem value="">Выберите тип</MenuItem>
-          {types.map((t) => (
-            <MenuItem key={t.id} value={t.id}>
-              {t.name}
-            </MenuItem>
-          ))}
-        </Select>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        gap={2}
+        my={2}
+      >
+        <Box display="flex" gap={2} alignItems="center">
+          <Select
+            value={selectedTypeId}
+            onChange={(e) => setSelectedTypeId(Number(e.target.value))}
+            size="small"
+            displayEmpty
+          >
+            <MenuItem value="">Выберите тип</MenuItem>
+            {types.map((t) => (
+              <MenuItem key={t.id} value={t.id}>
+                {t.name}
+              </MenuItem>
+            ))}
+          </Select>
 
-        <Button
-          variant={filterActive ? "outlined" : "contained"}
-          onClick={() => {
-            if (filterActive) {
-              setFilterParam("");
-              setFilterActive(false);
-            } else {
-              setFilterModalOpen(true);
-            }
-          }}
-        >
-          Параметры проверки
-        </Button>
-
-        <Button
-          variant="outlined"
-          onClick={() => {
-            setFilterParam("");
-            setFilterActive(false);
-            if (types.length > 0) setSelectedTypeId(types[0].id);
-          }}
-        >
-          Сбросить фильтры
-        </Button>
-
-        <Button
-          variant="contained"
-          onClick={() => setAddOpen(true)}
-          disabled={!selectedTypeId}
-        >
-          + Добавить
-        </Button>
+          <Button
+            variant="contained"
+            onClick={() => setAddOpen(true)}
+            disabled={!selectedTypeId}
+          >
+            + Добавить
+          </Button>
+        </Box>
       </Box>
 
-      <ObjectTypeTable parameters={filtered} onEdit={handleEdit} />
+      <ObjectTypeTable
+        parameters={parameters}
+        onEdit={handleEdit}
+        filters={filterDefinitions}
+        ref={gridRef}
+      />
 
       <AddParameterModal
         open={addOpen}
@@ -150,29 +134,6 @@ export function ObjectTypePage() {
         parameterId={editParam?.id ?? 0}
         parameterName={editParam?.name ?? ""}
       />
-
-      <Dialog open={filterModalOpen} onClose={() => setFilterModalOpen(false)}>
-        <DialogTitle>Фильтрация по параметрам проверки</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Параметр проверки"
-            fullWidth
-            value={filterParam}
-            onChange={(e) => setFilterParam(e.target.value)}
-            sx={{ mt: 1 }}
-          />
-          <Button
-            variant="contained"
-            sx={{ mt: 2 }}
-            onClick={() => {
-              setFilterActive(true);
-              setFilterModalOpen(false);
-            }}
-          >
-            Применить
-          </Button>
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }
