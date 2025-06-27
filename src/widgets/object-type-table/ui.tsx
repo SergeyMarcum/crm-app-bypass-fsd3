@@ -1,24 +1,13 @@
 // src/widgets/object-type-table/ui.tsx
-import { CustomTable, FilterDefinition } from "@/widgets/table";
+import { CustomTable } from "@/widgets/table";
 import type { ObjectParameter } from "./types";
-import { AgGridReact } from "ag-grid-react";
-import { Button } from "@mui/material";
-import { FilterAlt } from "@mui/icons-material";
-import { useRef } from "react";
-import type { JSX } from "react";
 
 type Props = {
-  data: ObjectParameter[];
+  parameters: ObjectParameter[];
   onEdit: (param: ObjectParameter) => void;
 };
 
-export const ObjectTypeTable = ({ data, onEdit }: Props): JSX.Element => {
-  const ref = useRef<AgGridReact<ObjectParameter>>(null);
-
-  const filterDefinitions: FilterDefinition<ObjectParameter>[] = [
-    { key: "parameter", label: "Параметр проверки", icon: <FilterAlt /> },
-  ];
-
+export function ObjectTypeTable({ parameters, onEdit }: Props) {
   const columns = [
     {
       headerName: "#",
@@ -26,7 +15,7 @@ export const ObjectTypeTable = ({ data, onEdit }: Props): JSX.Element => {
       width: 60,
     },
     {
-      headerName: "Наименование параметра",
+      headerName: "Параметр",
       field: "parameter",
       flex: 1,
     },
@@ -34,21 +23,18 @@ export const ObjectTypeTable = ({ data, onEdit }: Props): JSX.Element => {
       headerName: "Действия",
       field: "actions",
       cellRenderer: (params: { data: ObjectParameter }) => (
-        <Button size="small" onClick={() => onEdit(params.data)}>
-          ✏️
-        </Button>
+        <button onClick={() => onEdit(params.data)}>✏️</button>
       ),
-      width: 120,
+      width: 100,
     },
   ];
 
   return (
     <CustomTable<ObjectParameter>
-      ref={ref}
-      rowData={data}
+      rowData={parameters}
       columnDefs={columns}
       getRowId={(row) => row.id.toString()}
-      filters={filterDefinitions}
+      filters={[]}
     />
   );
-};
+}

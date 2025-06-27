@@ -8,8 +8,6 @@ const getAuthParams = () => {
   const domain = localStorage.getItem("auth_domain") || "";
   const username = localStorage.getItem("username") || "";
   const session_code = localStorage.getItem("session_token") || "";
-
-  console.log("📦 Auth Params:", { domain, username, session_code });
   return { domain, username, session_code };
 };
 
@@ -43,13 +41,8 @@ export const userApi = {
     if (response.data && response.data.user) {
       return editUserSchema.parse(response.data.user);
     } else {
-      console.error(
-        "Server response did not contain expected 'user' object:",
-        response.data
-      );
-      throw new Error(
-        "User data not found or invalid structure in server response."
-      );
+      console.error("Invalid editUser response:", response.data);
+      throw new Error("Invalid editUser response format.");
     }
   },
 
@@ -57,9 +50,7 @@ export const userApi = {
     await axiosInstance.put(
       "/dismiss-user",
       { user_id: userId },
-      {
-        params: getAuthParams(),
-      }
+      { params: getAuthParams() }
     );
   },
 
@@ -67,9 +58,7 @@ export const userApi = {
     await axiosInstance.put(
       "/make-main-admin",
       { user_id: userId },
-      {
-        params: getAuthParams(),
-      }
+      { params: getAuthParams() }
     );
   },
 
@@ -77,9 +66,7 @@ export const userApi = {
     await axiosInstance.put(
       "/make-company-admin",
       { user_id: userId },
-      {
-        params: getAuthParams(),
-      }
+      { params: getAuthParams() }
     );
   },
 
@@ -87,9 +74,7 @@ export const userApi = {
     await axiosInstance.put(
       "/make-shift-manager",
       { user_id: userId },
-      {
-        params: getAuthParams(),
-      }
+      { params: getAuthParams() }
     );
   },
 
@@ -97,9 +82,7 @@ export const userApi = {
     await axiosInstance.put(
       "/make-operator",
       { user_id: userId },
-      {
-        params: getAuthParams(),
-      }
+      { params: getAuthParams() }
     );
   },
 
