@@ -21,12 +21,12 @@ import type {
   Incongruity,
   AddParameterModalProps,
 } from "./types";
-import type { JSX } from "react";
 
 export const AddParameterModal = ({
   open,
   onClose,
-}: AddParameterModalProps): JSX.Element => {
+  objectTypeId,
+}: AddParameterModalProps) => {
   const [parameters, setParameters] = useState<ParameterOption[]>([]);
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
   const [selectedParam, setSelectedParam] = useState<ParameterOption | null>(
@@ -49,7 +49,7 @@ export const AddParameterModal = ({
     const parameterId = selectedParam.id;
 
     await objectTypeApi.saveObjectTypeParam({
-      id: 1, // пока захардкожено, уточнить по API
+      id: objectTypeId,
       name: selectedParam.name,
       parameter_ids: [parameterId],
     });
@@ -57,9 +57,8 @@ export const AddParameterModal = ({
     await Promise.all(
       list.map((i) =>
         objectTypeApi.addParameterIncongruity({
-          id: 0,
           parameter_id: parameterId,
-          incongruity_id: i.id,
+          incongruity_id: [i.id],
         })
       )
     );
