@@ -41,7 +41,7 @@ export const EditParameterModal = ({
     ]).then(([current, all]) => {
       const merged = current.map((curr) => {
         const full = all.find((a) => a.id === curr.id);
-        return full ? full : { ...curr, name: "(неизвестное несоответствие)" };
+        return full ?? { ...curr, name: "(неизвестное несоответствие)" };
       });
       setAllIncongruities(all);
       set(merged);
@@ -53,31 +53,38 @@ export const EditParameterModal = ({
   );
 
   const handleSave = async () => {
-    await objectTypeApi.editParameter({ id: parameterId, name });
+    try {
+      await objectTypeApi.editParameter({ id: parameterId, name });
 
-    const current = await objectTypeApi.getParameterIncongruities(parameterId);
-    const currentIds = new Set(current.map((i) => i.id));
+      const current =
+        await objectTypeApi.getParameterIncongruities(parameterId);
+      const currentIds = new Set(current.map((i) => i.id));
 
-    const added = list.filter((i) => !currentIds.has(i.id));
-    const removed = current.filter((i) => !list.find((l) => l.id === i.id));
+      const added = list.filter((i) => !currentIds.has(i.id));
+      const removed = current.filter((i) => !list.find((l) => l.id === i.id));
 
-    await Promise.all([
-      ...added.map((i) =>
-        objectTypeApi.addParameterIncongruity({
-          parameter_id: parameterId,
-          incongruity_id: [i.id],
-        })
-      ),
-      ...removed.map((i) =>
-        objectTypeApi.deleteParameterIncongruity({
-          id: 0,
-          parameter_id: parameterId,
-          incongruity_id: i.id,
-        })
-      ),
-    ]);
+      await Promise.all([
+        ...(added.length
+          ? [
+              objectTypeApi.addParameterIncongruity({
+                parameter_id: parameterId,
+                incongruity_ids: added.map((i) => i.id),
+              }),
+            ]
+          : []),
+        ...removed.map((i) =>
+          objectTypeApi.deleteParameterIncongruity({
+            id: 0,
+            parameter_id: parameterId,
+            incongruity_ids: i.id,
+          })
+        ),
+      ]);
 
-    onClose();
+      onClose();
+    } catch (err) {
+      console.error("Ошибка при сохранении параметра:", err);
+    }
   };
 
   return (

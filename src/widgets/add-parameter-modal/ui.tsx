@@ -22,11 +22,13 @@ import type {
   AddParameterModalProps,
 } from "./types";
 
+import type { JSX } from "react";
+
 export const AddParameterModal = ({
   open,
   onClose,
   objectTypeId,
-}: AddParameterModalProps) => {
+}: AddParameterModalProps): JSX.Element => {
   const [parameters, setParameters] = useState<ParameterOption[]>([]);
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
   const [selectedParam, setSelectedParam] = useState<ParameterOption | null>(
@@ -48,22 +50,24 @@ export const AddParameterModal = ({
     if (!selectedParam) return;
     const parameterId = selectedParam.id;
 
-    await objectTypeApi.saveObjectTypeParam({
-      id: objectTypeId,
-      name: selectedParam.name,
-      parameter_ids: [parameterId],
-    });
+    try {
+      await objectTypeApi.saveObjectTypeParam({
+        id: objectTypeId,
+        name: selectedParam.name,
+        parameter_ids: [parameterId],
+      });
 
-    await Promise.all(
-      list.map((i) =>
-        objectTypeApi.addParameterIncongruity({
+      if (list.length) {
+        await objectTypeApi.addParameterIncongruity({
           parameter_id: parameterId,
-          incongruity_id: [i.id],
-        })
-      )
-    );
+          incongruity_ids: list.map((i) => i.id),
+        });
+      }
 
-    onClose();
+      onClose();
+    } catch (err) {
+      console.error("Ошибка при сохранении параметра:", err);
+    }
   };
 
   const availableIncs = incongruities.filter(

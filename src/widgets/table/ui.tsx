@@ -91,6 +91,7 @@ function CustomTableInner<T extends object>(
   };
 
   const filteredData = useMemo(() => {
+    if (!Array.isArray(rowData)) return [];
     return rowData.filter((row) =>
       Object.entries(globalFilters).every(([field, value]) =>
         !value
@@ -156,14 +157,13 @@ function CustomTableInner<T extends object>(
         paginationPageSize={pageSize}
         rowSelection="multiple"
         animateRows
-        domLayout="normal" // domLayout="autoHeight"
+        domLayout="normal"
         getRowId={({ data }) => getRowId(data)}
       />
     </div>
   );
 }
 
-// ✅ Типизированный экспорт с generic <T>
 export const CustomTable = forwardRef(CustomTableInner) as <T extends object>(
   props: Props<T> & { ref?: ForwardedRef<AgGridReact> }
 ) => JSX.Element;

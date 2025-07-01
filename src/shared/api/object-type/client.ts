@@ -94,17 +94,16 @@ export const objectTypeApi = {
 
   async addParameterIncongruity(data: {
     parameter_id: number;
-    incongruity_id: number[];
+    incongruity_ids: number[]; // обязательно массив
   }): Promise<void> {
     await axiosInstance.post(
       `/add-parameter-non-compliance${getAuthParams()}`,
       data
     );
   },
-
   async updateParameterIncongruity(data: {
     parameter_id: number;
-    incongruity_id: number[];
+    incongruity_ids: number[];
   }): Promise<void> {
     await axiosInstance.put(
       `/edit-parameter-non-compliance${getAuthParams()}`,
@@ -115,7 +114,7 @@ export const objectTypeApi = {
   async deleteParameterIncongruity(data: {
     id: number;
     parameter_id: number;
-    incongruity_id: number;
+    incongruity_ids: number;
   }): Promise<void> {
     await axiosInstance.delete(
       `/delete-parameter-non-compliance${getAuthParams()}`,
