@@ -1,5 +1,4 @@
 // src/widgets/edit-parameter-modal/ui.tsx
-// src/widgets/edit-parameter-modal/ui.tsx
 import {
   Dialog,
   DialogTitle,
@@ -36,8 +35,17 @@ export const EditParameterModal = ({
     reset();
     setName(parameterName);
 
-    objectTypeApi.getParameterIncongruities(parameterId).then(set);
-    objectTypeApi.getAllIncongruities().then(setAllIncongruities);
+    Promise.all([
+      objectTypeApi.getParameterIncongruities(parameterId),
+      objectTypeApi.getAllIncongruities(),
+    ]).then(([current, all]) => {
+      const merged = current.map((curr) => {
+        const full = all.find((a) => a.id === curr.id);
+        return full ? full : { ...curr, name: "(неизвестное несоответствие)" };
+      });
+      setAllIncongruities(all);
+      set(merged);
+    });
   }, [open]);
 
   const availableIncs = allIncongruities.filter(
@@ -56,9 +64,8 @@ export const EditParameterModal = ({
     await Promise.all([
       ...added.map((i) =>
         objectTypeApi.addParameterIncongruity({
-          id: 0,
           parameter_id: parameterId,
-          incongruity_id: i.id,
+          incongruity_id: [i.id],
         })
       ),
       ...removed.map((i) =>

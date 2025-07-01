@@ -11,11 +11,7 @@ function getAuthParams() {
   const username = localStorage.getItem("username") || "";
   const session_code = localStorage.getItem("session_token") || "";
 
-  return {
-    domain,
-    username,
-    session_code,
-  };
+  return `?domain=${domain}&username=${username}&session_code=${session_code}`;
 }
 
 export const objectTypeApi = {
@@ -23,12 +19,9 @@ export const objectTypeApi = {
     objectTypeId: number
   ): Promise<{ id: number; parameter: string }[]> {
     try {
-      const res = await axiosInstance.get("/object-type-parameters", {
-        params: {
-          ...getAuthParams(),
-          id: objectTypeId,
-        },
-      });
+      const res = await axiosInstance.get(
+        `/object-type-parameters${getAuthParams()}&id=${objectTypeId}`
+      );
       if (!Array.isArray(res.data)) {
         throw new Error("Invalid response format: expected array");
       }
@@ -36,7 +29,7 @@ export const objectTypeApi = {
         id: item.id,
         parameter: item.name,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as AxiosError;
       console.error(
         "Ошибка при получении параметров типа объекта:",
@@ -48,11 +41,11 @@ export const objectTypeApi = {
 
   async getAllObjectTypes(): Promise<{ id: number; name: string }[]> {
     try {
-      const res = await axiosInstance.get("/all-object-types", {
-        params: getAuthParams(),
-      });
+      const res = await axiosInstance.get(
+        `/all-object-types${getAuthParams()}`
+      );
       return res.data;
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при получении всех типов объектов:", err.message);
       throw err;
@@ -60,16 +53,14 @@ export const objectTypeApi = {
   },
 
   async getAllParameters(): Promise<ParameterOption[]> {
-    const res = await axiosInstance.get("/parameters", {
-      params: getAuthParams(),
-    });
+    const res = await axiosInstance.get(`/parameters${getAuthParams()}`);
     return res.data;
   },
 
   async getAllIncongruities(): Promise<Incongruity[]> {
-    const res = await axiosInstance.get("/cases-of-non-compliance", {
-      params: getAuthParams(),
-    });
+    const res = await axiosInstance.get(
+      `/cases-of-non-compliance${getAuthParams()}`
+    );
     return res.data;
   },
 
@@ -78,29 +69,19 @@ export const objectTypeApi = {
     name: string;
     parameter_ids: number[];
   }): Promise<void> {
-    await axiosInstance.put("/edit-object-type", data, {
-      params: getAuthParams(),
-    });
+    await axiosInstance.put(`/edit-object-type${getAuthParams()}`, data);
   },
 
   async editParameter(data: { id: number; name: string }): Promise<void> {
-    await axiosInstance.put("/edit-parameter", data, {
-      params: getAuthParams(),
-    });
+    await axiosInstance.put(`/edit-parameter${getAuthParams()}`, data);
   },
 
   async getParameterIncongruities(paramId: number): Promise<Incongruity[]> {
     try {
       const res = await axiosInstance.get(
-        "/all-cases-of-parameter-non-compliance",
-        {
-          params: {
-            ...getAuthParams(),
-            param_id: paramId,
-          },
-        }
+        `/all-cases-of-parameter-non-compliance${getAuthParams()}&param_id=${paramId}`
       );
-      return res.data;
+      return res.data; // ← Убедись, что API возвращает name
     } catch (error) {
       const err = error as AxiosError;
       if (err.response?.status === 404) {
@@ -112,23 +93,23 @@ export const objectTypeApi = {
   },
 
   async addParameterIncongruity(data: {
-    id?: number;
     parameter_id: number;
-    incongruity_id: number;
+    incongruity_id: number[];
   }): Promise<void> {
-    try {
-      await axiosInstance.put("/edit-parameter-non-compliance", data, {
-        params: getAuthParams(),
-      });
-    } catch (error) {
-      const err = error as AxiosError;
-      if (err.response?.status === 404) {
-        console.error(
-          "❌ Сервер не нашёл ресурс при добавлении несоответствия"
-        );
-      }
-      throw err;
-    }
+    await axiosInstance.post(
+      `/add-parameter-non-compliance${getAuthParams()}`,
+      data
+    );
+  },
+
+  async updateParameterIncongruity(data: {
+    parameter_id: number;
+    incongruity_id: number[];
+  }): Promise<void> {
+    await axiosInstance.put(
+      `/edit-parameter-non-compliance${getAuthParams()}`,
+      data
+    );
   },
 
   async deleteParameterIncongruity(data: {
@@ -136,17 +117,11 @@ export const objectTypeApi = {
     parameter_id: number;
     incongruity_id: number;
   }): Promise<void> {
-    try {
-      await axiosInstance.delete("/delete-parameter-non-compliance", {
+    await axiosInstance.delete(
+      `/delete-parameter-non-compliance${getAuthParams()}`,
+      {
         data,
-        params: getAuthParams(),
-      });
-    } catch (error) {
-      const err = error as AxiosError;
-      if (err.response?.status === 404) {
-        console.warn("Несоответствие для удаления не найдено на сервере");
       }
-      throw err;
-    }
+    );
   },
 };
