@@ -37,11 +37,19 @@ type Props<TRow extends object> = {
   columnDefs: AgGridReactProps["columnDefs"];
   getRowId: (row: TRow) => string;
   pagination?: boolean;
+  pageSize?: number;
   filters?: FilterDefinition<TRow>[];
 };
 
 function CustomTableInner<T extends object>(
-  { rowData, columnDefs, getRowId, pagination = true, filters = [] }: Props<T>,
+  {
+    rowData,
+    columnDefs,
+    getRowId,
+    pagination = true,
+    filters = [],
+    pageSize = 20,
+  }: Props<T>,
   ref: ForwardedRef<AgGridReact>
 ): JSX.Element {
   const { filters: globalFilters, setFilter, resetFilters } = useTableStore();
@@ -145,9 +153,10 @@ function CustomTableInner<T extends object>(
         rowData={filteredData}
         columnDefs={columnDefs}
         pagination={pagination}
+        paginationPageSize={pageSize}
         rowSelection="multiple"
         animateRows
-        domLayout="autoHeight"
+        domLayout="normal" // domLayout="autoHeight"
         getRowId={({ data }) => getRowId(data)}
       />
     </div>

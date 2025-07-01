@@ -1,9 +1,9 @@
-// src/widgets/object-type-table/ui.tsx
-import { forwardRef } from "react";
+// src/widgets/parameters-table/ui.tsx
 import { CustomTable } from "@/widgets/table";
-import type { ObjectParameter } from "./types";
+import type { ObjectParameter } from "@/widgets/object-type-table/types";
 import type { FilterDefinition } from "@/widgets/table";
 import type { AgGridReact } from "ag-grid-react";
+import { forwardRef } from "react";
 
 type Props = {
   parameters: ObjectParameter[];
@@ -11,19 +11,11 @@ type Props = {
   filters?: FilterDefinition<ObjectParameter>[];
 };
 
-export const ObjectTypeTable = forwardRef<AgGridReact, Props>(
+export const ParametersTable = forwardRef<AgGridReact, Props>(
   ({ parameters, onEdit, filters = [] }, ref) => {
     const columns = [
-      {
-        headerName: "#",
-        valueGetter: "node.rowIndex + 1",
-        width: 60,
-      },
-      {
-        headerName: "Параметр",
-        field: "parameter",
-        flex: 1,
-      },
+      { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
+      { headerName: "Параметр проверки", field: "parameter", flex: 1 },
       {
         headerName: "Действия",
         field: "actions",

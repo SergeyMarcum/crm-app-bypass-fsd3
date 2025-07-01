@@ -1,25 +1,25 @@
 // src/app/routes.tsx
 import { ReactElement } from "react";
-import type { JSX } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-
 import { useAuthStore } from "@features/auth/model/store";
+
 import { DashboardLayout, LoginLayout } from "@widgets/layout";
 
-import { DashboardPage } from "@pages/dashboard";
-import { LoginPage } from "@pages/login";
-import { UsersPage } from "@pages/users";
-import { EmployeesPage } from "@pages/employees";
-import { TaskControlPage } from "@pages/tasks/control";
-import { TaskCreatePage } from "@pages/tasks/create";
-import { TaskViewPage } from "@pages/tasks/view";
-import { CalendarPage } from "@pages/calendar";
-import { HelpPage } from "@pages/help";
-import { SettingsPage } from "@pages/settings";
-import { CheckLogsPage } from "@pages/logs/checks";
-import { DefectLogsPage } from "@pages/logs/defects";
-import { ButtonsPage } from "@pages/ui-kit/button";
-import { ObjectTypePage } from "@pages/object-type"; // 👈 Новая страница
+import { DashboardPage } from "@/pages/dashboard";
+import { LoginPage } from "@/pages/login";
+import { UsersPage } from "@/pages/users";
+import { EmployeesPage } from "@/pages/employees";
+import { TaskControlPage } from "@/pages/tasks/control";
+import { TaskCreatePage } from "@/pages/tasks/create";
+import { TaskViewPage } from "@/pages/tasks/view";
+import { CalendarPage } from "@/pages/calendar";
+import { HelpPage } from "@/pages/help";
+import { SettingsPage } from "@/pages/settings";
+import { CheckLogsPage } from "@/pages/logs/checks";
+import { DefectLogsPage } from "@/pages/logs/defects";
+import { ButtonsPage } from "@/pages/ui-kit/button";
+import { ObjectTypePage } from "@/pages/object-type";
+import { ParametersPage } from "@/pages/parameters";
 
 const ProtectedRoute = ({
   children,
@@ -35,7 +35,7 @@ const ProtectedRoute = ({
   return children;
 };
 
-export function AppRoutes(): JSX.Element {
+export function AppRoutes() {
   return (
     <Routes>
       <Route element={<LoginLayout />}>
@@ -169,6 +169,17 @@ export function AppRoutes(): JSX.Element {
           <ProtectedRoute allowedRoles={[1, 2]}>
             <DashboardLayout>
               <ObjectTypePage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/objects/parameters"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2]}>
+            <DashboardLayout>
+              <ParametersPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
