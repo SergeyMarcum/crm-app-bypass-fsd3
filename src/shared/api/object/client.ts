@@ -1,7 +1,11 @@
 // src/shared/api/object/client.ts
 import axiosInstance from "@/shared/api/axios";
 import { getAuthParams } from "@/shared/lib/auth";
-import type { DomainObject } from "@/entities/object/types";
+import type {
+  DomainObject,
+  ObjectDetail,
+  ObjectTask,
+} from "@/entities/object/types";
 
 export const objectApi = {
   async getAll(): Promise<DomainObject[]> {
@@ -34,9 +38,35 @@ export const objectApi = {
     await axiosInstance.post(`/add-new-object${getAuthParams()}`, data);
   },
 
+  async update(data: {
+    id: number;
+    name: string;
+    address: string;
+    characteristic: string;
+    parameters: number[];
+    object_type: number;
+    domain: string;
+  }): Promise<void> {
+    await axiosInstance.put(`/object/edit${getAuthParams()}`, data);
+  },
+
   async getAllDomainObjects(): Promise<DomainObject[]> {
     const res = await axiosInstance.get(
       `/all-domain-objects${getAuthParams()}`
+    );
+    return res.data;
+  },
+
+  async getById(objectId: number): Promise<ObjectDetail> {
+    const res = await axiosInstance.get(
+      `/object/get${getAuthParams()}&object_id=${objectId}`
+    );
+    return res.data;
+  },
+
+  async getObjectTasks(objectId: number): Promise<ObjectTask[]> {
+    const res = await axiosInstance.get(
+      `/object/tasks${getAuthParams()}&object_id=${objectId}`
     );
     return res.data;
   },
