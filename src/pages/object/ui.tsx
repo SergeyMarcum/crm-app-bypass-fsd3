@@ -13,11 +13,8 @@ import { objectApi } from "@/shared/api/object";
 import { ObjectInfoCard } from "@/widgets/object-info-card";
 import { ObjectTaskTable } from "@/widgets/object-task-table";
 
-import type {
-  ObjectDetail,
-  ObjectTask,
-  ObjectHistoryRecord,
-} from "@/entities/object/types";
+import type { ObjectDetail, ObjectTask } from "@/entities/object/types";
+import type { ObjectHistoryRecord } from "@/widgets/object-task-table/types";
 
 export const ObjectPage = () => {
   const { id } = useParams();
@@ -33,17 +30,18 @@ export const ObjectPage = () => {
         objectApi.getById(objectId),
         objectApi.getObjectTasks(objectId),
       ]);
+
       setObjectInfo(info);
 
-      const transformed = history.map(
-        (task: ObjectTask): ObjectHistoryRecord => ({
+      const transformed: ObjectHistoryRecord[] = history.map(
+        (task: ObjectTask) => ({
           id: task.id,
-          check_date: task.check_date,
-          is_recheck: task.is_recheck,
-          operator_name: task.operator_name,
+          inspection_date: task.check_date,
+          is_reinspection: task.is_recheck,
+          operator_full_name: task.operator_name,
           upload_date: task.upload_date,
-          parameter_summary: task.parameters.map((p) => p.name).join(", "),
-          incongruity_summary: task.parameters
+          parameter: task.parameters.map((p) => p.name).join(", "),
+          incongruity: task.parameters
             .flatMap((p) => p.incongruities.map((i) => i.name))
             .join(", "),
         })
@@ -101,7 +99,12 @@ export const ObjectPage = () => {
       <ObjectInfoCard objectId={objectId} />
 
       <Box mt={4}>
-        <ObjectTaskTable data={tasks} />
+        <ObjectTaskTable
+          data={tasks}
+          onViewPhoto={(url) => {
+            window.open(url, "_blank");
+          }}
+        />
       </Box>
     </Box>
   );

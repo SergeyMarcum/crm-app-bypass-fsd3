@@ -19,6 +19,7 @@ import { CheckLogsPage } from "@/pages/logs/checks";
 import { DefectLogsPage } from "@/pages/logs/defects";
 import { ButtonsPage } from "@/pages/ui-kit/button";
 import { ObjectsPage } from "@/pages/objects";
+import { ObjectPage } from "@/pages/object"; // 👈 добавлено
 import { ObjectTypePage } from "@/pages/object-type";
 import { ParametersPage } from "@/pages/parameters";
 
@@ -170,6 +171,17 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={[1, 2]}>
             <DashboardLayout>
               <ObjectsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/objects/:id"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2]}>
+            <DashboardLayout>
+              <ObjectPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
