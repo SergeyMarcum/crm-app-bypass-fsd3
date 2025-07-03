@@ -18,6 +18,7 @@ import { objectTypeApi } from "@/shared/api/object-type";
 import { useEditIncongruityStore } from "./model/store";
 import type { Incongruity, ParamEditModalProps } from "./types";
 import type { JSX } from "react";
+import type { IncongruityCase } from "@/shared/api/object-type/types";
 
 export const EditParameterModal = ({
   open,
@@ -36,15 +37,20 @@ export const EditParameterModal = ({
     setName(parameterName);
 
     Promise.all([
-      objectTypeApi.getParameterIncongruities(parameterId),
+      objectTypeApi.getAllCasesOfParameterNonCompliance(parameterId),
       objectTypeApi.getAllIncongruities(),
-    ]).then(([current, all]) => {
-      const merged = current.map((curr) => {
-        const full = all.find((a) => a.id === curr.id);
-        return full ?? { ...curr, name: "(неизвестное несоответствие)" };
+    ]).then(([current, all]: [IncongruityCase[], Incongruity[]]) => {
+      const enriched = current.map((curr: IncongruityCase) => {
+        const match = all.find(
+          (i: Incongruity) => i.id === curr.incongruity_id
+        );
+        return {
+          id: curr.incongruity_id,
+          name: match?.name ?? curr.name ?? "(неизвестное несоответствие)",
+        };
       });
       setAllIncongruities(all);
-      set(merged);
+      set(enriched);
     });
   }, [open]);
 
@@ -57,11 +63,15 @@ export const EditParameterModal = ({
       await objectTypeApi.editParameter({ id: parameterId, name });
 
       const current =
-        await objectTypeApi.getParameterIncongruities(parameterId);
-      const currentIds = new Set(current.map((i) => i.id));
+        await objectTypeApi.getAllCasesOfParameterNonCompliance(parameterId);
+      const currentIds = new Set(
+        current.map((i: IncongruityCase) => i.incongruity_id)
+      );
 
       const added = list.filter((i) => !currentIds.has(i.id));
-      const removed = current.filter((i) => !list.find((l) => l.id === i.id));
+      const removed = current.filter(
+        (i: IncongruityCase) => !list.find((l) => l.id === i.incongruity_id)
+      );
 
       await Promise.all([
         ...(added.length
@@ -72,11 +82,11 @@ export const EditParameterModal = ({
               }),
             ]
           : []),
-        ...removed.map((i) =>
+        ...removed.map((i: IncongruityCase) =>
           objectTypeApi.deleteParameterIncongruity({
-            id: 0,
+            id: i.id,
             parameter_id: parameterId,
-            incongruity_ids: i.id,
+            incongruity_ids: i.incongruity_id,
           })
         ),
       ]);
