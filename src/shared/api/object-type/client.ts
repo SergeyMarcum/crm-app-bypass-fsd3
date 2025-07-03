@@ -5,14 +5,8 @@ import type {
   ParameterOption,
 } from "@/widgets/add-parameter-modal/types";
 import { AxiosError } from "axios";
-
-function getAuthParams() {
-  const domain = localStorage.getItem("auth_domain") || "";
-  const username = localStorage.getItem("username") || "";
-  const session_code = localStorage.getItem("session_token") || "";
-
-  return `?domain=${domain}&username=${username}&session_code=${session_code}`;
-}
+import { getAuthParams } from "@/shared/lib/auth";
+import type { IncongruityCase } from "./types";
 
 export const objectTypeApi = {
   async getObjectTypeParameters(
@@ -81,7 +75,7 @@ export const objectTypeApi = {
       const res = await axiosInstance.get(
         `/all-cases-of-parameter-non-compliance${getAuthParams()}&param_id=${paramId}`
       );
-      return res.data; // ← Убедись, что API возвращает name
+      return res.data;
     } catch (error) {
       const err = error as AxiosError;
       if (err.response?.status === 404) {
@@ -92,15 +86,25 @@ export const objectTypeApi = {
     }
   },
 
+  async getAllCasesOfParameterNonCompliance(
+    param_id: number
+  ): Promise<IncongruityCase[]> {
+    const res = await axiosInstance.get(
+      `/all-cases-of-parameter-non-compliance${getAuthParams()}&param_id=${param_id}`
+    );
+    return res.data;
+  },
+
   async addParameterIncongruity(data: {
     parameter_id: number;
-    incongruity_ids: number[]; // обязательно массив
+    incongruity_ids: number[];
   }): Promise<void> {
     await axiosInstance.post(
       `/add-parameter-non-compliance${getAuthParams()}`,
       data
     );
   },
+
   async updateParameterIncongruity(data: {
     parameter_id: number;
     incongruity_ids: number[];
