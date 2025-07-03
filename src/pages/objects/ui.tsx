@@ -1,24 +1,13 @@
 // src/pages/objects/ui.tsx
-import {
-  Box,
-  Typography,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  Select,
-  MenuItem,
-  Stack,
-  IconButton,
-} from "@mui/material";
+import { Box, Typography, Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
 import { ObjectModal } from "@/widgets/object-modal";
 import type { JSX } from "react";
-import type { AgGridReact } from "ag-grid-react";
-import { useTableStore } from "@/widgets/table/model/store";
+
+import type { DomainObject } from "@/entities/object/types";
+import { useNavigate } from "react-router-dom";
 
 interface ObjectData {
   id: number;
@@ -36,12 +25,22 @@ const filterDefinitions: FilterDefinition<ObjectData>[] = [
 export function ObjectsPage(): JSX.Element {
   const [objects, setObjects] = useState<ObjectData[]>([]);
   const [addOpen, setAddOpen] = useState(false);
-  const { resetFilters } = useTableStore();
+
+  const navigate = useNavigate();
 
   const fetchObjects = async () => {
     try {
-      const data = await objectApi.getAllDomainObjects();
-      setObjects(data);
+      const data: DomainObject[] = await objectApi.getAllDomainObjects();
+
+      const transformed: ObjectData[] = data.map((item) => ({
+        id: item.id,
+        name: item.name,
+        address: item.address,
+        object_type: item.type_name || "—",
+        characteristic: item.characteristic || "—",
+      }));
+
+      setObjects(transformed);
     } catch (err) {
       console.error("Ошибка при загрузке объектов", err);
     }
@@ -61,12 +60,8 @@ export function ObjectsPage(): JSX.Element {
       headerName: "Детали",
       field: "actions",
       width: 80,
-      cellRenderer: (params: { data: ObjectData }) => (
-        <Button
-          onClick={() => {
-            // handle navigation to object view
-          }}
-        >
+      cellRenderer: (_params: { data: ObjectData }) => (
+        <Button onClick={() => navigate(`/objects/${_params.data.id}`)}>
           →
         </Button>
       ),
@@ -82,31 +77,7 @@ export function ObjectsPage(): JSX.Element {
         Список объектов указанного филиала
       </Typography>
 
-      <Box display="flex" justifyContent="space-between" my={2}>
-        <Box display="flex" gap={2}>
-          <Button
-            variant="contained"
-            onClick={() => {
-              // Фильтрация через table
-            }}
-          >
-            Объекты
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={() => {
-              // Фильтрация через table
-            }}
-          >
-            Тип объекта
-          </Button>
-
-          <Button variant="outlined" onClick={() => resetFilters()}>
-            Сбросить фильтры
-          </Button>
-        </Box>
-
+      <Box display="flex" justifyContent="end" my={2}>
         <Button variant="contained" onClick={() => setAddOpen(true)}>
           Добавить объект
         </Button>
@@ -117,7 +88,7 @@ export function ObjectsPage(): JSX.Element {
         columnDefs={columns}
         getRowId={(row) => row.id.toString()}
         filters={filterDefinitions}
-        pageSize={15}
+        pageSize={20}
       />
 
       <ObjectModal

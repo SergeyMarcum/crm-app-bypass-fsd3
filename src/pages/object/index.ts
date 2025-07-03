@@ -1,2 +1,2 @@
 // src/pages/object/index.tsx
-export { ObjectTypePage } from "./ui";
+export { ObjectPage } from "./ui";

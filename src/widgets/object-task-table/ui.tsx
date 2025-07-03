@@ -1,58 +1,86 @@
 // src/widgets/object-task-table/ui.tsx
 import { forwardRef } from "react";
-import { CustomTable, FilterDefinition } from "@/widgets/table";
-import type { AgGridReact } from "ag-grid-react";
-import type { ObjectHistoryRecord } from "../object-history-table";
-
+import { CustomTable } from "@/widgets/table";
+import type { FilterDefinition } from "@/widgets/table";
+import type { ObjectHistoryRecord } from "./types";
+import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { IconButton, Tooltip } from "@mui/material";
-
-const columns = (
-  onViewPhoto: (photoUrl: string) => void
-): Parameters<typeof CustomTable<ObjectHistoryRecord>>[0]["columnDefs"] => [
-  { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
-  { headerName: "Дата проверки", field: "check_date", flex: 1 },
-  { headerName: "Повторная проверка", field: "is_repeated", flex: 1 },
-  { headerName: "Оператор", field: "operator", flex: 1 },
-  { headerName: "Дата загрузки отчета", field: "upload_date", flex: 1 },
-  { headerName: "Параметр", field: "parameter", flex: 1 },
-  { headerName: "Несоответствие", field: "incongruity", flex: 2 },
-  {
-    headerName: "Фото",
-    field: "photo",
-    cellRenderer: (params: { data: ObjectHistoryRecord }) =>
-      params.data.photo_url ? (
-        <Tooltip title="Открыть фото">
-          <IconButton onClick={() => onViewPhoto(params.data.photo_url!)}>
-            <VisibilityIcon />
-          </IconButton>
-        </Tooltip>
-      ) : (
-        "—"
-      ),
-    width: 100,
-  },
-];
-
-const filters: FilterDefinition<ObjectHistoryRecord>[] = [
-  { key: "check_date", label: "Дата проверки" },
-  { key: "upload_date", label: "Дата загрузки" },
-  { key: "parameter", label: "Параметр проверки" },
-  { key: "operator_name", label: "Оператор" },
-];
+import type { AgGridReact } from "ag-grid-react";
 
 type Props = {
-  data: ObjectHistoryRecord[];
+  data: (ObjectHistoryRecord & { photo_url?: string })[];
   onViewPhoto: (url: string) => void;
 };
 
 export const ObjectTaskTable = forwardRef<AgGridReact, Props>(
   ({ data, onViewPhoto }, ref) => {
+    const filters: FilterDefinition<ObjectHistoryRecord>[] = [
+      { key: "inspection_date", label: "Дата проверки" },
+      { key: "upload_date", label: "Дата загрузки" },
+      { key: "parameter", label: "Параметр проверки" },
+      { key: "operator_full_name", label: "Оператор" },
+    ];
+
+    const columns = [
+      { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
+      {
+        headerName: "Дата проверки",
+        field: "inspection_date",
+        flex: 1.2,
+      },
+      {
+        headerName: "Повторная?",
+        field: "is_reinspection",
+        width: 120,
+        cellRenderer: (params: { data: ObjectHistoryRecord }) =>
+          params.data.is_reinspection ? "Да" : "Нет",
+      },
+      {
+        headerName: "Оператор",
+        field: "operator_full_name",
+        flex: 1.5,
+      },
+      {
+        headerName: "Дата загрузки отчёта",
+        field: "upload_date",
+        flex: 1.5,
+      },
+      {
+        headerName: "Параметры",
+        field: "parameter",
+        flex: 2,
+      },
+      {
+        headerName: "Несоответствия",
+        field: "incongruity",
+        flex: 2,
+      },
+      {
+        headerName: "Фото",
+        field: "photo",
+        width: 100,
+        cellRenderer: (params: {
+          data: ObjectHistoryRecord & { photo_url?: string };
+        }) => {
+          const url = params.data.photo_url;
+          return url ? (
+            <IconButton
+              size="small"
+              onClick={() => onViewPhoto(url)}
+              title="Посмотреть фото"
+            >
+              <VisibilityIcon fontSize="small" />
+            </IconButton>
+          ) : null;
+        },
+      },
+    ];
+
     return (
-      <CustomTable<ObjectHistoryRecord>
+      <CustomTable<ObjectHistoryRecord & { photo_url?: string }>
         ref={ref}
         rowData={data}
-        columnDefs={columns(onViewPhoto)}
+        columnDefs={columns}
         getRowId={(row) => row.id.toString()}
         filters={filters}
         pageSize={15}

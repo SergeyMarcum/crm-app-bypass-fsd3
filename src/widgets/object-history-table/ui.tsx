@@ -12,10 +12,14 @@ import RuleIcon from "@mui/icons-material/Rule";
 import type { JSX } from "react";
 
 const filters: FilterDefinition<ObjectHistoryRecord>[] = [
-  { key: "check_date", label: "Дата проверки", icon: <CalendarMonthIcon /> },
+  {
+    key: "inspection_date",
+    label: "Дата проверки",
+    icon: <CalendarMonthIcon />,
+  },
   { key: "upload_date", label: "Дата загрузки", icon: <CalendarMonthIcon /> },
   { key: "parameter", label: "Параметр проверки", icon: <RuleIcon /> },
-  { key: "operator", label: "Оператор", icon: <PersonIcon /> },
+  { key: "operator_full_name", label: "Оператор", icon: <PersonIcon /> },
 ];
 
 type Props = {
@@ -27,14 +31,14 @@ export const ObjectHistoryTable = forwardRef<AgGridReact, Props>(
   ({ data, onViewPhoto }, ref): JSX.Element => {
     const columns = [
       { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
-      { headerName: "Дата проверки", field: "check_date" },
+      { headerName: "Дата проверки", field: "inspection_date" },
       {
         headerName: "Повторная проверка",
-        field: "is_repeat",
+        field: "is_reinspection",
         valueFormatter: (params: { value: boolean }) =>
           params.value ? "Да" : "Нет",
       },
-      { headerName: "Оператор", field: "operator" },
+      { headerName: "Оператор", field: "operator_full_name" },
       { headerName: "Дата загрузки", field: "upload_date" },
       { headerName: "Параметр", field: "parameter" },
       { headerName: "Несоответствия", field: "incongruity" },
