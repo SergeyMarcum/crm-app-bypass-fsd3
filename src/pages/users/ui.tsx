@@ -33,14 +33,14 @@ const statusTabs = [
 ];
 
 const roleMap: Record<number, string> = {
-  1: "Super Admin",
-  2: "Admin",
-  3: "Manager",
-  4: "User",
-  5: "Guest",
-  6: "Auditor",
-  7: "Editor",
-  8: "Contributor",
+  1: "Администратор ИТЦ",
+  2: "Администратор Филиала",
+  3: "Мастер",
+  4: "Оператор",
+  5: "Наблюдатель Филиала",
+  6: "Гость",
+  7: "Уволенные",
+  8: "Администратор Общества",
 };
 
 const statusMap: Record<number, string> = {
@@ -55,22 +55,37 @@ export const UsersPage = (): JSX.Element => {
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  const gridRef = useRef<AgGridReact<User>>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  const gridRef = useRef<AgGridReact<User>>(null);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editedUser, setEditedUser] = useState<Partial<User>>({});
 
   useEffect(() => {
-    userApi.getCompanyUsers().then((res) => {
-      setUsers(res.users);
-      setDepartments(
-        Array.from(
+    const load = async () => {
+      try {
+        const company = await userApi.getCompanyUsers();
+        const userFromStorage = localStorage.getItem("auth_user");
+
+        setUsers(company.users);
+        setCurrentUser(userFromStorage ? JSON.parse(userFromStorage) : null);
+
+        const departmentList = Array.from(
           new Set(
-            res.users.map((u) => u.department).filter((d): d is string => !!d)
+            company.users
+              .map((u) => u.department)
+              .filter(
+                (d): d is string => typeof d === "string" && d.trim() !== ""
+              )
           )
-        )
-      );
-    });
+        );
+        setDepartments(departmentList);
+      } catch (error) {
+        console.error("Ошибка при загрузке пользователей:", error);
+      }
+    };
+
+    load();
   }, []);
 
   const handleEdit = (user: User): void => {
@@ -144,6 +159,23 @@ export const UsersPage = (): JSX.Element => {
           />
         ) : (
           params.data?.full_name
+        ),
+    },
+    {
+      headerName: "Должность",
+      field: "position",
+      cellRenderer: (params: ICellRendererParams<User>) =>
+        editingUserId === params.data?.id ? (
+          <TextField
+            value={editedUser.position ?? ""}
+            onChange={(e) =>
+              setEditedUser((p) => ({ ...p, position: e.target.value }))
+            }
+            size="small"
+            fullWidth
+          />
+        ) : (
+          params.data?.position || "—"
         ),
     },
     {
