@@ -9,6 +9,8 @@ import {
   Button,
   Autocomplete,
   TextField,
+  // Grid, // Grid больше не импортируется для этого файла
+  Box,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -29,37 +31,32 @@ export const AddParameterModal = ({
   onClose,
   objectTypeId,
 }: AddParameterModalProps): JSX.Element => {
-  const [parameters, setParameters] = useState<ParameterOption[]>([]);
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
-  const [selectedParam, setSelectedParam] = useState<ParameterOption | null>(
-    null
-  );
+  const [newParameterName, setNewParameterName] = useState<string>("");
   const [newInc, setNewInc] = useState<Incongruity | null>(null);
   const { list, add, remove, reset } = useAddParameterStore();
 
   useEffect(() => {
     if (!open) return;
     reset();
-    setSelectedParam(null);
+    setNewParameterName("");
     setNewInc(null);
-    objectTypeApi.getAllParameters().then(setParameters);
     objectTypeApi.getAllIncongruities().then(setIncongruities);
   }, [open]);
 
   const handleSave = async () => {
-    if (!selectedParam) return;
-    const parameterId = selectedParam.id;
+    if (!newParameterName.trim()) {
+      alert("Название параметра не может быть пустым.");
+      return;
+    }
 
     try {
-      await objectTypeApi.saveObjectTypeParam({
-        id: objectTypeId,
-        name: selectedParam.name,
-        parameter_ids: [parameterId],
-      });
+      const newParam = await objectTypeApi.addNewParameter(newParameterName.trim());
+      const newParameterId = newParam.id;
 
-      if (list.length) {
+      if (list.length > 0) {
         await objectTypeApi.addParameterIncongruity({
-          parameter_id: parameterId,
+          parameter_id: newParameterId,
           incongruity_ids: list.map((i) => i.id),
         });
       }
@@ -67,6 +64,7 @@ export const AddParameterModal = ({
       onClose();
     } catch (err) {
       console.error("Ошибка при сохранении параметра:", err);
+      alert("Произошла ошибка при сохранении параметра. Пожалуйста, попробуйте еще раз.");
     }
   };
 
@@ -74,10 +72,16 @@ export const AddParameterModal = ({
     (i) => !list.some((l) => l.id === i.id)
   );
 
+  // Определяем ширину колонок для flexbox
+  // Соответствует xs={1}, xs={9}, xs={2} => 1/12, 9/12, 2/12 от общей ширины
+  const col1Width = '8.33%'; // 1/12
+  const col2Width = '75%';    // 9/12
+  const col3Width = '16.67%'; // 2/12
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
-        Параметр проверки объекта
+        Новый Параметр проверки объекта
         <IconButton
           onClick={onClose}
           sx={{ position: "absolute", top: 8, right: 8 }}
@@ -88,30 +92,45 @@ export const AddParameterModal = ({
 
       <DialogContent dividers>
         <Stack spacing={2}>
-          <Autocomplete
-            options={parameters}
-            getOptionLabel={(o) => o.name}
-            value={selectedParam}
-            onChange={(_, val) => setSelectedParam(val)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Выберите параметр проверки"
-                fullWidth
-              />
-            )}
+          <TextField
+            label="Название нового параметра проверки"
+            value={newParameterName}
+            onChange={(e) => setNewParameterName(e.target.value)}
+            fullWidth
           />
 
           <Typography variant="subtitle1">Список несоответствий</Typography>
-          {list.map((i, idx) => (
-            <Stack key={i.id} direction="row" alignItems="center" spacing={1}>
-              <Typography>{idx + 1}.</Typography>
-              <Typography sx={{ flex: 1 }}>{i.name}</Typography>
-              <IconButton onClick={() => remove(i.id)}>
-                <DeleteIcon />
-              </IconButton>
-            </Stack>
-          ))}
+          <Box sx={{ width: '100%' }}>
+            {/* Заголовки таблицы: Использование Box с flexbox */}
+            <Box sx={{ display: 'flex', width: '100%', fontWeight: 'bold', mb: 1, alignItems: 'center' }}>
+                <Box sx={{ flexBasis: col1Width, p: 1 }}>№</Box>
+                <Box sx={{ flexBasis: col2Width, p: 1 }}>Наименование несоответствия</Box>
+                <Box sx={{ flexBasis: col3Width, p: 1, display: 'flex', justifyContent: 'flex-end' }}></Box>
+            </Box>
+            {/* Строки таблицы: Использование Box с flexbox */}
+            {list.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ml:1}}>
+                    Нет добавленных несоответствий.
+                </Typography>
+            ) : (
+                list.map((i, idx) => (
+                    <Box key={i.id} sx={{ display: 'flex', width: '100%', alignItems: 'center', mb: 0.5 }}>
+                        <Box sx={{ flexBasis: col1Width, p: 1 }}>
+                            <Typography>{idx + 1}.</Typography>
+                        </Box>
+                        <Box sx={{ flexBasis: col2Width, p: 1 }}>
+                            <Typography>{i.name}</Typography>
+                        </Box>
+                        <Box sx={{ flexBasis: col3Width, p: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                            <IconButton onClick={() => remove(i.id)} size="small">
+                                <DeleteIcon />
+                            </IconButton>
+                        </Box>
+                    </Box>
+                ))
+            )}
+          </Box>
+
 
           <Stack direction="row" spacing={1} alignItems="center">
             <Autocomplete
@@ -132,6 +151,7 @@ export const AddParameterModal = ({
                 }
               }}
               color="primary"
+              disabled={!newInc}
             >
               <AddIcon />
             </IconButton>
