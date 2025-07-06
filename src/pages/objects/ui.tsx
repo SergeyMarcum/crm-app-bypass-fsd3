@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
 import { ObjectModal } from "@/widgets/object-modal";
-import type { JSX } from "react";
-
-import type { DomainObject } from "@/entities/object/types";
 import { useNavigate } from "react-router-dom";
+import type { DomainObject } from "@/entities/object/types";
+import type { JSX } from "react";
 
 interface ObjectData {
   id: number;
@@ -25,12 +24,16 @@ const filterDefinitions: FilterDefinition<ObjectData>[] = [
 export function ObjectsPage(): JSX.Element {
   const [objects, setObjects] = useState<ObjectData[]>([]);
   const [addOpen, setAddOpen] = useState(false);
-
   const navigate = useNavigate();
 
   const fetchObjects = async () => {
     try {
-      const data: DomainObject[] = await objectApi.getAllDomainObjects();
+      const data = await objectApi.getAllDomainObjects();
+
+      if (!Array.isArray(data)) {
+        console.error("API /all-domain-objects вернул не массив:", data);
+        return;
+      }
 
       const transformed: ObjectData[] = data.map((item) => ({
         id: item.id,
@@ -60,8 +63,8 @@ export function ObjectsPage(): JSX.Element {
       headerName: "Детали",
       field: "actions",
       width: 80,
-      cellRenderer: (_params: { data: ObjectData }) => (
-        <Button onClick={() => navigate(`/objects/${_params.data.id}`)}>
+      cellRenderer: (params: { data: ObjectData }) => (
+        <Button onClick={() => navigate(`/objects/${params.data.id}`)}>
           →
         </Button>
       ),
