@@ -84,9 +84,8 @@ export const EditParameterModal = ({
           : []),
         ...removed.map((i: IncongruityCase) =>
           objectTypeApi.deleteParameterIncongruity({
-            id: i.id,
             parameter_id: parameterId,
-            incongruity_ids: i.incongruity_id,
+            incongruity_ids: [i.incongruity_id], // Теперь `i.incongruity_id` оборачивается в массив
           })
         ),
       ]);

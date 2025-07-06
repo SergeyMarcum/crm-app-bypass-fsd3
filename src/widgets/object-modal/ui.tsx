@@ -31,13 +31,31 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
   const [customParams, setCustomParams] = useState<Parameter[]>([]);
   const [newParam, setNewParam] = useState<Parameter | null>(null);
 
+  // Добавьте новое состояние для всех доступных параметров
+  const [allAvailableParams, setAllAvailableParams] = useState<Parameter[]>([]);
+
   useEffect(() => {
     if (!open) return;
+    // Сброс состояний при открытии модального окна
+    setName("");
+    setAddress("");
+    setCharacteristic("");
+    setSelectedType(null);
+    setTypeParams([]);
+    setCustomParams([]);
+    setNewParam(null);
+
+    // Загрузка типов объектов
     objectTypeApi.getAllObjectTypes().then(setTypes);
+    // Загрузка всех параметров для выпадающего списка "Добавить параметр"
+    objectTypeApi.getAllParameters().then(setAllAvailableParams);
   }, [open]);
 
   useEffect(() => {
-    if (!selectedType) return;
+    if (!selectedType) {
+      setTypeParams([]); // Очистить, если тип не выбран
+      return;
+    }
     objectTypeApi.getObjectTypeParameters(selectedType.id).then((res) => {
       const transformed = res.map((r) => ({
         id: r.id,
@@ -61,10 +79,22 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
         parameters: params,
         domain,
       })
-      .then(() => onClose());
+      .then(() => onClose())
+      .catch((err) => {
+        console.error("Ошибка при сохранении объекта:", err);
+        // Добавьте здесь обработку ошибок, например, отображение уведомления пользователю
+      });
   };
 
-  const availableParams = typeParams.concat(customParams).map((p) => p.id);
+  // Параметры, которые уже выбраны (тип объекта + пользовательские)
+  const currentSelectedParamIds = new Set(
+    [...typeParams, ...customParams].map((p) => p.id)
+  );
+
+  // Доступные параметры для добавления (все параметры минус уже выбранные)
+  const filteredAvailableParams = allAvailableParams.filter(
+    (p) => !currentSelectedParamIds.has(p.id)
+  );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -128,7 +158,8 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
 
           <Stack direction="row" spacing={1} alignItems="center">
             <Autocomplete
-              options={[]}
+              // Используйте отфильтрованный список параметров здесь
+              options={filteredAvailableParams}
               getOptionLabel={(o) => o.name}
               value={newParam}
               onChange={(_, val) => setNewParam(val)}
@@ -139,7 +170,7 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
             />
             <IconButton
               onClick={() => {
-                if (newParam && !availableParams.includes(newParam.id)) {
+                if (newParam && !currentSelectedParamIds.has(newParam.id)) {
                   setCustomParams((prev) => [...prev, newParam]);
                   setNewParam(null);
                 }
