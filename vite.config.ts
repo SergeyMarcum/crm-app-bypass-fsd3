@@ -20,43 +20,43 @@ export default defineConfig({
   server: {
     proxy: {
       "/domain-list": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/login": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/logout": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/check-session": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
 
       "/all-users-company": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/current-user": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/check-auth": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
       "/edit-user": {
-        target: "http://192.168.1.240:82",
+        target: "http://192.168.0.184:82",
         changeOrigin: true,
         secure: false,
       },
