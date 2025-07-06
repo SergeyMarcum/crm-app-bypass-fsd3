@@ -38,12 +38,14 @@ export const userApi = {
     const response = await axiosInstance.put("/edit-user", payload, {
       params: getAuthParams(),
     });
-    if (response.data && response.data.user) {
-      return editUserSchema.parse(response.data.user);
-    } else {
-      console.error("Invalid editUser response:", response.data);
-      throw new Error("Invalid editUser response format.");
+
+    if (response.data?.Status === "OK") {
+      return editUserSchema.safeParse(response.data.user);
     }
+
+    const errorMsg = response.data?.message || "Unknown error";
+    console.error("Edit user error:", response.data);
+    throw new Error(`Ошибка API: ${errorMsg}`);
   },
 
   dismissUser: async (userId: number) => {
