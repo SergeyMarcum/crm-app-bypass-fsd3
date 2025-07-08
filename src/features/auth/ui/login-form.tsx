@@ -20,6 +20,7 @@ import { loginSchema } from "@shared/lib/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
 import { toast } from "react-toastify";
 import { z } from "zod";
+import { storage } from "@shared/lib/storage"; // Импорт storage
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -43,7 +44,7 @@ export function LoginForm(): ReactElement {
 
   // 🧠 Восстановление домена из localStorage
   useEffect(() => {
-    const savedDomain = localStorage.getItem("auth_domain");
+    const savedDomain = storage.get("auth_domain");
     if (savedDomain && domains.some((d) => d.id === savedDomain)) {
       setValue("domain", savedDomain);
     }
@@ -52,16 +53,8 @@ export function LoginForm(): ReactElement {
   const onSubmit = async (data: LoginFormData) => {
     try {
       // 🔐 Вызов логина
-      const response = await login(data);
-
-      // ✅ Сохраняем ключевые данные (предотвращает ошибки на protected pages)
-      localStorage.setItem("auth_domain", data.domain);
-      localStorage.setItem("username", data.username);
-      //localStorage.setItem("session_token", response.session_token);
-
-      if (data.rememberMe) {
-        // можно добавить куку или персистентное хранилище
-      }
+      // Функция login в store.ts теперь сама сохраняет token, user, username, auth_domain
+      await login(data);
 
       toast.success("Успешный вход");
     } catch {
@@ -110,7 +103,7 @@ export function LoginForm(): ReactElement {
                 onChange={(e) => {
                   const domainId = e.target.value;
                   field.onChange(domainId);
-                  localStorage.setItem("auth_domain", domainId);
+                  storage.set("auth_domain", domainId); // Сохраняем выбранный домен
                 }}
               >
                 {isLoading ? (

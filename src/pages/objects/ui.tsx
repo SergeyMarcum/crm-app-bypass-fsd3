@@ -5,7 +5,7 @@ import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
 import { ObjectModal } from "@/widgets/object-modal";
 import { useNavigate } from "react-router-dom";
-import type { DomainObject } from "@/entities/object/types";
+
 import type { JSX } from "react";
 
 interface ObjectData {
@@ -31,7 +31,24 @@ export function ObjectsPage(): JSX.Element {
       const data = await objectApi.getAllDomainObjects();
 
       if (!Array.isArray(data)) {
-        console.error("API /all-domain-objects вернул не массив:", data);
+        // Улучшенная обработка ошибок для API-ответов, не являющихся массивом
+        if (
+          typeof data === "object" &&
+          data !== null &&
+          "status" in data &&
+          "message" in data
+        ) {
+          console.error(
+            "Ошибка API при загрузке объектов:",
+            (data as { message: string }).message
+          );
+        } else {
+          console.error(
+            "API /all-domain-objects вернул не массив или непредвиденный формат:",
+            data
+          );
+        }
+        setObjects([]); // Очистка объектов при ошибке или неожиданном формате
         return;
       }
 
@@ -46,6 +63,7 @@ export function ObjectsPage(): JSX.Element {
       setObjects(transformed);
     } catch (err) {
       console.error("Ошибка при загрузке объектов", err);
+      setObjects([]); // Убедитесь, что объекты очищаются также при исключениях
     }
   };
 

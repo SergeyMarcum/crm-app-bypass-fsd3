@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { authApi } from "@shared/api/auth";
 import { AuthResponse, Domain, User, Credentials } from "../types";
+import { storage } from "@shared/lib/storage"; // Импорт storage
 
 interface AuthState {
   user: User | null;
@@ -38,9 +39,12 @@ export const useAuthStore = create<AuthState>()(
             domain,
           });
           set({ user, token, isAuthenticated: true, isLoading: false });
-          localStorage.setItem("session_token", token);
+          storage.set("session_token", token);
+          storage.set("username", username); // Сохраняем логин пользователя
+          storage.set("auth_user", JSON.stringify(user)); // Сохраняем объект пользователя
+
           if (rememberMe) {
-            localStorage.setItem("auth_domain", domain);
+            storage.set("auth_domain", domain);
           }
         } catch (error) {
           set({ isLoading: false, error: "Ошибка авторизации" });
@@ -54,8 +58,11 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // Даже при ошибке принудительно очищаем всё
         }
-        localStorage.removeItem("session_token");
-        localStorage.removeItem("auth_domain");
+        storage.remove("session_token");
+        storage.remove("auth_domain");
+        storage.remove("username"); // Удаляем логин пользователя
+        storage.remove("auth_user"); // Удаляем объект пользователя
+
         set({
           user: null,
           token: null,
@@ -84,11 +91,16 @@ export const useAuthStore = create<AuthState>()(
       initAuth: async () => {
         set({ isSessionChecking: true });
         try {
-          const storedToken = localStorage.getItem("session_token");
-          if (storedToken) {
-            const { user }: AuthResponse = await authApi.checkAuth();
+          const storedToken = storage.get("session_token");
+          const storedUser = storage.get("auth_user"); // Получаем объект пользователя
+          if (storedToken && storedUser) {
+            // Если токен и пользователь есть в хранилище, используем их без дополнительного запроса checkAuth
+            // Если checkAuth все еще нужен для валидации на бэкенде, его можно оставить,
+            // но тогда он должен возвращать пользователя, а не просто статус.
+            // Сейчас, если userFromStorage есть, то он уже валидный по схеме из client.ts
+            // Предполагаем, что storedUser уже содержит все необходимые данные
             set({
-              user,
+              user: JSON.parse(storedUser),
               token: storedToken,
               isAuthenticated: true,
               isSessionChecking: false,
@@ -97,7 +109,10 @@ export const useAuthStore = create<AuthState>()(
             set({ isSessionChecking: false });
           }
         } catch {
-          localStorage.removeItem("session_token");
+          storage.remove("session_token");
+          storage.remove("auth_domain");
+          storage.remove("username");
+          storage.remove("auth_user");
           set({
             user: null,
             token: null,

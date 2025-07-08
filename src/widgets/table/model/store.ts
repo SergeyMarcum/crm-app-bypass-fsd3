@@ -1,13 +1,14 @@
 // src/widgets/table/model/store.ts
 import { create } from "zustand";
+import { storage } from "@/shared/lib/storage";
 
 const FILTER_STORAGE_KEY = "table_filters";
 const SORT_STORAGE_KEY = "table_sort";
 
-// Загрузка фильтров и сортировки из localStorage
+// Загрузка фильтров и сортировки из localStorage (теперь через storage утилиту)
 const loadFilters = (): Record<string, string> => {
   try {
-    const raw = localStorage.getItem(FILTER_STORAGE_KEY);
+    const raw = storage.get(FILTER_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -16,7 +17,7 @@ const loadFilters = (): Record<string, string> => {
 
 const loadSort = (): TableSortState | null => {
   try {
-    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    const raw = storage.get(SORT_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -42,24 +43,24 @@ export const useTableStore = create<TableStore>((set) => ({
   sort: loadSort(),
 
   resetFilters: () => {
-    localStorage.removeItem(FILTER_STORAGE_KEY);
+    storage.remove(FILTER_STORAGE_KEY);
     set({ filters: {} });
   },
 
   setFilter: (field, value) =>
     set((state) => {
       const newFilters = { ...state.filters, [field]: value };
-      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(newFilters));
+      storage.set(FILTER_STORAGE_KEY, JSON.stringify(newFilters));
       return { filters: newFilters };
     }),
 
   setSort: (sort) => {
-    localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sort));
+    storage.set(SORT_STORAGE_KEY, JSON.stringify(sort));
     set({ sort });
   },
 
   clearSort: () => {
-    localStorage.removeItem(SORT_STORAGE_KEY);
+    storage.remove(SORT_STORAGE_KEY);
     set({ sort: null });
   },
 }));
