@@ -1,3 +1,4 @@
+// src/widgets/object-info-card/ui.tsx
 import {
   Card,
   CardHeader,
