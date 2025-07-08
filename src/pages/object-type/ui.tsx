@@ -6,7 +6,7 @@ import { AgGridReact } from "ag-grid-react";
 
 import { objectTypeApi } from "@/shared/api/object-type";
 import { ObjectTypeTable } from "@/widgets/object-type-table";
-import { AddParameterModal } from "@/widgets/add-parameter-modal";
+//import { AddParameterModal } from "@/widgets/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
 import { AddObjectTypeModal } from "@/widgets/add-object-type-modal";
 

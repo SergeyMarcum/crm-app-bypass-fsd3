@@ -5,10 +5,12 @@ import { Box, Typography, Button } from "@mui/material";
 import type { AgGridReact as AgGridReactType } from "ag-grid-react";
 
 import RuleIcon from "@mui/icons-material/Rule";
-import { AddParameterModal } from "@/widgets/add-parameter-modal";
+
+import { AddNewParameterModal } from "@/widgets/add-new-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
 import type { ObjectParameter } from "@/widgets/object-type-table/types";
-import { objectTypeApi } from "@/shared/api/object-type";
+
+import { parameterApi } from "@/shared/api/parameter";
 import { ParametersTable } from "@/widgets/parameters-table";
 import type { FilterDefinition } from "@/widgets/table";
 
@@ -23,8 +25,14 @@ export const ParametersPage = () => {
   const gridRef = useRef<AgGridReactType>(null);
 
   const fetchParameters = async () => {
-    const all = await objectTypeApi.getAllParameters();
-    setParameters(all.map((p) => ({ id: p.id, parameter: p.name })));
+    const all = await parameterApi.getAllParameters();
+
+    setParameters(
+      all.map((p: { id: number; name: string }) => ({
+        id: p.id,
+        parameter: p.name,
+      }))
+    );
   };
 
   useEffect(() => {
@@ -62,13 +70,12 @@ export const ParametersPage = () => {
         filters={filters}
       />
 
-      <AddParameterModal
+      <AddNewParameterModal
         open={addOpen}
         onClose={() => {
           setAddOpen(false);
           fetchParameters();
         }}
-        objectTypeId={1} // Объект можно будет заменить на актуальный
       />
 
       <EditParameterModal

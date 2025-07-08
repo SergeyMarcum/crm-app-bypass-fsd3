@@ -1,4 +1,4 @@
-// src/widgets/add-new-parameter-modal/ui.tsx
+// src/widgets/add-parameter-modal/ui.tsx
 import {
   Dialog,
   DialogTitle,
@@ -15,12 +15,9 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
-// ИЗМЕНЕНИЕ: Импортируем parameterApi вместо objectTypeApi
-import { parameterApi } from "@/shared/api/parameter";
-// ИЗМЕНЕНИЕ: Обновляем импорт стора
-import { useAddNewParameterStore } from "./model/store";
-// ИЗМЕНЕНИЕ: Обновляем импорт типов
-import type { Incongruity, AddNewParameterModalProps } from "./types";
+import { objectTypeApi } from "@/shared/api/object-type";
+import { useAddParameterStore } from "./model/store";
+import type { Incongruity, AddParameterModalProps } from "./types";
 import type { JSX } from "react";
 import { AxiosError } from "axios";
 
@@ -40,25 +37,22 @@ const isBackendErrorResponse = (
   );
 };
 
-// ИЗМЕНЕНИЕ: Обновляем имя компонента и тип пропсов
-export const AddNewParameterModal = ({
+export const AddParameterModal = ({
   open,
   onClose,
-}: AddNewParameterModalProps): JSX.Element => {
+}: AddParameterModalProps): JSX.Element => {
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
   const [newParameterName, setNewParameterName] = useState<string>("");
   const [newInc, setNewInc] = useState<Incongruity | null>(null);
-  // ИЗМЕНЕНИЕ: Обновляем имя стора
-  const { list, add, remove, reset } = useAddNewParameterStore();
+  const { list, add, remove, reset } = useAddParameterStore();
 
   useEffect(() => {
     if (!open) return;
     reset();
     setNewParameterName("");
     setNewInc(null);
-    // ИЗМЕНЕНИЕ: Вызываем метод из parameterApi
-    parameterApi.getAllIncongruities().then(setIncongruities);
-  }, [open, reset]); // Добавлены зависимости для useEffect
+    objectTypeApi.getAllIncongruities().then(setIncongruities);
+  }, [open]);
 
   const handleSave = async () => {
     if (!newParameterName.trim()) {
@@ -70,8 +64,7 @@ export const AddNewParameterModal = ({
       const selectedIncongruityIds = list.map((i) => i.id);
 
       // Вызываем API, теперь оно возвращает AddNewParameterSuccessResponse
-      // ИЗМЕНЕНИЕ: Вызываем метод из parameterApi
-      const response = await parameterApi.addNewParameter(
+      const response = await objectTypeApi.addNewParameter(
         newParameterName.trim(),
         selectedIncongruityIds
       );
@@ -87,7 +80,7 @@ export const AddNewParameterModal = ({
       // то вы сможете получить его здесь. На данный момент 'parameter' пустой.
       // Например, если бы бэкенд возвращал ID:
       // if (response.parameter && response.parameter.id) {
-      //   console.log(`Добавлен новый параметр с ID: ${response.parameter.id}`);
+      //   console.log(`Добавлен новый параметр с ID: ${response.parameter.id}`);
       // }
     } catch (err) {
       console.error("Ошибка при сохранении параметра:", err);
