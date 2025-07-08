@@ -1,6 +1,5 @@
-// src/widgets/add-new-parameter-modal/model/store.ts
+// src/widgets/add-parameter-modal/model/store.ts
 import { create } from "zustand";
-
 import type { Incongruity } from "../types";
 
 interface State {
@@ -11,7 +10,7 @@ interface State {
   reset: () => void;
 }
 
-export const useAddNewParameterStore = create<State>((set) => ({
+export const useAddParameterStore = create<State>((set) => ({
   list: [],
   set: (items) => set({ list: items }),
   add: (item) => set((state) => ({ list: [...state.list, item] })),
