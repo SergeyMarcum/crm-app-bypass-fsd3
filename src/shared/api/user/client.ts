@@ -3,20 +3,37 @@ import axiosInstance from "@/shared/api/axios";
 import { userSchema, editUserSchema } from "@shared/lib/schemas";
 import { EditUserPayload } from "@entities/user/types";
 import { z } from "zod";
-
-const getAuthParams = () => {
-  const domain = localStorage.getItem("auth_domain") || "";
-  const username = localStorage.getItem("username") || "";
-  const session_code = localStorage.getItem("session_token") || "";
-  return { domain, username, session_code };
-};
+import { getAuthParams } from "@/shared/lib/auth";
+import { storage } from "@/shared/lib/storage";
 
 export const userApi = {
   getCurrentUser: async () => {
-    const response = await axiosInstance.get("/current-user", {
-      params: getAuthParams(),
-    });
-    return userSchema.parse(response.data);
+    try {
+      const userFromStorage = storage.get("auth_user");
+      if (userFromStorage) {
+        // Парсим сохраненные данные пользователя и валидируем их схемой
+        const userData = JSON.parse(userFromStorage);
+        return userSchema.parse(userData);
+      } else {
+        // Если пользовательские данные не найдены в localStorage,
+        // выбрасываем ошибку, чтобы сигнализировать об отсутствии авторизации.
+        throw new Error("User data not found in local storage. Please log in.");
+      }
+    } catch (error) {
+      // Логируем ошибку только если она не является ожидаемой ошибкой отсутствия данных пользователя.
+      if (
+        error instanceof Error &&
+        error.message === "User data not found in local storage. Please log in."
+      ) {
+        // Это ожидаемое состояние (пользователь не авторизован), просто перебрасываем ошибку без дополнительного логирования.
+      } else {
+        console.error(
+          "Ошибка при получении текущего пользователя из хранилища:",
+          error
+        );
+      }
+      throw error; // Перебрасываем ошибку для дальнейшей обработки
+    }
   },
 
   getCompanyUsers: async () => {

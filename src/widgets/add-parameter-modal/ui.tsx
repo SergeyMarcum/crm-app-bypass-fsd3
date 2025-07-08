@@ -9,7 +9,6 @@ import {
   Button,
   Autocomplete,
   TextField,
-  // Grid, // Grid больше не импортируется для этого файла
   Box,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -18,18 +17,29 @@ import AddIcon from "@mui/icons-material/Add";
 import { useEffect, useState } from "react";
 import { objectTypeApi } from "@/shared/api/object-type";
 import { useAddParameterStore } from "./model/store";
-import type {
-  ParameterOption,
-  Incongruity,
-  AddParameterModalProps,
-} from "./types";
-
+import type { Incongruity, AddParameterModalProps } from "./types";
 import type { JSX } from "react";
+import { AxiosError } from "axios";
+
+// Определяем интерфейс для ожидаемого объекта ошибки API с полем 'detail'
+interface BackendErrorResponse {
+  detail: string;
+}
+
+// Защитник типа для проверки, является ли объект ошибкой API с полем 'detail'
+const isBackendErrorResponse = (
+  data: unknown
+): data is BackendErrorResponse => {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    typeof (data as Record<string, unknown>).detail === "string"
+  );
+};
 
 export const AddParameterModal = ({
   open,
   onClose,
-  objectTypeId,
 }: AddParameterModalProps): JSX.Element => {
   const [incongruities, setIncongruities] = useState<Incongruity[]>([]);
   const [newParameterName, setNewParameterName] = useState<string>("");
@@ -51,20 +61,49 @@ export const AddParameterModal = ({
     }
 
     try {
-      const newParam = await objectTypeApi.addNewParameter(newParameterName.trim());
-      const newParameterId = newParam.id;
+      const selectedIncongruityIds = list.map((i) => i.id);
 
-      if (list.length > 0) {
-        await objectTypeApi.addParameterIncongruity({
-          parameter_id: newParameterId,
-          incongruity_ids: list.map((i) => i.id),
-        });
-      }
+      // Вызываем API, теперь оно возвращает AddNewParameterSuccessResponse
+      const response = await objectTypeApi.addNewParameter(
+        newParameterName.trim(),
+        selectedIncongruityIds
+      );
 
-      onClose();
+      // Используем сообщение из успешного ответа, если оно есть
+      alert(
+        response.message || `Параметр "${newParameterName}" успешно добавлен.`
+      );
+      onClose(); // Закрываем модальное окно после успешного сохранения
+
+      // Если в будущем вам потребуется ID добавленного параметра,
+      // и бэкенд начнет его возвращать в 'response.parameter.id',
+      // то вы сможете получить его здесь. На данный момент 'parameter' пустой.
+      // Например, если бы бэкенд возвращал ID:
+      // if (response.parameter && response.parameter.id) {
+      //   console.log(`Добавлен новый параметр с ID: ${response.parameter.id}`);
+      // }
     } catch (err) {
       console.error("Ошибка при сохранении параметра:", err);
-      alert("Произошла ошибка при сохранении параметра. Пожалуйста, попробуйте еще раз.");
+      let errorMessage =
+        "Произошла ошибка при сохранении параметра. Пожалуйста, попробуйте еще раз.";
+
+      if (err instanceof AxiosError) {
+        // Проверяем, есть ли ответ от сервера и содержит ли он детальные данные об ошибке
+        if (err.response && isBackendErrorResponse(err.response.data)) {
+          errorMessage = `Ошибка: ${err.response.data.detail}`;
+        } else if (err.response && err.response.status === 500) {
+          // Общий случай для 500, если нет детального сообщения
+          errorMessage = "Ошибка сервера (500): Произошла внутренняя ошибка.";
+        } else if (err.message) {
+          // Если есть сообщение от Axios (например, "Network Error")
+          errorMessage = err.message;
+        }
+      } else if (err instanceof Error) {
+        // Для других стандартных ошибок JavaScript
+        errorMessage = err.message;
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -72,11 +111,9 @@ export const AddParameterModal = ({
     (i) => !list.some((l) => l.id === i.id)
   );
 
-  // Определяем ширину колонок для flexbox
-  // Соответствует xs={1}, xs={9}, xs={2} => 1/12, 9/12, 2/12 от общей ширины
-  const col1Width = '8.33%'; // 1/12
-  const col2Width = '75%';    // 9/12
-  const col3Width = '16.67%'; // 2/12
+  const col1Width = "8.33%";
+  const col2Width = "75%";
+  const col3Width = "16.67%";
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -100,37 +137,66 @@ export const AddParameterModal = ({
           />
 
           <Typography variant="subtitle1">Список несоответствий</Typography>
-          <Box sx={{ width: '100%' }}>
-            {/* Заголовки таблицы: Использование Box с flexbox */}
-            <Box sx={{ display: 'flex', width: '100%', fontWeight: 'bold', mb: 1, alignItems: 'center' }}>
-                <Box sx={{ flexBasis: col1Width, p: 1 }}>№</Box>
-                <Box sx={{ flexBasis: col2Width, p: 1 }}>Наименование несоответствия</Box>
-                <Box sx={{ flexBasis: col3Width, p: 1, display: 'flex', justifyContent: 'flex-end' }}></Box>
+          <Box sx={{ width: "100%" }}>
+            <Box
+              sx={{
+                display: "flex",
+                width: "100%",
+                fontWeight: "bold",
+                mb: 1,
+                alignItems: "center",
+              }}
+            >
+              <Box sx={{ flexBasis: col1Width, p: 1 }}>№</Box>
+              <Box sx={{ flexBasis: col2Width, p: 1 }}>
+                Наименование несоответствия
+              </Box>
+              <Box
+                sx={{
+                  flexBasis: col3Width,
+                  p: 1,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              ></Box>
             </Box>
-            {/* Строки таблицы: Использование Box с flexbox */}
             {list.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ml:1}}>
-                    Нет добавленных несоответствий.
-                </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                Нет добавленных несоответствий.
+              </Typography>
             ) : (
-                list.map((i, idx) => (
-                    <Box key={i.id} sx={{ display: 'flex', width: '100%', alignItems: 'center', mb: 0.5 }}>
-                        <Box sx={{ flexBasis: col1Width, p: 1 }}>
-                            <Typography>{idx + 1}.</Typography>
-                        </Box>
-                        <Box sx={{ flexBasis: col2Width, p: 1 }}>
-                            <Typography>{i.name}</Typography>
-                        </Box>
-                        <Box sx={{ flexBasis: col3Width, p: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                            <IconButton onClick={() => remove(i.id)} size="small">
-                                <DeleteIcon />
-                            </IconButton>
-                        </Box>
-                    </Box>
-                ))
+              list.map((i, idx) => (
+                <Box
+                  key={i.id}
+                  sx={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    mb: 0.5,
+                  }}
+                >
+                  <Box sx={{ flexBasis: col1Width, p: 1 }}>
+                    <Typography>{idx + 1}.</Typography>
+                  </Box>
+                  <Box sx={{ flexBasis: col2Width, p: 1 }}>
+                    <Typography>{i.name}</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      flexBasis: col3Width,
+                      p: 1,
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <IconButton onClick={() => remove(i.id)} size="small">
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+              ))
             )}
           </Box>
-
 
           <Stack direction="row" spacing={1} alignItems="center">
             <Autocomplete
