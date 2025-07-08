@@ -22,6 +22,7 @@ import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User, EditUserPayload } from "@/entities/user/types";
 import type { JSX } from "react";
+// import { storage } from "@/shared/lib/storage"; // Удален неиспользуемый импорт
 
 const statusTabs = [
   { label: "Все", value: null },
@@ -55,7 +56,7 @@ export const UsersPage = (): JSX.Element => {
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // const [currentUser, setCurrentUser] = useState<User | null>(null); // Удалена неиспользуемая переменная
 
   const gridRef = useRef<AgGridReact<User>>(null);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
@@ -65,10 +66,10 @@ export const UsersPage = (): JSX.Element => {
     const load = async () => {
       try {
         const company = await userApi.getCompanyUsers();
-        const userFromStorage = localStorage.getItem("auth_user");
+        // const userFromStorage = storage.get("auth_user"); // Удалено, так как currentUser не используется
 
         setUsers(company.users);
-        setCurrentUser(userFromStorage ? JSON.parse(userFromStorage) : null);
+        // setCurrentUser(userFromStorage ? JSON.parse(userFromStorage) : null); // Удалено, так как currentUser не используется
 
         const departmentList = Array.from(
           new Set(
@@ -112,15 +113,11 @@ export const UsersPage = (): JSX.Element => {
 
     try {
       await userApi.editUser(payload);
+      // Обновляем локальное состояние, что автоматически вызовет перерисовку AgGridReact через пропс rowData
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, ...payload } : u))
       );
-      if (gridRef.current?.api) {
-        const rowNode = gridRef.current.api.getRowNode(userId.toString());
-        if (rowNode) {
-          gridRef.current.api.refreshCells({ rowNodes: [rowNode] });
-        }
-      }
+      // Удален ручной вызов refreshCells, так как setUsers должен справиться с этим
     } catch (err) {
       console.error("Ошибка при сохранении:", err);
     }
@@ -150,6 +147,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <TextField
+            key={`${params.data!.id}-full_name`}
             value={editedUser.full_name ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({ ...p, full_name: e.target.value }))
@@ -167,6 +165,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <TextField
+            key={`${params.data!.id}-position`}
             value={editedUser.position ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({ ...p, position: e.target.value }))
@@ -184,6 +183,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <TextField
+            key={`${params.data!.id}-email`}
             value={editedUser.email ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({ ...p, email: e.target.value }))
@@ -201,6 +201,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <TextField
+            key={`${params.data!.id}-phone`}
             value={editedUser.phone ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({ ...p, phone: e.target.value }))
@@ -218,6 +219,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <Select
+            key={`${params.data!.id}-department`}
             value={editedUser.department ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({
@@ -245,6 +247,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <Select
+            key={`${params.data!.id}-role_id`}
             value={editedUser.role_id ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({
@@ -271,6 +274,7 @@ export const UsersPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
           <Select
+            key={`${params.data!.id}-status_id`}
             value={editedUser.status_id ?? ""}
             onChange={(e) =>
               setEditedUser((p) => ({

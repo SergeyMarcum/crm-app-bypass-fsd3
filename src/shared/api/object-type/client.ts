@@ -1,12 +1,21 @@
 // src/shared/api/object-type/client.ts
 import axiosInstance from "@/shared/api/axios";
-import type {
-  Incongruity,
-  ParameterOption,
-} from "@/widgets/add-parameter-modal/types";
+import type { Incongruity } from "@/widgets/add-parameter-modal/types";
 import { AxiosError } from "axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import type { IncongruityCase } from "./types";
+
+// Define the expected successful response type for addNewParameter
+interface AddNewParameterSuccessResponse {
+  message: string;
+  parameter: Record<string, unknown>; // Use Record<string, unknown> for an empty object or any future properties
+}
+
+// Define the expected successful response type for addNewObjectType (if any)
+interface AddNewObjectTypeSuccessResponse {
+  message: string; // Assuming a success message
+  // Add other fields if the backend returns them, e.g., 'objectType: { id: number; name: string }'
+}
 
 export const objectTypeApi = {
   async getObjectTypeParameters(
@@ -14,15 +23,12 @@ export const objectTypeApi = {
   ): Promise<{ id: number; parameter: string }[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get(
-        "/object-type-parameters",
-        {
-          params: { // Объединяем все параметры запроса здесь
-            ...authParams,
-            id: objectTypeId
-          }
-        }
-      );
+      const res = await axiosInstance.get("/object-type-parameters", {
+        params: {
+          ...authParams,
+          id: objectTypeId,
+        },
+      });
       if (!Array.isArray(res.data)) {
         throw new Error("Invalid response format: expected array");
       }
@@ -42,8 +48,8 @@ export const objectTypeApi = {
 
   async getAllObjectTypes(): Promise<{ id: number; name: string }[]> {
     try {
-      const res = await axiosInstance.get("/all-object-types", { // Corrected line
-        params: getAuthParams(), // Correctly passing parameters
+      const res = await axiosInstance.get("/all-object-types", {
+        params: getAuthParams(),
       });
       return res.data;
     } catch (error: unknown) {
@@ -53,12 +59,13 @@ export const objectTypeApi = {
     }
   },
 
-async getAllParameters(): Promise<{ id: number; name: string }[]> {
+  async getAllParameters(): Promise<{ id: number; number: string }[]> {
     try {
       const res = await axiosInstance.get("/parameters", {
         params: getAuthParams(),
       });
-      return res.data;
+
+      return res.data as { id: number; number: string }[];
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при получении всех параметров:", err.message);
@@ -69,77 +76,112 @@ async getAllParameters(): Promise<{ id: number; name: string }[]> {
   async getAllIncongruities(): Promise<Incongruity[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get(
-        "/cases-of-non-compliance", // Путь без параметров
-        {
-          params: authParams // Объект params для всех параметров запроса
-        }
-      );
-      // Дополнительная проверка на случай, если API все же вернет не массив
+      const res = await axiosInstance.get("/cases-of-non-compliance", {
+        params: authParams,
+      });
       if (!Array.isArray(res.data)) {
-        console.error("Неверный формат ответа для getAllIncongruities: ожидался массив", res.data);
-        return []; // Возвращаем пустой массив, чтобы предотвратить ошибку .find() в UI
+        console.error(
+          "Неверный формат ответа для getAllIncongruities: ожидался массив",
+          res.data
+        );
+        return [];
       }
       return res.data;
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при получении всех несоответствий:", err.message);
-      throw err; // Перебрасываем ошибку для обработки выше по стеку
+      throw err;
     }
   },
 
-// Эта функция больше не будет использоваться для добавления НОВОГО параметра
-  // Она предназначена для редактирования СУЩЕСТВУЮЩЕГО типа объекта (его id, name, и связанного списка parameter_ids)
   async saveObjectTypeParam(data: {
     id: number;
     name: string;
     parameter_ids: number[];
   }): Promise<void> {
-    // Получаем параметры аутентификации
     const authParams = getAuthParams();
-    await axiosInstance.put(
-      "/edit-object-type", // Базовый URL без параметров
-      data, // Тело запроса
-      {
-        params: authParams, // Передаем параметры аутентификации в объект конфигурации Axios
-      }
-    );
+    await axiosInstance.put("/edit-object-type", data, {
+      params: authParams,
+    });
   },
 
-  // НОВАЯ ФУНКЦИЯ: Добавление нового параметра проверки объекта
-  async addNewParameter(name: string): Promise<{ id: number; name: string }> {
+  async addNewParameter(
+    name: string,
+    non_comp_ids: number[] = []
+  ): Promise<AddNewParameterSuccessResponse> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.post(
-        "/add-new-parameter",
-        { name }, // Тело запроса с именем нового параметра
+      const res = await axiosInstance.post<AddNewParameterSuccessResponse>(
+        "http://192.168.1.243:82/add-new-parameter", // Use the correct IP for your backend
+        { name, non_comp_ids },
         {
-          params: authParams, // Параметры аутентификации в запросе
+          params: authParams,
         }
       );
-      // Предполагаем, что бэкенд возвращает созданный объект с ID
-      if (typeof res.data !== 'object' || res.data === null || typeof res.data.id !== 'number') {
-          console.error("Неверный формат ответа для addNewParameter: ожидался объект с id", res.data);
-          throw new Error("Invalid response format for addNewParameter");
+
+      console.log("Ответ сервера при добавлении параметра (res):", res);
+
+      if (
+        res.data &&
+        typeof res.data.message === "string" &&
+        typeof res.data.parameter === "object"
+      ) {
+        return res.data;
+      } else {
+        throw new Error(
+          "Неверный формат ответа для addNewParameter: ожидался объект с полями 'message' и 'parameter'"
+        );
       }
-      return res.data;
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при добавлении нового параметра:", err.message);
+      if (err.response && err.response.data) {
+        console.error("Детали ошибки от сервера:", err.response.data);
+      }
       throw err;
     }
   },
 
+  // --- НОВЫЙ МЕТОД: addNewObjectType ---
+  async addNewObjectType(
+    name: string,
+    parameter_ids: number[] = []
+  ): Promise<AddNewObjectTypeSuccessResponse> {
+    try {
+      const authParams = getAuthParams();
+      const res = await axiosInstance.post<AddNewObjectTypeSuccessResponse>(
+        "http://192.168.1.243:82/add-object-type", // Use the correct IP for your backend based on your provided API table
+        { name, parameter_ids },
+        {
+          params: authParams,
+        }
+      );
+      // Backend returns '-', so we'll assume a success if no error is thrown
+      // If backend ever returns a success message/object, adjust this.
+      console.log("Ответ сервера при добавлении типа объекта:", res);
+      // For now, if no error, consider it a success and return a generic message.
+      // If the backend sends an empty response for success, you'd adjust this.
+      return {
+        message:
+          "Тип объекта успешно добавлен" /* add other fields if they exist */,
+      };
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("Ошибка при добавлении нового типа объекта:", err.message);
+      if (err.response && err.response.data) {
+        console.error("Детали ошибки от сервера:", err.response.data);
+      }
+      throw err; // Re-throw to be handled by the UI
+    }
+  },
+  // --- КОНЕЦ НОВОГО МЕТОДА ---
+
   async editParameter(data: { id: number; name: string }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await axiosInstance.put(
-        "/edit-parameter", // Базовый путь
-        data, // Тело запроса
-        {
-          params: authParams // Передаем параметры аутентификации как параметры запроса
-        }
-      );
+      await axiosInstance.put("/edit-parameter", data, {
+        params: authParams,
+      });
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при редактировании параметра:", err.message);
@@ -149,8 +191,15 @@ async getAllParameters(): Promise<{ id: number; name: string }[]> {
 
   async getParameterIncongruities(paramId: number): Promise<Incongruity[]> {
     try {
+      const authParams = getAuthParams();
       const res = await axiosInstance.get(
-        `/all-cases-of-parameter-non-compliance${getAuthParams()}&param_id=${paramId}`
+        "/all-cases-of-parameter-non-compliance",
+        {
+          params: {
+            ...authParams,
+            param_id: paramId,
+          },
+        }
       );
       return res.data;
     } catch (error) {
@@ -163,24 +212,26 @@ async getAllParameters(): Promise<{ id: number; name: string }[]> {
     }
   },
 
- async getAllCasesOfParameterNonCompliance(
+  async getAllCasesOfParameterNonCompliance(
     param_id: number
   ): Promise<IncongruityCase[]> {
     try {
       const authParams = getAuthParams();
       const res = await axiosInstance.get(
-        "/all-cases-of-parameter-non-compliance", // Путь без параметров
+        "/all-cases-of-parameter-non-compliance",
         {
-          params: { // Объект params для всех параметров запроса
-            ...authParams, // Параметры аутентификации
-            param_id: param_id // ID параметра
-          }
+          params: {
+            ...authParams,
+            param_id: param_id,
+          },
         }
       );
-      // Дополнительная проверка на случай, если API все же вернет не массив
       if (!Array.isArray(res.data)) {
-        console.error("Неверный формат ответа для getAllCasesOfParameterNonCompliance: ожидался массив", res.data);
-        return []; // Возвращаем пустой массив, чтобы предотвратить ошибку .map() в UI
+        console.error(
+          "Неверный формат ответа для getAllCasesOfParameterNonCompliance: ожидался массив",
+          res.data
+        );
+        return [];
       }
       return res.data;
     } catch (error: unknown) {
@@ -189,8 +240,6 @@ async getAllParameters(): Promise<{ id: number; name: string }[]> {
         "Ошибка при получении всех несоответствий параметра:",
         err.message
       );
-      // Перебрасываем ошибку, чтобы она была обработана выше по стеку,
-      // например, в Promise.all().catch()
       throw err;
     }
   },
@@ -201,46 +250,61 @@ async getAllParameters(): Promise<{ id: number; name: string }[]> {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await axiosInstance.post(
-        "/add-parameter-non-compliance", // Базовый URL
-        data, // Тело запроса
-        {
-          params: authParams // Передаем authParams как параметры запроса
-        }
-      );
+      await axiosInstance.post("/add-parameter-non-compliance", data, {
+        params: authParams,
+      });
     } catch (error: unknown) {
       const err = error as AxiosError;
-      console.error("Ошибка при добавлении несоответствия параметра:", err.message);
+      console.error(
+        "Ошибка при добавлении несоответствия параметра:",
+        err.message
+      );
       throw err;
     }
   },
 
- async updateParameterIncongruity(data: {
+  async updateParameterIncongruity(data: {
     parameter_id: number;
     incongruity_ids: number[];
   }): Promise<void> {
-    await axiosInstance.put(
-      `/edit-parameter-non-compliance${getAuthParams()}`,
-      data
-    );
-  },
-
-  async deleteParameterIncongruity(data: {
-    parameter_id: number;
-    incongruity_ids: number[]; // Изменено на массив чисел
-  }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await axiosInstance.delete(
-        "/delete-parameter-non-compliance", // Базовый URL
+      await axiosInstance.put(
+        "http://192.168.1.243:82/edit-parameter-non-compliance", // Use the correct IP for your backend
+        data,
         {
-          params: authParams, // Передаем параметры аутентификации как параметры запроса
-          data, // Передаем тело запроса
+          params: authParams,
         }
       );
     } catch (error: unknown) {
       const err = error as AxiosError;
-      console.error("Ошибка при удалении несоответствия параметра:", err.message);
+      console.error(
+        "Ошибка при обновлении несоответствия параметра:",
+        err.message
+      );
+      throw err;
+    }
+  },
+
+  async deleteParameterIncongruity(data: {
+    parameter_id: number;
+    incongruity_ids: number[];
+  }): Promise<void> {
+    try {
+      const authParams = getAuthParams();
+      await axiosInstance.delete(
+        "http://192.168.1.243:82/delete-parameter-non-compliance", // Use the correct IP for your backend
+        {
+          params: authParams,
+          data,
+        }
+      );
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error(
+        "Ошибка при удалении несоответствия параметра:",
+        err.message
+      );
       throw err;
     }
   },

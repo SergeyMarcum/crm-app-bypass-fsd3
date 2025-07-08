@@ -6,12 +6,11 @@ import type {
   ObjectDetail,
   ObjectTask,
 } from "@/entities/object/types";
-function getAuthQueryParams() {
-  return {
-    domain: localStorage.getItem("auth_domain") || "",
-    username: localStorage.getItem("username") || "",
-    session_code: localStorage.getItem("session_token") || "",
-  };
+
+// Определяем интерфейс для ожидаемого объекта ошибки API
+interface ApiResponseError {
+  status: "Error";
+  message: string;
 }
 
 export const objectApi = {
@@ -69,15 +68,37 @@ export const objectApi = {
   },
 
   async getAllDomainObjects(): Promise<DomainObject[]> {
-    const res = await axiosInstance.get("/all-domain-objects", {
-      params: getAuthQueryParams(),
-    });
+    try {
+      const res = await axiosInstance.get("/all-domain-objects", {
+        params: getAuthParams(),
+      });
 
-    if (!Array.isArray(res.data)) {
-      throw new Error("Ожидался массив объектов, получено: " + JSON.stringify(res.data));
+      // Защитник типа для проверки, является ли объект ошибкой API
+      // Принимаем `unknown` и безопасно проверяем свойства
+      const isApiResponseError = (data: unknown): data is ApiResponseError => {
+        return (
+          typeof data === "object" &&
+          data !== null &&
+          (data as Record<string, unknown>).status === "Error" && // Приведение к Record<string, unknown> для безопасного доступа
+          typeof (data as Record<string, unknown>).message === "string"
+        );
+      };
+
+      if (isApiResponseError(res.data)) {
+        throw new Error(`Ошибка API: ${res.data.message}`);
+      }
+
+      if (!Array.isArray(res.data)) {
+        throw new Error(
+          "Ожидался массив объектов, получено: " + JSON.stringify(res.data)
+        );
+      }
+
+      return res.data;
+    } catch (error) {
+      // Перебрасываем ошибку, чтобы она была обработана в компоненте UI
+      throw error;
     }
-
-    return res.data;
   },
 
   async getById(objectId: number): Promise<ObjectDetail> {

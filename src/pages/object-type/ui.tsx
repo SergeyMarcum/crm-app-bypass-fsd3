@@ -1,5 +1,5 @@
 // src/pages/object-type/ui.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react"; // Импортируем useCallback
 import { Box, Typography, Select, MenuItem, Button } from "@mui/material";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import { AgGridReact } from "ag-grid-react";
@@ -8,7 +8,8 @@ import { objectTypeApi } from "@/shared/api/object-type";
 import { ObjectTypeTable } from "@/widgets/object-type-table";
 import { AddParameterModal } from "@/widgets/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/edit-parameter-modal";
-//import { useTableStore } from "@/widgets/table/model/store";
+import { AddObjectTypeModal } from "@/widgets/add-object-type-modal";
+
 import type { ObjectParameter } from "@/widgets/object-type-table/types";
 import type { FilterDefinition } from "@/widgets/table";
 
@@ -16,7 +17,8 @@ export function ObjectTypePage() {
   const [parameters, setParameters] = useState<ObjectParameter[]>([]);
   const [types, setTypes] = useState<{ id: number; name: string }[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<number | "">("");
-  const [addOpen, setAddOpen] = useState(false);
+  const [addParameterModalOpen, setAddParameterModalOpen] = useState(false); // Переименовано для ясности
+  const [addObjectTypeModalOpen, setAddObjectTypeModalOpen] = useState(false); // Новое состояние для новой модалки
   const [editOpen, setEditOpen] = useState(false);
   const [editParam, setEditParam] = useState<{
     id: number;
@@ -24,35 +26,50 @@ export function ObjectTypePage() {
   } | null>(null);
   const gridRef = useRef<AgGridReact<ObjectParameter>>(null);
 
-  //const { resetFilters } = useTableStore();
+  // --- Начало изменений с useCallback ---
 
-  const fetchTypes = async () => {
+  const fetchTypes = useCallback(async () => {
     try {
       const res = await objectTypeApi.getAllObjectTypes();
       setTypes(res);
-      if (res.length > 0) setSelectedTypeId(res[0].id);
+      // Логика для выбора первого типа или сохранения текущего выбора
+      if (res.length > 0) {
+        if (
+          !selectedTypeId ||
+          !res.some((type) => type.id === selectedTypeId)
+        ) {
+          setSelectedTypeId(res[0].id); // Выбираем первый, если ничего не выбрано или текущий ID отсутствует
+        }
+      } else {
+        setSelectedTypeId(""); // Типов нет, очищаем выбор
+      }
     } catch (err) {
       console.error("Ошибка при загрузке типов объектов", err);
     }
-  };
+  }, [selectedTypeId]); // selectedTypeId является зависимостью, так как используется для проверки валидности текущего ID
 
-  const fetchParameters = async () => {
-    if (!selectedTypeId || typeof selectedTypeId !== "number") return;
+  const fetchParameters = useCallback(async () => {
+    if (!selectedTypeId || typeof selectedTypeId !== "number") {
+      setParameters([]); // Очищаем параметры, если тип не выбран
+      return;
+    }
     try {
       const res = await objectTypeApi.getObjectTypeParameters(selectedTypeId);
       setParameters(res);
     } catch (err) {
       console.error("Ошибка при загрузке параметров", err);
     }
-  };
+  }, [selectedTypeId]); // selectedTypeId является зависимостью, так как используется в вызове API
+
+  // --- Конец изменений с useCallback ---
 
   useEffect(() => {
     fetchTypes();
-  }, []);
+  }, [fetchTypes]); // Теперь fetchTypes стабилен и запускается только при изменении его внутренних зависимостей
 
   useEffect(() => {
     fetchParameters();
-  }, [selectedTypeId]);
+  }, [fetchParameters]); // Теперь fetchParameters стабилен
 
   const handleEdit = (param: ObjectParameter) => {
     setEditParam({ id: param.id, name: param.parameter });
@@ -99,12 +116,22 @@ export function ObjectTypePage() {
             ))}
           </Select>
 
+          {/* Существующая кнопка "Добавить параметр" (переименовано состояние для ясности) */}
           <Button
             variant="contained"
-            onClick={() => setAddOpen(true)}
+            onClick={() => setAddParameterModalOpen(true)}
             disabled={!selectedTypeId}
           >
-            + Добавить
+            + Добавить (Параметр)
+          </Button>
+
+          {/* НОВАЯ кнопка "Добавить тип объекта" */}
+          <Button
+            variant="contained"
+            onClick={() => setAddObjectTypeModalOpen(true)}
+            color="secondary" // Используем другой цвет для различения
+          >
+            + Добавить (Тип Объекта)
           </Button>
         </Box>
       </Box>
@@ -116,20 +143,31 @@ export function ObjectTypePage() {
         ref={gridRef}
       />
 
+      {/* Существующая AddParameterModal */}
       <AddParameterModal
-        open={addOpen}
+        open={addParameterModalOpen}
         onClose={() => {
-          setAddOpen(false);
-          fetchParameters();
+          setAddParameterModalOpen(false);
+          fetchParameters(); // Вызываем стабильную fetchParameters
         }}
         objectTypeId={Number(selectedTypeId)}
+      />
+
+      {/* НОВАЯ AddObjectTypeModal */}
+      <AddObjectTypeModal
+        open={addObjectTypeModalOpen}
+        onClose={() => setAddObjectTypeModalOpen(false)}
+        onSaveSuccess={() => {
+          fetchTypes(); // Вызываем стабильную fetchTypes для обновления типов
+          setAddObjectTypeModalOpen(false);
+        }}
       />
 
       <EditParameterModal
         open={editOpen}
         onClose={() => {
           setEditOpen(false);
-          fetchParameters();
+          fetchParameters(); // Вызываем стабильную fetchParameters
         }}
         parameterId={editParam?.id ?? 0}
         parameterName={editParam?.name ?? ""}

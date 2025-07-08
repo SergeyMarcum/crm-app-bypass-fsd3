@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { objectApi } from "@/shared/api/object";
 import { objectTypeApi } from "@/shared/api/object-type";
 import type { ObjectModalProps, ObjectType, Parameter } from "./types";
+import { storage } from "@/shared/lib/storage"; // Импорт storage
 
 export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
   const [name, setName] = useState("");
@@ -48,7 +49,16 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
     // Загрузка типов объектов
     objectTypeApi.getAllObjectTypes().then(setTypes);
     // Загрузка всех параметров для выпадающего списка "Добавить параметр"
-    objectTypeApi.getAllParameters().then(setAllAvailableParams);
+    objectTypeApi
+      .getAllParameters()
+      .then((res: { id: number; number: string }[]) => {
+        // Преобразуем поле 'number' в 'name', чтобы соответствовать типу Parameter
+        const transformedParams: Parameter[] = res.map((p) => ({
+          id: p.id,
+          name: p.number,
+        }));
+        setAllAvailableParams(transformedParams);
+      });
   }, [open]);
 
   useEffect(() => {
@@ -68,7 +78,7 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
 
   const handleSave = async () => {
     const params = [...typeParams, ...customParams].map((p) => p.id);
-    const domain = localStorage.getItem("auth_domain") || "";
+    const domain = storage.get("auth_domain") || ""; // Используем storage.get
 
     await objectApi
       .create({
