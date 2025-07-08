@@ -21,25 +21,6 @@ export const objectApi = {
     return res.data;
   },
 
-  async getAllTypes(): Promise<{ id: number; name: string }[]> {
-    const res = await axiosInstance.get("/all-object-types", {
-      params: getAuthParams(),
-    });
-    return res.data;
-  },
-
-  async getTypeParameters(
-    typeId: number
-  ): Promise<{ id: number; parameter: string }[]> {
-    const res = await axiosInstance.get("/object-type-parameters", {
-      params: {
-        ...getAuthParams(),
-        id: typeId,
-      },
-    });
-    return res.data;
-  },
-
   async create(data: {
     name: string;
     address: string;
