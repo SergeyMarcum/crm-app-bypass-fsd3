@@ -2,11 +2,10 @@
 import axiosInstance from "@/shared/api/axios";
 import { AxiosError } from "axios";
 import { getAuthParams } from "@/shared/lib/auth";
+import { Parameter } from "./types"; // Импортируем общий тип Parameter
 
-// Define the expected successful response type for addNewObjectType
 interface AddNewObjectTypeSuccessResponse {
-  message: string; // Assuming a success message
-  // Add other fields if the backend returns them, e.g., 'objectType: { id: number; name: string }'
+  message: string;
 }
 
 export const objectTypeApi = {
@@ -23,6 +22,55 @@ export const objectTypeApi = {
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error("Ошибка при получении всех типов объектов:", err.message);
+      throw err;
+    }
+  },
+
+  /**
+   * Получает все параметры проверки объекта из базы данных.
+   * Соответствует API: GET /parameters.
+   * @returns Массив параметров { id: number; name: string }.
+   */
+  async getAllParameters(): Promise<Parameter[]> {
+    try {
+      const res = await axiosInstance.get("/parameters", {
+        params: getAuthParams(),
+      });
+      // Структура ответа: [{"id":1,"name":"..."}]
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("Ошибка при получении всех параметров:", err.message);
+      throw err;
+    }
+  },
+
+  /**
+   * Получает параметры для конкретного типа объекта по его ID.
+   * Соответствует API: GET /object-type-parameters?id=<id тип объекта>
+   * Теперь API возвращает объекты с полем 'name'.
+   * @param objectTypeId ID типа объекта.
+   * @returns Массив параметров { id: number; name: string }.
+   */
+  async getObjectTypeParameters(objectTypeId: number): Promise<Parameter[]> {
+    try {
+      const authParams = getAuthParams();
+      const res = await axiosInstance.get("/object-type-parameters", {
+        params: {
+          ...authParams,
+          id: objectTypeId, // Изменено с object_type_id на id
+        },
+      });
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error(
+        `Ошибка при получении параметров для типа объекта с ID ${objectTypeId}:`,
+        err.message
+      );
+      if (err.response && err.response.data) {
+        console.error("Детали ошибки от сервера:", err.response.data);
+      }
       throw err;
     }
   },
@@ -78,6 +126,57 @@ export const objectTypeApi = {
       if (err.response && err.response.data) {
         console.error("Детали ошибки от сервера:", err.response.data);
       }
+      throw err;
+    }
+  },
+
+  /**
+   * Получает тип объекта по ID.
+   * @param id ID типа объекта.
+   * @returns Объект типа { id: number; name: string } или null, если не найден.
+   */
+  async getObjectTypeById(
+    id: number
+  ): Promise<{ id: number; name: string } | null> {
+    try {
+      const authParams = getAuthParams();
+      const res = await axiosInstance.get(`/object-type-by-id`, {
+        params: {
+          ...authParams,
+          id: id,
+        },
+      });
+      return res.data;
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      if (err.response?.status === 404) {
+        console.warn(`Тип объекта с ID ${id} не найден.`);
+        return null;
+      }
+      console.error("Ошибка при получении типа объекта по ID:", err.message);
+      throw err;
+    }
+  },
+
+  /**
+   * Добавляет существующий параметр к указанному типу объекта.
+   * @param data Объект с ID типа объекта и ID параметра.
+   */
+  async addParameterToObjectType(data: {
+    object_type_id: number;
+    parameter_id: number;
+  }): Promise<void> {
+    try {
+      const authParams = getAuthParams();
+      await axiosInstance.post("/add-parameter-to-object-type", data, {
+        params: authParams,
+      });
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error(
+        "Ошибка при добавлении параметра к типу объекта:",
+        err.message
+      );
       throw err;
     }
   },

@@ -23,10 +23,15 @@ export interface IncongruityCase {
  * Тип успешного ответа при добавлении нового параметра.
  */
 export interface AddNewParameterSuccessResponse {
+  id: number;
   message: string;
   parameter: {
     id: number;
     name: string;
     // Добавьте другие поля параметра, если они возвращаются при создании
   };
+}
+export interface ObjectParameter {
+  id: number;
+  parameter: string; // Имя параметра
 }
