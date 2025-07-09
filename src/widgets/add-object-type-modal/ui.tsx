@@ -18,7 +18,9 @@ import { useEffect, useState } from "react";
 import { objectTypeApi } from "@/shared/api/object-type";
 import { AxiosError } from "axios";
 
-import type { AddObjectTypeModalProps, Parameter } from "./types";
+// Импортируем тип Parameter из общих типов
+import type { Parameter } from "@/shared/api/object-type/types";
+import type { AddObjectTypeModalProps } from "./types";
 import type { JSX } from "react";
 
 interface BackendErrorResponse {
@@ -54,18 +56,18 @@ export const AddObjectTypeModal = ({
       setNewParameterToAdd(null);
       objectTypeApi
         .getAllParameters()
-        .then((res) => {
+        .then((res: Parameter[]) => {
           // Убедимся, что 'name' всегда имеет строковое значение.
-          // Если p.number может быть null/undefined, то String() безопасно преобразует его.
+          // Если p.name может быть null/undefined, то String() безопасно преобразует его.
           // Если бэкенд возвращает пустое название, используем ID как запасной вариант для отображения.
           setAllParameters(
-            res.map((p) => ({
+            res.map((p: Parameter) => ({
               id: p.id,
-              name: p.number || `Параметр ID: ${p.id}`, // Возвращаем запасной вариант для отображения, если 'number' пуст
+              name: p.name || `Параметр ID: ${p.id}`, // Используем p.name
             }))
           );
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error("Ошибка при загрузке всех параметров:", err);
           alert("Не удалось загрузить список параметров.");
         });
@@ -178,7 +180,7 @@ export const AddObjectTypeModal = ({
             ) : (
               selectedParameters.map((param, idx) => (
                 <Box
-                  key={param.id} // Ключ здесь уже корректен (param.id)
+                  key={param.id}
                   sx={{
                     display: "flex",
                     width: "100%",
@@ -216,8 +218,6 @@ export const AddObjectTypeModal = ({
             <Autocomplete
               options={availableParameters}
               getOptionLabel={(option) => option.name || ""}
-              // Явно указываем Autocomplete использовать 'id' как ключ
-              getOptionKey={(option) => option.id} // <-- ДОБАВЛЕНО/ИЗМЕНЕНО
               value={newParameterToAdd}
               onChange={(_, newValue) => setNewParameterToAdd(newValue)}
               sx={{ flexGrow: 1 }}
