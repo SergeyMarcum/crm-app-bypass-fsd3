@@ -6,6 +6,7 @@ import {
   ModuleRegistry,
   PaginationModule,
   RowSelectionModule,
+  // SelectionChangedEvent,
 } from "ag-grid-community";
 import {
   Button,
@@ -13,7 +14,9 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +42,7 @@ type Props<TRow extends object> = {
   pagination?: boolean;
   pageSize?: number;
   filters?: FilterDefinition<TRow>[];
+  onSelectionChanged?: AgGridReactProps["onSelectionChanged"];
 };
 
 function CustomTableInner<T extends object>(
@@ -49,6 +53,7 @@ function CustomTableInner<T extends object>(
     pagination = true,
     filters = [],
     pageSize = 20,
+    onSelectionChanged,
   }: Props<T>,
   ref: ForwardedRef<AgGridReact>
 ): JSX.Element {
@@ -131,8 +136,22 @@ function CustomTableInner<T extends object>(
       </div>
 
       <Dialog open={filterField !== null} onClose={() => setFilterField(null)}>
-        <DialogTitle>Фильтрация</DialogTitle>
-        <DialogContent>
+        <DialogTitle>
+          Фильтрация
+          <IconButton
+            aria-label="close"
+            onClick={() => setFilterField(null)}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <form onSubmit={onApplyFilters}>
             {filterField && (
               <TextField
@@ -155,10 +174,12 @@ function CustomTableInner<T extends object>(
         columnDefs={columnDefs}
         pagination={pagination}
         paginationPageSize={pageSize}
+        paginationPageSizeSelector={[10, 20, 50, 100]} // Изменено: явное указание опций
         rowSelection="multiple"
         animateRows
         domLayout="normal"
         getRowId={({ data }) => getRowId(data)}
+        onSelectionChanged={onSelectionChanged}
       />
     </div>
   );
