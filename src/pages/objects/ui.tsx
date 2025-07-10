@@ -3,7 +3,7 @@ import { Box, Typography, Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
-import { ObjectModal } from "@/widgets/object-modal";
+import { ObjectModal } from "@/widgets/object/object-modal";
 import { useNavigate } from "react-router-dom";
 
 import type { JSX } from "react";

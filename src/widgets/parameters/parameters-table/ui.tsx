@@ -1,6 +1,6 @@
 // src/widgets/parameters-table/ui.tsx
 import { CustomTable } from "@/widgets/table";
-import type { ObjectParameter } from "@/widgets/object-type-table/types";
+import type { ObjectParameter } from "@/widgets/object-type/object-type-table/types";
 import type { FilterDefinition } from "@/widgets/table";
 import type { AgGridReact } from "ag-grid-react";
 import { forwardRef } from "react";
