@@ -5,12 +5,12 @@ import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import { AgGridReact } from "ag-grid-react";
 
 import { objectTypeApi } from "@/shared/api/object-type";
-import { ObjectTypeTable } from "@/widgets/object-type-table";
-import { AddParameterModal } from "@/widgets/add-parameter-modal";
-import { EditParameterModal } from "@/widgets/edit-parameter-modal";
-import { AddObjectTypeModal } from "@/widgets/add-object-type-modal";
+import { ObjectTypeTable } from "@/widgets/object-type/object-type-table";
+import { AddParameterModal } from "@/widgets/parameters/add-parameter-modal";
+import { EditParameterModal } from "@/widgets/parameters/edit-parameter-modal";
+import { AddObjectTypeModal } from "@/widgets/object-type/add-object-type-modal";
 
-import type { ObjectParameter } from "@/widgets/object-type-table/types"; // Предполагается { id: number; parameter: string; }
+import type { ObjectParameter } from "@/widgets/object-type/object-type-table/types"; // Предполагается { id: number; parameter: string; }
 import type { FilterDefinition } from "@/widgets/table";
 
 export function ObjectTypePage() {

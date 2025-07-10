@@ -10,11 +10,11 @@ import {
 } from "@mui/material";
 
 import { objectApi } from "@/shared/api/object";
-import { ObjectInfoCard } from "@/widgets/object-info-card";
-import { ObjectTaskTable } from "@/widgets/object-task-table";
+import { ObjectInfoCard } from "@/widgets/object/object-info-card";
+import { ObjectTaskTable } from "@/widgets/task/object-task-table";
 
 import type { ObjectDetail, ObjectTask } from "@/entities/object/types";
-import type { ObjectHistoryRecord } from "@/widgets/object-task-table/types";
+import type { ObjectHistoryRecord } from "@/widgets/task/object-task-table/types";
 
 export const ObjectPage = () => {
   const { id } = useParams();
