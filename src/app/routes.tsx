@@ -12,7 +12,7 @@ import { EmployeesPage } from "@/pages/employees";
 import { TaskControlPage } from "@/pages/tasks/control";
 import { TaskCreatePage } from "@/pages/tasks/create";
 import { TaskViewPage } from "@/pages/tasks/view";
-import { TaskPage } from "pages/task";
+// import { TaskPage } from "pages/task";
 import { CalendarPage } from "@/pages/calendar";
 import { HelpPage } from "@/pages/help";
 import { SettingsPage } from "@/pages/settings";
@@ -106,16 +106,6 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={[1, 2, 3]}>
             <DashboardLayout>
               <TaskViewPage />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task/:taskId"
-        element={
-          <ProtectedRoute allowedRoles={[1, 2, 3]}>
-            <DashboardLayout>
-              <TaskPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

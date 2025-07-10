@@ -6,12 +6,12 @@ import type { AgGridReact as AgGridReactType } from "ag-grid-react";
 
 import RuleIcon from "@mui/icons-material/Rule";
 
-import { AddNewParameterModal } from "@/widgets/add-new-parameter-modal";
-import { EditParameterModal } from "@/widgets/edit-parameter-modal";
-import type { ObjectParameter } from "@/widgets/object-type-table/types";
+import { AddNewParameterModal } from "@/widgets/parameters/add-new-parameter-modal";
+import { EditParameterModal } from "@/widgets/parameters/edit-parameter-modal";
+import type { ObjectParameter } from "@/widgets/object-type/object-type-table/types";
 
 import { parameterApi } from "@/shared/api/parameter";
-import { ParametersTable } from "@/widgets/parameters-table";
+import { ParametersTable } from "@/widgets/parameters/parameters-table";
 import type { FilterDefinition } from "@/widgets/table";
 
 export const ParametersPage = () => {
