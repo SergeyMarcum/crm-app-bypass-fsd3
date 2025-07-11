@@ -129,14 +129,24 @@ export function TaskCreatePage() {
     try {
       const response: GetObjectParametersResponse =
         await objectApi.getParametersAndObjectType(objectId);
-      // Фильтруем null/undefined элементы и проверяем наличие id
-      const filteredParameters =
-        response.parameters?.filter(
-          (param): param is InspectionParameter =>
-            param != null && param.id != null
-        ) || [];
-      setInspectionParameters(filteredParameters);
-      console.log("Параметры проверки загружены:", filteredParameters);
+      // Преобразуем параметры, чтобы они соответствовали интерфейсу InspectionParameter
+      const transformedParameters: InspectionParameter[] =
+        response.parameters
+          ?.map((param: Record<string, string>) => {
+            const id = Object.keys(param)[0]; // Получаем ID, который является ключом
+            const name = param[id]; // Получаем имя, которое является значением
+            return {
+              id: parseInt(id, 10), // Преобразуем ID в число
+              name: name,
+              type: "N/A", // API не предоставляет 'type', поэтому устанавливаем значение по умолчанию
+            };
+          })
+          .filter(
+            (param): param is InspectionParameter =>
+              param != null && param.id != null
+          ) || [];
+      setInspectionParameters(transformedParameters);
+      console.log("Параметры проверки загружены:", transformedParameters);
     } catch (error) {
       console.error(
         `Ошибка при загрузке параметров для объекта ${objectId}:`,
@@ -631,17 +641,16 @@ export function TaskCreatePage() {
                         <TableCell padding="checkbox">
                           <Checkbox />
                         </TableCell>
-                        <TableCell>Порядковый номер.</TableCell>
+
                         <TableCell>Наименование несоответствия.</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {nonCompliancesForCurrentParameter.map((nc, index) => (
+                      {nonCompliancesForCurrentParameter.map((nc) => (
                         <TableRow key={nc.id}>
                           <TableCell padding="checkbox">
                             <Checkbox />
                           </TableCell>
-                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{nc.name}</TableCell>
                         </TableRow>
                       ))}
