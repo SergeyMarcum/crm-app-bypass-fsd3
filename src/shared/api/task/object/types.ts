@@ -13,12 +13,21 @@ export interface ObjectItem {
 export interface InspectionParameter {
   id: number;
   name: string;
-  type: string; // Например, 'Первичная' или 'Вторичная'
-  // Добавьте другие поля, если API возвращает их
+  type: string;
 }
 
 // Тип для ответа от /object/get, если он возвращает не только параметры, но и тип объекта
 export interface GetObjectParametersResponse {
-  object_type?: string; // Например, 'Автозаправочная станция'
-  parameters: InspectionParameter[];
+  object_info: {
+    name: string;
+    full_name: string | null;
+    address: string;
+    object_type_text: string | null;
+    id: number;
+    characteristic: string | null;
+    object_type_id: number | null;
+    domain: string;
+  };
+  object_type: unknown | null;
+  parameters: Record<string, string>[];
 }

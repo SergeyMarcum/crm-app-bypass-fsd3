@@ -19,7 +19,7 @@ export const nonComplianceApi = {
         {
           params: {
             ...authParams,
-            parameter_id: parameterId, // Предполагаем, что API ожидает parameter_id
+            param_id: parameterId, // ИЗМЕНЕНО: с parameter_id на param_id
           },
         }
       );
