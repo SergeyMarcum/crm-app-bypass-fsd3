@@ -26,11 +26,21 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  InputLabel,
+  FormControl,
+  FormHelperText,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import { SelectChangeEvent } from "@mui/material/Select";
+// import { SelectChangeEvent } from "@mui/material/Select"; // Эта строка не нужна, если SelectChangeEvent не используется явно
+
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import * as dayjs from "dayjs";
+type Dayjs = dayjs.Dayjs;
 
 import { employeeApi } from "@/shared/api/task/employee";
 import {
@@ -53,17 +63,41 @@ import {
   ValueFormatterParams,
 } from "ag-grid-community";
 
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  createTaskStep1Schema,
+  CreateTaskStep1Form,
+} from "@/features/tasks/task-form/model/task-schemas";
+import { taskApi } from "@/features/tasks/task-form/api/task";
+import { toast } from "sonner";
+
 export function TaskCreatePage() {
   const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState({
-    object: "",
-    inspectionDate: null as Date | null,
-    inspectionTime: null as Date | null,
-    isRepeatInspection: false,
-    lastInspectionDate: null as Date | null,
-    operator: "",
-    comment: "",
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid },
+    reset,
+  } = useForm<CreateTaskStep1Form>({
+    resolver: zodResolver(createTaskStep1Schema),
+    mode: "onChange",
+    defaultValues: {
+      objectId: "",
+      checkDate: null,
+      checkTime: null,
+      isRepeatInspection: false,
+      lastCheckDate: null,
+      operatorId: "",
+      comment: "",
+    },
   });
+
+  const isRepeatInspection = watch("isRepeatInspection");
+  const objectId = watch("objectId");
 
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [operators, setOperators] = useState<User[]>([]);
@@ -82,6 +116,8 @@ export function TaskCreatePage() {
   ] = useState<NonComplianceCase[]>([]);
 
   const [addParameterModalOpen, setAddParameterModalOpen] = useState(false);
+
+  const createTaskMutation = taskApi.useCreateTask();
 
   // --- API Fetching Logic ---
 
@@ -121,40 +157,41 @@ export function TaskCreatePage() {
     }
   }, []);
 
-  const fetchInspectionParameters = useCallback(async (objectId: string) => {
-    if (!objectId) {
-      setInspectionParameters([]);
-      return;
-    }
-    try {
-      const response: GetObjectParametersResponse =
-        await objectApi.getParametersAndObjectType(objectId);
-      // Преобразуем параметры, чтобы они соответствовали интерфейсу InspectionParameter
-      const transformedParameters: InspectionParameter[] =
-        response.parameters
-          ?.map((param: Record<string, string>) => {
-            const id = Object.keys(param)[0]; // Получаем ID, который является ключом
-            const name = param[id]; // Получаем имя, которое является значением
-            return {
-              id: parseInt(id, 10), // Преобразуем ID в число
-              name: name,
-              type: "N/A", // API не предоставляет 'type', поэтому устанавливаем значение по умолчанию
-            };
-          })
-          .filter(
-            (param): param is InspectionParameter =>
-              param != null && param.id != null
-          ) || [];
-      setInspectionParameters(transformedParameters);
-      console.log("Параметры проверки загружены:", transformedParameters);
-    } catch (error) {
-      console.error(
-        `Ошибка при загрузке параметров для объекта ${objectId}:`,
-        error
-      );
-      setInspectionParameters([]);
-    }
-  }, []);
+  const fetchInspectionParameters = useCallback(
+    async (currentObjectId: string) => {
+      if (!currentObjectId) {
+        setInspectionParameters([]);
+        return;
+      }
+      try {
+        const response: GetObjectParametersResponse =
+          await objectApi.getParametersAndObjectType(currentObjectId);
+        const transformedParameters: InspectionParameter[] =
+          response.parameters
+            ?.map((param: Record<string, string>) => {
+              const id = Object.keys(param)[0];
+              const name = param[id];
+              return {
+                id: parseInt(id, 10),
+                name: name,
+                type: "N/A",
+              };
+            })
+            .filter(
+              (param): param is InspectionParameter =>
+                param != null && param.id != null
+            ) || [];
+        setInspectionParameters(transformedParameters);
+      } catch (error) {
+        console.error(
+          `Ошибка при загрузке параметров для объекта ${currentObjectId}:`,
+          error
+        );
+        setInspectionParameters([]);
+      }
+    },
+    []
+  );
 
   const fetchNonCompliancesForParameter = useCallback(
     async (parameterId: string) => {
@@ -164,10 +201,6 @@ export function TaskCreatePage() {
             parameterId
           );
         setNonCompliancesForCurrentParameter(nonCompliances);
-        console.log(
-          `Несоответствия для параметра ${parameterId} загружены:`,
-          nonCompliances
-        );
       } catch (error) {
         console.error(
           `Ошибка при загрузке несоответствий для параметра ${parameterId}:`,
@@ -185,11 +218,11 @@ export function TaskCreatePage() {
   }, [fetchObjects, fetchOperators]);
 
   useEffect(() => {
-    if (formData.object) {
-      fetchInspectionParameters(formData.object);
+    if (objectId) {
+      fetchInspectionParameters(objectId);
       setSelectedInspectionParameters([]);
     }
-  }, [formData.object, fetchInspectionParameters]);
+  }, [objectId, fetchInspectionParameters]);
 
   useEffect(() => {
     if (parameterEditModalOpen && currentParameterInModal) {
@@ -203,87 +236,46 @@ export function TaskCreatePage() {
     fetchNonCompliancesForParameter,
   ]);
 
-  // --- Handlers for Form Data ---
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    if (e.target instanceof HTMLInputElement && e.target.type === "checkbox") {
-      const { checked } = e.target;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: checked,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-
-    if (type === "date") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value ? new Date(value) : null,
-      }));
-    } else if (type === "time") {
-      if (value) {
-        const [hours, minutes] = value.split(":").map(Number);
-        const now = new Date();
-        now.setHours(hours, minutes, 0, 0);
-        setFormData((prev) => ({
-          ...prev,
-          [name]: now,
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: null,
-        }));
-      }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
   // --- Handlers for Stepper and Modals ---
 
-  const isStep1Valid = () => {
-    return (
-      formData.object !== "" &&
-      formData.inspectionDate !== null &&
-      formData.inspectionTime !== null &&
-      formData.operator !== "" &&
-      (!formData.isRepeatInspection || formData.lastInspectionDate !== null)
-    );
-  };
+  const handleNextStep1 = handleSubmit(async (data: CreateTaskStep1Form) => {
+    console.log("Данные формы Шага 1:", data);
+    try {
+      if (!data.checkDate || !data.checkTime) {
+        toast.error("Дата и время проверки должны быть указаны.");
+        return;
+      }
+
+      const payload = {
+        user_id: parseInt(data.operatorId, 10),
+        manager_id: 1,
+        object_id: parseInt(data.objectId, 10),
+        shift_id: 1,
+        checking_type_id: data.isRepeatInspection ? 2 : 1,
+        date_time: dayjs(data.checkDate) // Это место, где возникала ошибка
+          .set("hour", dayjs(data.checkTime).hour())
+          .set("minute", dayjs(data.checkTime).minute())
+          .toISOString(),
+      };
+      await createTaskMutation.mutateAsync(payload);
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    } catch (error) {
+      console.error("Ошибка при отправке данных Шага 1:", error);
+    }
+  });
 
   const handleNext = () => {
-    if (activeStep === 0 && !isStep1Valid()) {
-      alert("Пожалуйста, заполните все обязательные поля в Шаге 1.");
-      return;
+    if (activeStep === 0) {
+      handleNextStep1();
+    } else if (activeStep === 1) {
+      if (selectedInspectionParameters.length === 0) {
+        alert("Пожалуйста, выберите хотя бы один параметр проверки на Шаге 2.");
+        return;
+      }
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    } else {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
-    if (activeStep === 1 && selectedInspectionParameters.length === 0) {
-      alert("Пожалуйста, выберите хотя бы один параметр проверки на Шаге 2.");
-      return;
-    }
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
   const handleBack = () => {
@@ -292,23 +284,12 @@ export function TaskCreatePage() {
 
   const handleSaveTask = () => {
     console.log("Сохранение задания:", {
-      formData,
+      formData: watch(),
       selectedInspectionParameters,
     });
     alert("Задание сохранено!");
+    reset();
     setActiveStep(0);
-    setFormData({
-      object: "",
-      inspectionDate: null,
-      inspectionTime: null,
-      isRepeatInspection: false,
-      lastInspectionDate: null,
-      operator: "",
-      comment: "",
-    });
-    setObjects([]);
-    setOperators([]);
-    setInspectionParameters([]);
     setSelectedInspectionParameters([]);
     setParameterEditModalOpen(false);
     setCurrentParameterInModal(null);
@@ -376,13 +357,11 @@ export function TaskCreatePage() {
         width: 50,
         resizable: false,
       },
-      // Удален столбец "Порядковый номер."
       {
         headerName: "Наименование параметра проверки объекта.",
         field: "name",
         flex: 1,
         minWidth: 200,
-        // Добавим valueFormatter для отображения "N/A" если имя пустое/null
         valueFormatter: (params: ValueFormatterParams) => {
           if (
             params.value === null ||
@@ -427,13 +406,11 @@ export function TaskCreatePage() {
     setSelectedInspectionParameters(selectedRows);
   }, []);
 
-  // Defensive getRowId to prevent TypeError
   const getInspectionParameterRowId = useCallback(
     (data: InspectionParameter | undefined | null) => {
       if (data && data.id) {
         return data.id.toString();
       }
-      // Fallback for undefined/null data or missing id
       console.warn(
         "getRowId received undefined/null data or missing ID. Generating random ID."
       );
@@ -442,124 +419,195 @@ export function TaskCreatePage() {
     []
   );
 
-  // --- Stepper Steps Definition ---
-
   const steps = [
     {
       label: "Основная форма задания",
       title: "Основная информация",
       content: (
-        <Box sx={{ mt: 2, mb: 2 }}>
-          <Select
-            name="object"
-            value={formData.object}
-            onChange={handleSelectChange}
-            displayEmpty
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="" disabled>
-              Выбор объекта для проверки
-            </MenuItem>
-            {objects.map((obj) => (
-              <MenuItem key={obj.id} value={obj.id.toString()}>
-                {obj.name}
-              </MenuItem>
-            ))}
-          </Select>
-
-          <TextField
-            label="Дата проверки (placeholder)"
-            type="date"
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-            onChange={handleDateInputChange}
-            name="inspectionDate"
-            InputLabelProps={{ shrink: true }}
-            value={
-              formData.inspectionDate
-                ? formData.inspectionDate.toISOString().split("T")[0]
-                : ""
-            }
-          />
-
-          <TextField
-            label="Время начала проверки (placeholder)"
-            type="time"
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-            onChange={handleDateInputChange}
-            name="inspectionTime"
-            InputLabelProps={{ shrink: true }}
-            value={
-              formData.inspectionTime
-                ? `${String(formData.inspectionTime.getHours()).padStart(2, "0")}:${String(formData.inspectionTime.getMinutes()).padStart(2, "0")}`
-                : ""
-            }
-          />
-
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={formData.isRepeatInspection}
-                onChange={handleChange}
-                name="isRepeatInspection"
-              />
-            }
-            label="Повторная проверка"
-            sx={{ mb: 2 }}
-          />
-          {formData.isRepeatInspection && (
-            <TextField
-              label="Дата последней проверки (placeholder)"
-              type="date"
-              fullWidth
-              required
-              sx={{ mb: 2 }}
-              onChange={handleDateInputChange}
-              name="lastInspectionDate"
-              InputLabelProps={{ shrink: true }}
-              value={
-                formData.lastInspectionDate
-                  ? formData.lastInspectionDate.toISOString().split("T")[0]
-                  : ""
-              }
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Controller
+              name="objectId"
+              control={control}
+              render={({ field }) => (
+                <FormControl
+                  fullWidth
+                  required
+                  sx={{ mb: 2 }}
+                  error={!!errors.objectId}
+                >
+                  <InputLabel id="object-select-label">
+                    Выбор объекта для проверки
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="object-select-label"
+                    label="Выбор объекта для проверки"
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>
+                      Выбор объекта для проверки
+                    </MenuItem>
+                    {objects.map((obj) => (
+                      <MenuItem key={obj.id} value={obj.id.toString()}>
+                        {obj.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.objectId && (
+                    <FormHelperText>{errors.objectId.message}</FormHelperText>
+                  )}
+                </FormControl>
+              )}
             />
-          )}
 
-          <Select
-            name="operator"
-            value={formData.operator}
-            onChange={handleSelectChange}
-            displayEmpty
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="" disabled>
-              Выбор оператора
-            </MenuItem>
-            {operators.map((op) => (
-              <MenuItem key={op.id} value={op.id.toString()}>
-                {op.full_name}
-              </MenuItem>
-            ))}
-          </Select>
+            <Controller
+              name="checkDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  label="Дата проверки"
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(date: Dayjs | null) =>
+                    field.onChange(date ? date.toDate() : null)
+                  }
+                  sx={{ mb: 2, width: "100%" }}
+                  slotProps={{
+                    textField: {
+                      required: true,
+                      fullWidth: true,
+                      error: !!errors.checkDate,
+                      helperText: errors.checkDate?.message,
+                    },
+                  }}
+                />
+              )}
+            />
 
-          <TextField
-            name="comment"
-            label="Комментарий к заданию"
-            multiline
-            rows={4}
-            fullWidth
-            value={formData.comment}
-            onChange={handleChange}
-            sx={{ mb: 2 }}
-          />
-        </Box>
+            <Controller
+              name="checkTime"
+              control={control}
+              render={({ field }) => (
+                <TimePicker
+                  label="Время начала проверки"
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(time: Dayjs | null) =>
+                    field.onChange(time ? time.toDate() : null)
+                  }
+                  ampm={false}
+                  sx={{ mb: 2, width: "100%" }}
+                  slotProps={{
+                    textField: {
+                      required: true,
+                      fullWidth: true,
+                      error: !!errors.checkTime,
+                      helperText: errors.checkTime?.message,
+                    },
+                  }}
+                />
+              )}
+            />
+
+            <Controller
+              name="isRepeatInspection"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      {...field}
+                      checked={field.value}
+                      onChange={(e) => {
+                        field.onChange(e.target.checked);
+                        if (!e.target.checked) {
+                          setValue("lastCheckDate", null);
+                        }
+                      }}
+                    />
+                  }
+                  label="Повторная проверка"
+                  sx={{ mb: 2 }}
+                />
+              )}
+            />
+            {isRepeatInspection && (
+              <Controller
+                name="lastCheckDate"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    label="Дата последней проверки"
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(date: Dayjs | null) =>
+                      field.onChange(date ? date.toDate() : null)
+                    }
+                    sx={{ mb: 2, width: "100%" }}
+                    slotProps={{
+                      textField: {
+                        required: isRepeatInspection,
+                        fullWidth: true,
+                        error: !!errors.lastCheckDate,
+                        helperText: errors.lastCheckDate?.message,
+                      },
+                    }}
+                  />
+                )}
+              />
+            )}
+
+            <Controller
+              name="operatorId"
+              control={control}
+              render={({ field }) => (
+                <FormControl
+                  fullWidth
+                  required
+                  sx={{ mb: 2 }}
+                  error={!!errors.operatorId}
+                >
+                  <InputLabel id="operator-select-label">
+                    Выбор оператора
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="operator-select-label"
+                    label="Выбор оператора"
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>
+                      Выбор оператора
+                    </MenuItem>
+                    {operators.map((op) => (
+                      <MenuItem key={op.id} value={op.id.toString()}>
+                        {op.full_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.operatorId && (
+                    <FormHelperText>{errors.operatorId.message}</FormHelperText>
+                  )}
+                </FormControl>
+              )}
+            />
+
+            <Controller
+              name="comment"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  label="Комментарий к заданию"
+                  multiline
+                  rows={4}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                  error={!!errors.comment}
+                  helperText={errors.comment?.message}
+                />
+              )}
+            />
+          </Box>
+        </LocalizationProvider>
       ),
     },
     {
@@ -597,7 +645,7 @@ export function TaskCreatePage() {
             </div>
           ) : (
             <Typography>
-              {formData.object
+              {objectId
                 ? "Параметры проверки для выбранного объекта не найдены."
                 : "Выберите объект на Шаге 1, чтобы загрузить параметры проверки."}
             </Typography>
@@ -641,7 +689,6 @@ export function TaskCreatePage() {
                         <TableCell padding="checkbox">
                           <Checkbox />
                         </TableCell>
-
                         <TableCell>Наименование несоответствия.</TableCell>
                       </TableRow>
                     </TableHead>
@@ -739,13 +786,13 @@ export function TaskCreatePage() {
           </Typography>
           <Typography>
             Дата проведения проверки:{" "}
-            {formData.inspectionDate
-              ? formData.inspectionDate.toLocaleDateString()
+            {watch("checkDate")
+              ? dayjs(watch("checkDate")).format("DD.MM.YYYY")
               : "Не указана"}
           </Typography>
           <Typography>
             Наименование объекта:{" "}
-            {objects.find((o) => o.id.toString() === formData.object)?.name ||
+            {objects.find((o) => o.id.toString() === objectId)?.name ||
               "Не выбрано"}
           </Typography>
 
@@ -754,17 +801,17 @@ export function TaskCreatePage() {
           </Typography>
           <Typography>
             Полное наименование:{" "}
-            {objects.find((o) => o.id.toString() === formData.object)
-              ?.full_name || "N/A"}
+            {objects.find((o) => o.id.toString() === objectId)?.full_name ||
+              "N/A"}
           </Typography>
           <Typography>
             Адрес объекта:{" "}
-            {objects.find((o) => o.id.toString() === formData.object)
-              ?.address || "N/A"}
+            {objects.find((o) => o.id.toString() === objectId)?.address ||
+              "N/A"}
           </Typography>
           <Typography>
             Характеристика объекта:{" "}
-            {objects.find((o) => o.id.toString() === formData.object)
+            {objects.find((o) => o.id.toString() === objectId)
               ?.characteristics || "N/A"}
           </Typography>
 
@@ -773,34 +820,34 @@ export function TaskCreatePage() {
           </Typography>
           <Typography>
             ФИО:{" "}
-            {operators.find((o) => o.id.toString() === formData.operator)
+            {operators.find((o) => o.id.toString() === watch("operatorId"))
               ?.full_name || "Не выбрано"}
           </Typography>
           <Typography>
             Должность:{" "}
-            {operators.find((o) => o.id.toString() === formData.operator)
+            {operators.find((o) => o.id.toString() === watch("operatorId"))
               ?.position || "N/A"}
           </Typography>
           <Typography>
             Отдел:{" "}
-            {operators.find((o) => o.id.toString() === formData.operator)
+            {operators.find((o) => o.id.toString() === watch("operatorId"))
               ?.department || "N/A"}
           </Typography>
           <Typography>
             Телефон:{" "}
-            {operators.find((o) => o.id.toString() === formData.operator)
+            {operators.find((o) => o.id.toString() === watch("operatorId"))
               ?.phone || "N/A"}
           </Typography>
           <Typography>
             Email:{" "}
-            {operators.find((o) => o.id.toString() === formData.operator)
+            {operators.find((o) => o.id.toString() === watch("operatorId"))
               ?.email || "N/A"}
           </Typography>
 
           <Typography variant="h6" sx={{ mt: 2 }}>
             Комментарий:
           </Typography>
-          <Typography>{formData.comment || "Нет"}</Typography>
+          <Typography>{watch("comment") || "Нет"}</Typography>
 
           <Typography variant="h6" sx={{ mt: 2 }}>
             Выбранные параметры проверки:
@@ -868,7 +915,8 @@ export function TaskCreatePage() {
                     onClick={handleNext}
                     sx={{ mt: 1, mr: 1 }}
                     disabled={
-                      (activeStep === 0 && !isStep1Valid()) ||
+                      (activeStep === 0 && !isValid) ||
+                      (activeStep === 0 && createTaskMutation.isPending) ||
                       (activeStep === 1 &&
                         selectedInspectionParameters.length === 0)
                     }
@@ -876,7 +924,7 @@ export function TaskCreatePage() {
                     {index === steps.length - 1 ? "Сохранить" : "Далее"}
                   </Button>
                   <Button
-                    disabled={index === 0}
+                    disabled={index === 0 || createTaskMutation.isPending}
                     onClick={handleBack}
                     sx={{ mt: 1, mr: 1 }}
                   >
