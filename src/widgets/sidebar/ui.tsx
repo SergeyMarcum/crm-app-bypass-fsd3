@@ -202,7 +202,7 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
             </List>
           </Collapse>
 
-          <NavItem to="/messages" icon={<MessageIcon />} text="Сообщения" />
+          <NavItem to="/chat" icon={<MessageIcon />} text="Сообщения" />
         </List>
       </Box>
 

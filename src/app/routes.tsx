@@ -23,6 +23,7 @@ import { ObjectsPage } from "@/pages/objects";
 import { ObjectPage } from "@/pages/object"; // 👈 добавлено
 import { ObjectTypePage } from "@/pages/object-type";
 import { ParametersPage } from "@/pages/parameters";
+import { ChatPage } from "@/pages/chat";
 
 const ProtectedRoute = ({
   children,
@@ -128,6 +129,17 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={[1, 2, 3]}>
             <DashboardLayout>
               <HelpPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2, 3]}>
+            <DashboardLayout>
+              <ChatPage  />
             </DashboardLayout>
           </ProtectedRoute>
         }
