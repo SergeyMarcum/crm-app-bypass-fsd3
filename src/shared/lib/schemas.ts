@@ -11,7 +11,7 @@ export const loginSchema = z.object({
 export const loginResponseSchema = z.object({
   token: z.string(),
   user: z.object({
-    id: z.string(),
+    id: z.string(), // ID в ответе на логин может быть строкой
     name: z.string(),
     role_id: z.number(),
   }),
@@ -19,25 +19,22 @@ export const loginResponseSchema = z.object({
 
 export const domainListSchema = z.record(z.string());
 
-// *** ИЗМЕНЕННАЯ userSchema ***
 export const userSchema = z.object({
-  // Поля, которые отсутствуют в auth_user из localStorage, сделаны необязательными.
-  // Поле 'login' добавлено, так как оно присутствует в auth_user.
-  id: z.number().optional(), // id отсутствует в auth_user из консоли, делаем необязательным
-  login: z.string(), // Добавляем поле 'login', так как оно присутствует
-  system_login: z.string().optional(), // 'system_login' также присутствует, делаем необязательным на всякий случай
+  id: z.number().optional().nullable(), // ИСПРАВЛЕНО: 'id' теперь опциональный и может быть null
+  login: z.string().optional().nullable(),
+  system_login: z.string().optional().nullable(),
   full_name: z.string().nullable(),
   company: z.string().nullable(),
   email: z.string().nullable(),
   role_id: z.number(),
-  status_id: z.number().nullable().optional(), // status_id отсутствует, делаем необязательным
-  domain: z.string().nullable().optional(), // domain отсутствует, делаем необязательным
-  name: z.string().optional(), // name отсутствует (вместо него 'login'), делаем необязательным
+  status_id: z.number().nullable().optional(),
+  domain: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
   position: z.string().nullable(),
   department: z.string().nullable(),
   phone: z.string().nullable(),
-  address: z.string().nullable().optional(), // address присутствует, но можно сделать необязательным, если не всегда есть
-  photo: z.string().nullable().optional(), // photo присутствует, но можно сделать необязательным
+  address: z.string().nullable().optional(),
+  photo: z.string().nullable().optional(),
 });
 
 export const companyUsersResponseSchema = z.object({
@@ -47,15 +44,15 @@ export const companyUsersResponseSchema = z.object({
 
 export const editUserSchema = z.object({
   user_id: z.number(),
-  name: z.string(),
-  full_name: z.string(),
-  position: z.string(),
-  company: z.string(),
-  department: z.string(),
-  email: z.string(),
-  phone: z.string(),
-  role_id: z.number(),
-  status_id: z.number(),
+  name: z.string().optional(),
+  full_name: z.string().optional(),
+  position: z.string().optional(),
+  company: z.string().optional(),
+  department: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  role_id: z.number().optional(),
+  status_id: z.number().optional(),
 });
 
 export const currentUserSchema = userSchema;

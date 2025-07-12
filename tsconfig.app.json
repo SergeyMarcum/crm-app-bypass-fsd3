@@ -72,7 +72,11 @@
     "strictNullChecks": true,
 
     // Обеспечение согласованности регистра в именах файлов
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+
+    // ошибка импорта dayjs
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
   },
   // Включение только исходного кода в src
   "include": ["src", "node_modules/@hookform/resolvers/**/*.d.ts"]

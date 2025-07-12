@@ -33,27 +33,27 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-// import { SelectChangeEvent } from "@mui/material/Select"; // Эта строка не нужна, если SelectChangeEvent не используется явно
+
+import dayjs from "dayjs";
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+dayjs.extend(customParseFormat);
 
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-import * as dayjs from "dayjs";
-type Dayjs = dayjs.Dayjs;
+
 
 import { employeeApi } from "@/shared/api/task/employee";
 import {
   objectApi,
-  InspectionParameter,
-  GetObjectParametersResponse,
 } from "@/shared/api/task/object";
 import {
   nonComplianceApi,
   NonComplianceCase,
 } from "@/shared/api/task/non-compliance";
 import type { User } from "@/shared/api/task/employee";
-import type { ObjectItem } from "@/shared/api/task/object";
+import type { ObjectItem, GetObjectParametersResponse, InspectionParameter } from "@/shared/api/task/object/types";
 
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import {
@@ -68,11 +68,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createTaskStep1Schema,
   CreateTaskStep1Form,
+  AddNewTaskPayload
 } from "@/features/tasks/task-form/model/task-schemas";
 import { taskApi } from "@/features/tasks/task-form/api/task";
 import { toast } from "sonner";
+import axios, { AxiosError } from "axios";
 
-export function TaskCreatePage() {
+// Определяем интерфейс для деталей ошибки API
+interface ApiErrorDetail {
+  loc?: (string | number)[]; // Например: ["body", "date_time"]
+  msg: string;               // Сообщение об ошибке
+  type?: string;             // Тип ошибки
+}
+
+
+export function CreateTaskPage() {
   const [activeStep, setActiveStep] = useState(0);
 
   const {
@@ -166,15 +176,14 @@ export function TaskCreatePage() {
       try {
         const response: GetObjectParametersResponse =
           await objectApi.getParametersAndObjectType(currentObjectId);
+        
         const transformedParameters: InspectionParameter[] =
           response.parameters
-            ?.map((param: Record<string, string>) => {
-              const id = Object.keys(param)[0];
-              const name = param[id];
+            ?.map((param: InspectionParameter) => {
               return {
-                id: parseInt(id, 10),
-                name: name,
-                type: "N/A",
+                id: param.id,
+                name: param.name,
+                type: param.type || "N/A",
               };
             })
             .filter(
@@ -246,21 +255,79 @@ export function TaskCreatePage() {
         return;
       }
 
-      const payload = {
+      // Объединяем дату и время и форматируем в ISOString
+      const combinedDateTime = dayjs(data.checkDate)
+        .hour(dayjs(data.checkTime).hour())
+        .minute(dayjs(data.checkTime).minute())
+        .second(0)
+        .toISOString();
+
+      const payload: AddNewTaskPayload = {
         user_id: parseInt(data.operatorId, 10),
-        manager_id: 1,
+        manager_id: 1, // Или извлеките фактический manager_id
         object_id: parseInt(data.objectId, 10),
-        shift_id: 1,
+        shift_id: 1, // Или извлеките фактический shift_id
         checking_type_id: data.isRepeatInspection ? 2 : 1,
-        date_time: dayjs(data.checkDate) // Это место, где возникала ошибка
-          .set("hour", dayjs(data.checkTime).hour())
-          .set("minute", dayjs(data.checkTime).minute())
-          .toISOString(),
+        date_time: combinedDateTime,
+        comment: data.comment || undefined,
       };
+
+      // Условно добавляем date_time_previous_check только если это повторная проверка
+      // и дата последней проверки существует.
+      if (data.isRepeatInspection && data.lastCheckDate) {
+        payload.date_time_previous_check = dayjs(data.lastCheckDate).toISOString();
+      }
+
+      console.log("Payload перед отправкой:", payload); // <-- Оставляем этот лог
+
       await createTaskMutation.mutateAsync(payload);
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Ошибка при отправке данных Шага 1:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Полные данные ответа сервера (error.response.data):", error.response?.data);
+        let errorMessage = `Ошибка при создании задания: ${error.message}`;
+        if (error.response) {
+          errorMessage = `Ошибка при создании задания (статус: ${error.response.status}): `;
+          if (error.response.data && typeof error.response.data === 'object') {
+            if ('detail' in error.response.data) {
+                const detail = (error.response.data as { detail: unknown }).detail;
+                console.error("Содержимое 'detail' поля:", detail);
+                if (Array.isArray(detail)) {
+                    const detailsMessages = detail.map((item: ApiErrorDetail | string) => {
+                        if (typeof item === 'object' && item !== null && 'msg' in item) {
+                            if (Array.isArray(item.loc) && item.loc.length > 1) {
+                                return `Поле '${item.loc[1]}': ${item.msg}`;
+                            }
+                            return item.msg;
+                        }
+                        return String(item);
+                    }).filter(Boolean).join('; ');
+                    if (detailsMessages) {
+                        errorMessage += detailsMessages;
+                    } else {
+                        errorMessage += 'Сервер вернул пустые детали ошибки.';
+                    }
+                } else if (typeof detail === 'string') {
+                    errorMessage += detail;
+                } else {
+                    errorMessage += `Неизвестная структура деталей ошибки: ${JSON.stringify(detail)}`;
+                }
+            } else if (typeof error.response.data.message === 'string') {
+                errorMessage += error.response.data.message;
+            } else {
+                errorMessage += 'Неизвестная ошибка сервера.';
+            }
+          } else {
+            errorMessage += 'Неизвестная ошибка сервера (нет данных ответа).';
+          }
+        }
+        toast.error(errorMessage);
+      } else if (error instanceof Error) {
+        toast.error(`Ошибка при создании задания: ${error.message}`);
+      } else {
+        toast.error("Ошибка при создании задания: Неизвестная ошибка");
+      }
     }
   });
 
@@ -468,7 +535,7 @@ export function TaskCreatePage() {
                 <DatePicker
                   label="Дата проверки"
                   value={field.value ? dayjs(field.value) : null}
-                  onChange={(date: Dayjs | null) =>
+                  onChange={(date) =>
                     field.onChange(date ? date.toDate() : null)
                   }
                   sx={{ mb: 2, width: "100%" }}
@@ -491,7 +558,7 @@ export function TaskCreatePage() {
                 <TimePicker
                   label="Время начала проверки"
                   value={field.value ? dayjs(field.value) : null}
-                  onChange={(time: Dayjs | null) =>
+                  onChange={(time) =>
                     field.onChange(time ? time.toDate() : null)
                   }
                   ampm={false}
@@ -538,7 +605,7 @@ export function TaskCreatePage() {
                   <DatePicker
                     label="Дата последней проверки"
                     value={field.value ? dayjs(field.value) : null}
-                    onChange={(date: Dayjs | null) =>
+                    onChange={(date) =>
                       field.onChange(date ? date.toDate() : null)
                     }
                     sx={{ mb: 2, width: "100%" }}
