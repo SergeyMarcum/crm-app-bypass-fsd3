@@ -11,9 +11,9 @@ export interface ObjectItem {
 
 // Новый тип для параметров проверки, возвращаемых /object/get
 export interface InspectionParameter {
-  id: number;
+  id: number; // Убедитесь, что это `number`
   name: string;
-  type: string;
+  type: string; // Убедитесь, что это `string`
 }
 
 // Тип для ответа от /object/get, если он возвращает не только параметры, но и тип объекта
@@ -29,5 +29,6 @@ export interface GetObjectParametersResponse {
     domain: string;
   };
   object_type: unknown | null;
-  parameters: Record<string, string>[];
+  // ИСПРАВЛЕНО: Теперь это массив InspectionParameter
+  parameters: InspectionParameter[];
 }
