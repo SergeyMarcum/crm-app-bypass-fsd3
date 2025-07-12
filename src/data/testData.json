@@ -1,0 +1,519 @@
+{
+  "domain-list": {
+    "orenburg": "Оренбургский филиал (тестовый)",
+    "irkutsk": "Иркутский филиал"
+  },
+  "login": [
+    {
+      "id": 2,
+      "username": "gordeev",
+      "password": "123QWE",
+      "domain": "orenburg",
+      "token": "mock-token-gordeev"
+    },
+    {
+      "id": 3,
+      "username": "frontend",
+      "password": "123QWE",
+      "domain": "orenburg",
+      "token": "mock-token-frontend"
+    },
+    {
+      "id": 9,
+      "username": "barin",
+      "password": "123QWE",
+      "domain": "orenburg",
+      "token": "mock-token-barin"
+    },
+    {
+      "id": 10,
+      "username": "zarin",
+      "password": "123QWE",
+      "domain": "irkutsk",
+      "token": "mock-token-zarin"
+    },
+    {
+      "id": 11,
+      "username": "sharinarin",
+      "password": "123QWE",
+      "domain": "irkutsk",
+      "token": "mock-token-sharinarin"
+    }
+  ],
+  "all-users-company": {
+    "users": [
+      {
+        "id": 2,
+        "full_name": "Василий Гордеев",
+        "company": "ПУЭ ФУЭ",
+        "email": "gordeev@dev.of.energo.gazprom.ru",
+        "role_id": 4,
+        "status_id": 1,
+        "domain": "orenburg",
+        "position": "Инженер",
+        "name": "gordeev",
+        "department": "ОСЭиРЛИУС",
+        "phone": "9030000000",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 8,
+        "full_name": "Иван Иванович Гардин",
+        "company": "ПУЭ ФУЭ",
+        "email": "garin@dev.of.energo.gazprom.ru",
+        "role_id": 2,
+        "status_id": 2,
+        "domain": "orenburg",
+        "position": "Инженер",
+        "name": "garin",
+        "department": "ОСЭиРЛИУС",
+        "phone": "+7(3532)10-10-08",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 9,
+        "full_name": "Барин Иван Иванович",
+        "company": "ПУЭ ФУЭ",
+        "email": "barin@dev.of.energo.gazprom.ru",
+        "role_id": 4,
+        "status_id": 1,
+        "domain": "orenburg",
+        "position": "Начальник отдела",
+        "name": "barin",
+        "department": "ОСЭиРЛИУС",
+        "phone": "+7(3532)10-10-09",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 10,
+        "full_name": "Зарин Иван Иванович",
+        "company": "ПУЭ ФУЭ",
+        "email": "zarin@dev.of.energo.gazprom.ru",
+        "role_id": 3,
+        "status_id": 4,
+        "domain": "irkutsk",
+        "position": "Заместитель начальника отдела",
+        "name": "zarin",
+        "department": "ОСЭиРЛИУС",
+        "phone": "+7(3532)10-10-10",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 11,
+        "full_name": "Шарин Иван Иванович",
+        "company": "ПУЭ ФУЭ",
+        "email": "sharin@dev.of.energo.gazprom.ru",
+        "role_id": 3,
+        "status_id": 2,
+        "domain": "irkutsk",
+        "position": "Инженер",
+        "name": "sharin",
+        "department": "ОСЭиРЛИУС",
+        "phone": "+7(3532)10-10-11",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 12,
+        "full_name": "Шарин Иван Иванович",
+        "company": "ПУЭ ФУЭ",
+        "email": "sharin@dev.of.energo.gazprom.ru",
+        "role_id": 4,
+        "status_id": 1,
+        "domain": "orenburg",
+        "position": "Начальник отдела",
+        "name": "sharin",
+        "department": "ТоСё",
+        "phone": "+7(3532)10-10-12",
+        "avatar": "/assets/avatar-1.png"
+      },
+      {
+        "id": 3,
+        "full_name": "Ф. Ф. Фронтендов",
+        "company": "ПУЭ ФУЭ",
+        "email": "frontend@dev.of.energo.gazprom.ru",
+        "role_id": 2,
+        "status_id": 2,
+        "domain": "orenburg",
+        "position": "Инженер",
+        "name": "frontend",
+        "department": "ОСЭиРЛИУС",
+        "phone": "+7(3532)10-10-03",
+        "avatar": "/assets/avatar-1.png"
+      }
+    ],
+    "departments": [
+      { "dep": "ОСЭиРЛИУС", "id": "af23" },
+      { "dep": "ПТО", "id": "bd55" },
+      { "dep": "АСКУЭ", "id": "527f" },
+      { "dep": "ЛУНЦ", "id": "776d" },
+      { "dep": "ТоСё", "id": "abcd" }
+    ]
+  },
+  "all-domain-objects": [
+    {
+      "domain": "orenburg",
+      "address": "г. Соль-Илецк",
+      "name": "Станция подстанция №3",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 2
+    },
+    {
+      "domain": "orenburg",
+      "address": "г. Оренбург",
+      "name": "2Т ПС 110/35/10 кВ - Дедуровка",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 3
+    },
+    {
+      "domain": "orenburg",
+      "address": "г. Оренбург",
+      "name": "1Т ПС 110/35/6 кВ - ГП-7",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 4
+    },
+    {
+      "domain": "orenburg",
+      "address": "г. Оренбург",
+      "name": "2Т ПС 110/35/6 кВ - ГП-7",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 5
+    },
+    {
+      "domain": "irkutsk",
+      "address": "г. Иркутск",
+      "name": "1Т ПС 110/10 кВ - Промбаза",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 6
+    },
+    {
+      "domain": "irkutsk",
+      "address": "г. Иркутск",
+      "name": "2Т ПС 110/10 кВ - Промбаза",
+      "feature": "трехфазные силовые масляные трансформаторы...",
+      "id": 7
+    }
+  ],
+  "checks": [
+    {
+      "id": 1,
+      "objectId": 2,
+      "objectName": "Станция подстанция №3",
+      "startTime": "2025-04-15T10:00:00",
+      "checkDate": "2025-04-15",
+      "checkTime": "10:00",
+      "status": "planned",
+      "shift": "day",
+      "operator": {
+        "id": 2,
+        "fullName": "Василий Гордеев",
+        "avatar": "/assets/avatar-2.png"
+      },
+      "operatorName": "Василий Гордеев",
+      "parameter": "Проверка температуры масла",
+      "isCompliant": true,
+      "nonCompliance": "",
+      "severity": "",
+      "detectionType": "",
+      "detectionDate": "",
+      "resolutionDate": "",
+      "comment": "Всё в норме",
+      "score": 5,
+      "nonComplianceScore": null,
+      "master": "Барин Иван Иванович",
+      "domain": "orenburg"
+    },
+    {
+      "id": 2,
+      "objectId": 3,
+      "objectName": "2Т ПС 110/35/10 кВ - Дедуровка",
+      "startTime": "2025-04-16T12:00:00",
+      "checkDate": "2025-04-16",
+      "checkTime": "12:00",
+      "status": "pending",
+      "shift": "day",
+      "operator": {
+        "id": 3,
+        "fullName": "Ф. Ф. Фронтендов",
+        "avatar": "/assets/avatar-3.png"
+      },
+      "operatorName": "Ф. Ф. Фронтендов",
+      "parameter": "Проверка напряжения",
+      "isCompliant": false,
+      "nonCompliance": "Следы коррозии металла",
+      "severity": "Высокая",
+      "detectionType": "Визуальный",
+      "detectionDate": "2025-04-16",
+      "resolutionDate": "",
+      "comment": "Требуется ремонт",
+      "score": 2,
+      "nonComplianceScore": 1,
+      "master": "Барин Иван Иванович",
+      "domain": "orenburg"
+    },
+    {
+      "id": 3,
+      "objectId": 4,
+      "objectName": "1Т ПС 110/35/6 кВ - ГП-7",
+      "startTime": "2025-04-17T14:00:00",
+      "checkDate": "2025-04-17",
+      "checkTime": "14:00",
+      "status": "overdue",
+      "shift": "night",
+      "operator": {
+        "id": 9,
+        "fullName": "Барин Иван Иванович",
+        "avatar": "/assets/avatar-9.png"
+      },
+      "operatorName": "Барин Иван Иванович",
+      "parameter": "Осмотр трансформатора на течи",
+      "isCompliant": true,
+      "nonCompliance": "",
+      "severity": "",
+      "detectionType": "",
+      "detectionDate": "",
+      "resolutionDate": "",
+      "comment": "Без замечаний",
+      "score": 4,
+      "nonComplianceScore": null,
+      "master": "Зарин Иван Иванович",
+      "domain": "orenburg"
+    },
+    {
+      "id": 4,
+      "objectId": 6,
+      "objectName": "1Т ПС 110/10 кВ - Промбаза",
+      "startTime": "2025-04-18T09:00:00",
+      "checkDate": "2025-04-18",
+      "checkTime": "09:00",
+      "status": "completed",
+      "shift": "day",
+      "operator": {
+        "id": 10,
+        "fullName": "Зарин Иван Иванович",
+        "avatar": "/assets/avatar-10.png"
+      },
+      "operatorName": "Зарин Иван Иванович",
+      "parameter": "Проверка уровня масла",
+      "isCompliant": false,
+      "nonCompliance": "Треснула обшивка",
+      "severity": "Средняя",
+      "detectionType": "Визуальный",
+      "detectionDate": "2025-04-18",
+      "resolutionDate": "2025-04-19",
+      "comment": "Обшивка заменена",
+      "score": 3,
+      "nonComplianceScore": 2,
+      "master": "Шарин Иван Иванович",
+      "domain": "irkutsk"
+    }
+  ],
+  "defects": [
+    {
+      "id": 1,
+      "checkDate": "2025-04-16",
+      "checkTime": "12:00",
+      "objectName": "2Т ПС 110/35/10 кВ - Дедуровка",
+      "operatorSignature": "",
+      "operatorName": "Ф. Ф. Фронтендов",
+      "defectDescription": "Следы коррозии металла",
+      "reportedTo": "Барин Иван Иванович",
+      "reportedDateTime": "2025-04-16 12:30",
+      "resolution": "Провести антикоррозийную обработку",
+      "resolutionSignature": "",
+      "resolutionName": "Барин Иван Иванович",
+      "resolvedMark": "",
+      "resolvedSignature": "",
+      "resolvedName": "",
+      "comment": "Ожидается поставка материалов",
+      "domain": "orenburg"
+    },
+    {
+      "id": 2,
+      "checkDate": "2025-04-18",
+      "checkTime": "09:00",
+      "objectName": "1Т ПС 110/10 кВ - Промбаза",
+      "operatorSignature": "",
+      "operatorName": "Зарин Иван Иванович",
+      "defectDescription": "Треснула обшивка",
+      "reportedTo": "Шарин Иван Иванович",
+      "reportedDateTime": "2025-04-18 09:30",
+      "resolution": "Замена обшивки",
+      "resolutionSignature": "",
+      "resolutionName": "Шарин Иван Иванович",
+      "resolvedMark": "Устранено",
+      "resolvedSignature": "",
+      "resolvedName": "Зарин Иван Иванович",
+      "comment": "Работы завершены",
+      "domain": "irkutsk"
+    },
+    {
+      "id": 3,
+      "checkDate": "2025-04-19",
+      "checkTime": "10:00",
+      "objectName": "Станция подстанция №3",
+      "operatorSignature": "",
+      "operatorName": "Василий Гордеев",
+      "defectDescription": "Посторонние предметы на территории",
+      "reportedTo": "Барин Иван Иванович",
+      "reportedDateTime": "2025-04-19 10:15",
+      "resolution": "",
+      "resolutionSignature": "",
+      "resolutionName": "",
+      "resolvedMark": "",
+      "resolvedSignature": "",
+      "resolvedName": "",
+      "comment": "Требуется уборка территории",
+      "domain": "orenburg"
+    }
+  ],
+  "operators": [
+    {
+      "id": 2,
+      "fullName": "Василий Гордеев",
+      "avatar": "/assets/avatar-2.png",
+      "domain": "orenburg"
+    },
+    {
+      "id": 3,
+      "fullName": "Ф. Ф. Фронтендов",
+      "avatar": "/assets/avatar-3.png",
+      "domain": "orenburg"
+    },
+    {
+      "id": 9,
+      "fullName": "Барин Иван Иванович",
+      "avatar": "/assets/avatar-9.png",
+      "domain": "orenburg"
+    },
+    {
+      "id": 10,
+      "fullName": "Зарин Иван Иванович",
+      "avatar": "/assets/avatar-10.png",
+      "domain": "irkutsk"
+    },
+    {
+      "id": 11,
+      "fullName": "Шарин Иван Иванович",
+      "avatar": "/assets/avatar-11.png",
+      "domain": "irkutsk"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 16,
+      "shift_id": 1,
+      "checking_type_text": null,
+      "date_time": "2025-04-06T12:19:03.373000",
+      "user_id": 2,
+      "object_id": 2,
+      "checking_type_id": 1,
+      "domain": "orenburg",
+      "date_for_search": null,
+      "status": "Не начато"
+    },
+    {
+      "id": 17,
+      "shift_id": 1,
+      "checking_type_text": null,
+      "date_time": "2025-04-10T12:19:03.373000",
+      "user_id": 2,
+      "object_id": 3,
+      "checking_type_id": 1,
+      "domain": "orenburg",
+      "date_for_search": null,
+      "status": "В процессе"
+    },
+    {
+      "id": 18,
+      "shift_id": 1,
+      "checking_type_text": null,
+      "date_time": "2025-04-11T12:19:03.373000",
+      "user_id": 3,
+      "object_id": 7,
+      "checking_type_id": 1,
+      "domain": "orenburg",
+      "date_for_search": null,
+      "status": "Выполнено"
+    },
+    {
+      "id": 19,
+      "shift_id": 1,
+      "checking_type_text": null,
+      "date_time": "2025-04-15T12:25:03.373000",
+      "user_id": 2,
+      "object_id": 3,
+      "checking_type_id": 1,
+      "domain": "orenburg",
+      "date_for_search": null,
+      "status": "Не начато"
+    },
+    {
+      "id": 20,
+      "shift_id": 1,
+      "checking_type_text": null,
+      "date_time": "2025-04-16T12:25:03.373000",
+      "user_id": 10,
+      "object_id": 6,
+      "checking_type_id": 1,
+      "domain": "irkutsk",
+      "date_for_search": null,
+      "status": "В процессе"
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "author": { "id": 2, "avatar": "/assets/avatar-2.png" },
+      "task": { "id": 3 },
+      "text": "Здравствуйте, необходимо загрузить отчет до 01.04.",
+      "timestamp": "3 дня назад"
+    },
+    {
+      "id": 2,
+      "author": { "id": 3, "avatar": "/assets/avatar-3.png" },
+      "task": { "id": 2 },
+      "text": "Проверка завершена, всё в порядке.",
+      "timestamp": "1 день назад"
+    },
+    {
+      "id": 3,
+      "author": { "id": 9, "avatar": "/assets/avatar-9.png" },
+      "task": { "id": 4 },
+      "text": "Не забудьте о совещании в 15:00.",
+      "timestamp": "2 часа назад"
+    },
+    {
+      "id": 4,
+      "author": { "id": 10, "avatar": "/assets/avatar-10.png" },
+      "task": { "id": 1 },
+      "text": "Документы по проекту загружены в систему.",
+      "timestamp": "только что"
+    }
+  ],
+  "parameters": [
+    { "id": 1, "name": "Проверка температуры масла" },
+    { "id": 2, "name": "Проверка напряжения" },
+    { "id": 3, "name": "Положение РПН" },
+    { "id": 4, "name": "Осмотр трансформатора на течи" },
+    { "id": 5, "name": "Проверка уровня масла" }
+  ],
+  "cases-of-non-compliance": [
+    { "id": 1, "name": "Треснула обшивка" },
+    { "id": 2, "name": "Отвалился расширительный бак" },
+    { "id": 3, "name": "Следы коррозии металла" },
+    { "id": 4, "name": "Посторонние предметы на территории" },
+    { "id": 5, "name": "Дымится" }
+  ],
+  "object-types": [
+    { "id": 1, "name": "Типовой трансформатор", "parameter_ids": [1, 2, 3] },
+    { "id": 2, "name": "Щитовая установка", "parameter_ids": [4, 5] }
+  ],
+  "dashboard": {
+    "count_objects_with_secondary_tasks": 2,
+    "unique_user_status_count": [
+      { "role_id": 1, "count": 2 },
+      { "role_id": 2, "count": 3 },
+      { "role_id": 3, "count": 1 }
+    ]
+  }
+}

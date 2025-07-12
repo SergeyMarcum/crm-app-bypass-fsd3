@@ -15,6 +15,7 @@ export interface User {
   system_login?: string | null;
   address?: string | null;
   photo?: string | null;
+  tech_support_email?: string | null; // Добавлено новое поле
 }
 
 export interface NormalizedUser {
