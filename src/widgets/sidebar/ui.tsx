@@ -1,6 +1,6 @@
 // src/widgets/sidebar/ui.tsx
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom"; // Добавили useNavigate
 import {
   Drawer,
   List,
@@ -26,7 +26,6 @@ import {
   ExpandMore,
   Layers as LayersIcon,
 } from "@mui/icons-material";
-//import { useUser } from "@shared/hooks/use-user";
 import { useAuthStore } from "@features/auth/model/store";
 
 interface SidebarProps {
@@ -52,6 +51,7 @@ const activeStyle = {
 
 export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
   const { pathname } = useLocation();
+  const navigate = useNavigate(); // Инициализируем useNavigate
   const logout = useAuthStore((state) => state.logout);
 
   const [tasksOpen, setTasksOpen] = useState(pathname.startsWith("/tasks"));
@@ -60,7 +60,10 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
     pathname.startsWith("/objects")
   );
 
-  const handleLogout = () => logout();
+  const handleLogout = async () => { // Сделаем handleLogout асинхронным
+    await logout(); // Дождемся завершения logout
+    navigate('/login'); // Перенаправляем на страницу логина после выхода
+  };
 
   const NavItem = ({
     to,
@@ -210,6 +213,15 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
           <NavItem to="/instructions" icon={<HelpIcon />} text="Инструкции" />
           <NavItem to="/settings" icon={<SettingsIcon />} text="Настройки" />
           <NavItem to="/help" icon={<HelpIcon />} text="Нужна помощь?" />
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{ justifyContent: isOpen ? "initial" : "center" }}
+          >
+            <ListItemIcon sx={{ minWidth: 0, mr: isOpen ? 2 : "auto" }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            {isOpen && <ListItemText primary="Выход" />}
+          </ListItemButton>
           <ListItemButton
             onClick={handleLogout}
             sx={{ justifyContent: isOpen ? "initial" : "center" }}

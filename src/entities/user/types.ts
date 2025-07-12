@@ -1,16 +1,20 @@
 // src/entities/user/types.ts
 export interface User {
-  id: number;
+  id?: number | null; // Изменено: может быть опциональным и null для согласованности со схемой
   full_name: string | null;
   company: string | null;
   email: string | null;
   role_id: number;
-  status_id: number | null;
+  status_id: number | null; // Теперь без 'undefined' чтобы соответствовать схеме
   domain: string | null;
-  name: string;
+  name: string | null;
   position: string | null;
   department: string | null;
   phone: string | null;
+  login?: string | null;
+  system_login?: string | null;
+  address?: string | null;
+  photo?: string | null;
 }
 
 export interface NormalizedUser {

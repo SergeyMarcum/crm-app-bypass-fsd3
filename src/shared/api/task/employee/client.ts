@@ -6,76 +6,71 @@ import { AxiosError } from "axios";
 
 export const employeeApi = {
   /**
-   * Получает всех операторов.
-   * Использует новый эндпоинт /users-show-operators.
+   * Получает всех операторов (role_id = 4).
    */
   async getAllOperators(): Promise<User[]> {
-    // Переименовано для ясности
     try {
       const authParams = getAuthParams();
       const res = await axiosInstance.get("/users-show-operators", {
-        // Использован новый эндпоинт
         params: authParams,
       });
       return res.data;
-    } catch (error: unknown) {
-      const err = error as AxiosError;
-      console.error("Ошибка при получении всех операторов:", err.message);
-      if (err.response && err.response.data) {
-        console.error("Детали ошибки от сервера:", err.response.data);
-      }
-      throw err;
+    } catch (error) {
+      handleAxiosError("получении всех операторов", error);
     }
   },
 
   /**
-   * Получает всех руководителей смен (мастеров).
-   * Использует новый эндпоинт /users-show-shift-managers.
+   * Получает всех руководителей смен (мастеров, role_id = 3).
    */
   async getAllShiftManagers(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
       const res = await axiosInstance.get("/users-show-shift-managers", {
-        // Новый эндпоинт
         params: authParams,
       });
       return res.data;
-    } catch (error: unknown) {
-      const err = error as AxiosError;
-      console.error(
-        "Ошибка при получении всех руководителей смен:",
-        err.message
-      );
-      if (err.response && err.response.data) {
-        console.error("Детали ошибки от сервера:", err.response.data);
-      }
-      throw err;
+    } catch (error) {
+      handleAxiosError("получении всех руководителей смен", error);
     }
   },
 
   /**
-   * Поиск пользователей по запросу.
-   * Может быть использован, если нет прямого эндпоинта для всех пользователей.
-   * Оставлен на случай, если бэкенд все еще поддерживает этот эндпоинт для общего поиска.
+   * Получает всех администраторов филиалов (role_id = 2).
+   */
+  async getAllCompanyAdmins(): Promise<User[]> {
+    try {
+      const authParams = getAuthParams();
+      const res = await axiosInstance.get("/users-show-company-admins", {
+        params: authParams,
+      });
+      return res.data;
+    } catch (error) {
+      handleAxiosError("получении всех администраторов филиалов", error);
+    }
+  },
+
+  /**
+   * Поиск пользователей по строке запроса.
    */
   async searchUsers(query: string = ""): Promise<User[]> {
     try {
       const authParams = getAuthParams();
       const res = await axiosInstance.get("/search", {
-        params: {
-          ...authParams,
-          query: query,
-        },
+        params: { ...authParams, query },
       });
-      // Предполагается, что API возвращает user_search_result в качестве части ответа
       return res.data.user_search_result || [];
-    } catch (error: unknown) {
-      const err = error as AxiosError;
-      console.error("Ошибка при поиске пользователей:", err.message);
-      if (err.response && err.response.data) {
-        console.error("Детали ошибки от сервера:", err.response.data);
-      }
-      throw err;
+    } catch (error) {
+      handleAxiosError("поиске пользователей", error);
     }
   },
 };
+
+function handleAxiosError(context: string, error: unknown): never {
+  const err = error as AxiosError;
+  console.error(`Ошибка при ${context}:`, err.message);
+  if (err.response?.data) {
+    console.error("Детали ошибки от сервера:", err.response.data);
+  }
+  throw err;
+}

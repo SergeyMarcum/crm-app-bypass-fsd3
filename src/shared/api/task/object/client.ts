@@ -3,7 +3,7 @@ import axiosInstance from "@/shared/api/axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import {
   ObjectItem,
-  InspectionParameter,
+  
   GetObjectParametersResponse,
 } from "./types"; // Импортируем новые типы
 import { AxiosError } from "axios";

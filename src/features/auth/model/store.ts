@@ -1,7 +1,7 @@
 // src/features/auth/model/store.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authApi } from "@shared/api/auth";
+import { authApi } from "@shared/api/auth"; // Предполагается, что authApi уже использует VITE_API_URL
 import { AuthResponse, Domain, User, Credentials } from "../types";
 import { storage } from "@shared/lib/storage"; // Импорт storage
 
@@ -55,22 +55,24 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await authApi.logout();
-        } catch {
+        } catch (error) {
           // Даже при ошибке принудительно очищаем всё
-        }
-        storage.remove("session_token");
-        storage.remove("auth_domain");
-        storage.remove("username"); // Удаляем логин пользователя
-        storage.remove("auth_user"); // Удаляем объект пользователя
+          console.error("Ошибка при выходе из системы через API:", error);
+        } finally {
+          storage.remove("session_token");
+          storage.remove("auth_domain");
+          storage.remove("username"); // Удаляем логин пользователя
+          storage.remove("auth_user"); // Удаляем объект пользователя
 
-        set({
-          user: null,
-          token: null,
-          domains: [],
-          isAuthenticated: false,
-          isLoading: false,
-          error: null,
-        });
+          set({
+            user: null,
+            token: null,
+            domains: [],
+            isAuthenticated: false,
+            isLoading: false,
+            error: null,
+          });
+        }
       },
 
       fetchDomains: async () => {
@@ -82,9 +84,9 @@ export const useAuthStore = create<AuthState>()(
             name: String(name),
           }));
           set({ domains, isLoading: false });
-        } catch {
+        } catch (error) {
           set({ isLoading: false, error: "Ошибка загрузки доменов" });
-          throw new Error("Ошибка загрузки доменов");
+          throw error; // Перебрасываем ошибку для дальнейшей обработки, если необходимо
         }
       },
 
@@ -92,13 +94,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isSessionChecking: true });
         try {
           const storedToken = storage.get("session_token");
-          const storedUser = storage.get("auth_user"); // Получаем объект пользователя
+          const storedUser = storage.get("auth_user");
           if (storedToken && storedUser) {
-            // Если токен и пользователь есть в хранилище, используем их без дополнительного запроса checkAuth
-            // Если checkAuth все еще нужен для валидации на бэкенде, его можно оставить,
-            // но тогда он должен возвращать пользователя, а не просто статус.
-            // Сейчас, если userFromStorage есть, то он уже валидный по схеме из client.ts
-            // Предполагаем, что storedUser уже содержит все необходимые данные
             set({
               user: JSON.parse(storedUser),
               token: storedToken,
@@ -108,7 +105,8 @@ export const useAuthStore = create<AuthState>()(
           } else {
             set({ isSessionChecking: false });
           }
-        } catch {
+        } catch (error) {
+          console.error("Ошибка при инициализации аутентификации:", error);
           storage.remove("session_token");
           storage.remove("auth_domain");
           storage.remove("username");
