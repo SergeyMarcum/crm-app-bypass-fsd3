@@ -1,5 +1,6 @@
 // src/shared/api/object/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import type {
   DomainObject,
@@ -15,7 +16,8 @@ interface ApiResponseError {
 
 export const objectApi = {
   async getAll(): Promise<DomainObject[]> {
-    const res = await axiosInstance.get("/all-objects", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const res = await api.get("/all-objects", {
       params: getAuthParams(),
     });
     return res.data;
@@ -29,7 +31,8 @@ export const objectApi = {
     object_type: number;
     domain: string;
   }): Promise<void> {
-    await axiosInstance.post("/add-new-object", data, {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.post("/add-new-object", data, {
       params: getAuthParams(),
     });
   },
@@ -43,14 +46,16 @@ export const objectApi = {
     object_type: number;
     domain: string;
   }): Promise<void> {
-    await axiosInstance.put("/object/edit", data, {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put("/object/edit", data, {
       params: getAuthParams(),
     });
   },
 
   async getAllDomainObjects(): Promise<DomainObject[]> {
     try {
-      const res = await axiosInstance.get("/all-domain-objects", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/all-domain-objects", {
         params: getAuthParams(),
       });
 
@@ -60,7 +65,7 @@ export const objectApi = {
         return (
           typeof data === "object" &&
           data !== null &&
-          (data as Record<string, unknown>).status === "Error" && // Приведение к Record<string, unknown> для безопасного доступа
+          (data as Record<string, unknown>).status === "Error" &&
           typeof (data as Record<string, unknown>).message === "string"
         );
       };
@@ -83,7 +88,8 @@ export const objectApi = {
   },
 
   async getById(objectId: number): Promise<ObjectDetail> {
-    const res = await axiosInstance.get("/object/get", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const res = await api.get("/object/get", {
       params: {
         ...getAuthParams(),
         object_id: objectId,
@@ -93,7 +99,8 @@ export const objectApi = {
   },
 
   async getObjectTasks(objectId: number): Promise<ObjectTask[]> {
-    const res = await axiosInstance.get("/object/tasks", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const res = await api.get("/object/tasks", {
       params: {
         ...getAuthParams(),
         object_id: objectId,
