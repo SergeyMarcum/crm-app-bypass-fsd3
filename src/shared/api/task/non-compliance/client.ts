@@ -1,5 +1,6 @@
 // src/shared/api/task/non-compliance/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import { NonComplianceCase } from "./types";
 import { AxiosError } from "axios";
@@ -14,12 +15,13 @@ export const nonComplianceApi = {
   ): Promise<NonComplianceCase[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get(
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get( // <-- ИЗМЕНЕНО
         "/all-cases-of-parameter-non-compliance",
         {
           params: {
             ...authParams,
-            param_id: parameterId, // ИЗМЕНЕНО: с parameter_id на param_id
+            param_id: parameterId,
           },
         }
       );
