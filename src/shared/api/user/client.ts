@@ -1,5 +1,6 @@
 // src/shared/api/user/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { userSchema, editUserSchema } from "@shared/lib/schemas";
 import { EditUserPayload } from "@entities/user/types";
 import { z } from "zod";
@@ -37,7 +38,8 @@ export const userApi = {
   },
 
   getCompanyUsers: async () => {
-    const response = await axiosInstance.get("/all-users-company", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const response = await api.get("/all-users-company", {
       params: getAuthParams(),
     });
 
@@ -52,7 +54,8 @@ export const userApi = {
   },
 
   editUser: async (payload: EditUserPayload) => {
-    const response = await axiosInstance.put("/edit-user", payload, {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const response = await api.put("/edit-user", payload, {
       params: getAuthParams(),
     });
 
@@ -66,7 +69,8 @@ export const userApi = {
   },
 
   dismissUser: async (userId: number) => {
-    await axiosInstance.put(
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put(
       "/dismiss-user",
       { user_id: userId },
       { params: getAuthParams() }
@@ -74,7 +78,8 @@ export const userApi = {
   },
 
   makeMainAdmin: async (userId: number) => {
-    await axiosInstance.put(
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put(
       "/make-main-admin",
       { user_id: userId },
       { params: getAuthParams() }
@@ -82,7 +87,8 @@ export const userApi = {
   },
 
   makeCompanyAdmin: async (userId: number) => {
-    await axiosInstance.put(
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put(
       "/make-company-admin",
       { user_id: userId },
       { params: getAuthParams() }
@@ -90,7 +96,8 @@ export const userApi = {
   },
 
   makeShiftManager: async (userId: number) => {
-    await axiosInstance.put(
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put(
       "/make-shift-manager",
       { user_id: userId },
       { params: getAuthParams() }
@@ -98,7 +105,8 @@ export const userApi = {
   },
 
   makeOperator: async (userId: number) => {
-    await axiosInstance.put(
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    await api.put(
       "/make-operator",
       { user_id: userId },
       { params: getAuthParams() }
@@ -106,21 +114,24 @@ export const userApi = {
   },
 
   getCompanyAdmins: async () => {
-    const response = await axiosInstance.get("/users-show-company-admins", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const response = await api.get("/users-show-company-admins", {
       params: getAuthParams(),
     });
     return userSchema.array().parse(response.data);
   },
 
   getShiftManagers: async () => {
-    const response = await axiosInstance.get("/users-show-shift-managers", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const response = await api.get("/users-show-shift-managers", {
       params: getAuthParams(),
     });
     return userSchema.array().parse(response.data);
   },
 
   getOperators: async () => {
-    const response = await axiosInstance.get("/users-show-operators", {
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+    const response = await api.get("/users-show-operators", {
       params: getAuthParams(),
     });
     return userSchema.array().parse(response.data);

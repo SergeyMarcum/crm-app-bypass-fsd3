@@ -1,7 +1,8 @@
 // src/shared/api/task/employee/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
-import { User } from "./types";
+import { User } from "@/features/auth/types"; // Adjusted import path for User type
 import { AxiosError } from "axios";
 
 export const employeeApi = {
@@ -11,7 +12,8 @@ export const employeeApi = {
   async getAllOperators(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/users-show-operators", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/users-show-operators", {
         params: authParams,
       });
       return res.data;
@@ -26,7 +28,8 @@ export const employeeApi = {
   async getAllShiftManagers(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/users-show-shift-managers", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/users-show-shift-managers", {
         params: authParams,
       });
       return res.data;
@@ -41,7 +44,8 @@ export const employeeApi = {
   async getAllCompanyAdmins(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/users-show-company-admins", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/users-show-company-admins", {
         params: authParams,
       });
       return res.data;
@@ -56,7 +60,8 @@ export const employeeApi = {
   async searchUsers(query: string = ""): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/search", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/search", {
         params: { ...authParams, query },
       });
       return res.data.user_search_result || [];

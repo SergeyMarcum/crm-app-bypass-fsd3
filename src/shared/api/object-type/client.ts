@@ -1,5 +1,6 @@
 // src/shared/api/object-type/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { AxiosError } from "axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import { Parameter } from "./types"; // Импортируем общий тип Parameter
@@ -15,7 +16,7 @@ export const objectTypeApi = {
    */
   async getAllObjectTypes(): Promise<{ id: number; name: string }[]> {
     try {
-      const res = await axiosInstance.get("/all-object-types", {
+      const res = await api.get("/all-object-types", { // <-- ИЗМЕНЕНО: используем 'api'
         params: getAuthParams(),
       });
       return res.data;
@@ -33,7 +34,7 @@ export const objectTypeApi = {
    */
   async getAllParameters(): Promise<Parameter[]> {
     try {
-      const res = await axiosInstance.get("/parameters", {
+      const res = await api.get("/parameters", { // <-- ИЗМЕНЕНО: используем 'api'
         params: getAuthParams(),
       });
       // Структура ответа: [{"id":1,"name":"..."}]
@@ -55,10 +56,10 @@ export const objectTypeApi = {
   async getObjectTypeParameters(objectTypeId: number): Promise<Parameter[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/object-type-parameters", {
+      const res = await api.get("/object-type-parameters", { // <-- ИЗМЕНЕНО: используем 'api'
         params: {
           ...authParams,
-          id: objectTypeId, // Изменено с object_type_id на id
+          id: objectTypeId,
         },
       });
       return res.data;
@@ -86,7 +87,7 @@ export const objectTypeApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await axiosInstance.put("/edit-object-type", data, {
+      await api.put("/edit-object-type", data, { // <-- ИЗМЕНЕНО: используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {
@@ -111,7 +112,7 @@ export const objectTypeApi = {
   ): Promise<AddNewObjectTypeSuccessResponse> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.post<AddNewObjectTypeSuccessResponse>(
+      const res = await api.post<AddNewObjectTypeSuccessResponse>( // <-- ИЗМЕНЕНО: используем 'api'
         `${import.meta.env.VITE_API_URL}/add-object-type`,
         { name, parameter_ids },
         {
@@ -140,7 +141,7 @@ export const objectTypeApi = {
   ): Promise<{ id: number; name: string } | null> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get(`/object-type-by-id`, {
+      const res = await api.get(`/object-type-by-id`, { // <-- ИЗМЕНЕНО: используем 'api'
         params: {
           ...authParams,
           id: id,
@@ -168,7 +169,7 @@ export const objectTypeApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await axiosInstance.post("/add-parameter-to-object-type", data, {
+      await api.post("/add-parameter-to-object-type", data, { // <-- ИЗМЕНЕНО: используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {

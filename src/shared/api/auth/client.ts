@@ -1,8 +1,9 @@
-// src/shared/api/client.ts
-import axios from "../axios"; // Используется твой общий настроенный инстанс
+// src/shared/api/auth/client.ts
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "../axios"; // Теперь импортируем именованный экспорт 'api'
 
-import { Credentials } from "@features/auth/types";
-import { AuthResponse } from "@features/auth/types";
+import { Credentials } from "@/features/auth/types"; // Используем алиас
+import { AuthResponse } from "@/features/auth/types"; // Используем алиас
 
 export const authApi = {
   /**
@@ -12,7 +13,8 @@ export const authApi = {
    */
   login: async (credentials: Credentials): Promise<AuthResponse> => {
     const { username, password, domain } = credentials;
-    const response = await axios.post("/login", { username, password, domain });
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
+    const response = await api.post("/login", { username, password, domain });
     return response.data;
   },
 
@@ -21,7 +23,8 @@ export const authApi = {
    * @returns Promise<void>
    */
   logout: async (): Promise<void> => {    
-    await axios.get("/logout");
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
+    await api.get("/logout");
   },
 
   /**
@@ -31,7 +34,8 @@ export const authApi = {
    * @returns Promise<AuthResponse>
    */
   checkAuth: async (): Promise<AuthResponse> => {
-    const response = await axios.get("/check-auth");
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
+    const response = await api.get("/check-auth");
     return response.data;
   },
 
@@ -40,7 +44,8 @@ export const authApi = {
    * @returns Promise<Record<string, string>> - Объект, где ключ - ID домена, значение - название домена.
    */
   getDomainList: async (): Promise<Record<string, string>> => {
-    const response = await axios.get("/domain-list");
+    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
+    const response = await api.get("/domain-list");
     return response.data;
   },
 };

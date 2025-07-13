@@ -1,18 +1,19 @@
 // src/shared/api/task/object/client.ts
-import axiosInstance from "@/shared/api/axios";
+// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import {
   ObjectItem,
-  
   GetObjectParametersResponse,
-} from "./types"; // Импортируем новые типы
+} from "./types";
 import { AxiosError } from "axios";
 
 export const objectApi = {
   async getAllObjects(): Promise<ObjectItem[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/all-domain-objects", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/all-domain-objects", {
         params: authParams,
       });
       return res.data;
@@ -29,7 +30,8 @@ export const objectApi = {
   async searchObjects(query: string = ""): Promise<ObjectItem[]> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/search", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/search", {
         params: {
           ...authParams,
           query: query,
@@ -55,7 +57,8 @@ export const objectApi = {
   ): Promise<GetObjectParametersResponse> {
     try {
       const authParams = getAuthParams();
-      const res = await axiosInstance.get("/object/get", {
+      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+      const res = await api.get("/object/get", {
         params: {
           ...authParams,
           object_id: objectId, // Предполагаем, что API ожидает object_id

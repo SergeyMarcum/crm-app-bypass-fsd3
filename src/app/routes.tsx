@@ -24,6 +24,7 @@ import { ObjectPage } from "@/pages/object"; // 👈 добавлено
 import { ObjectTypePage } from "@/pages/object-type";
 import { ParametersPage } from "@/pages/parameters";
 import { ChatPage } from "@/pages/chat";
+import { InstructionsPage } from "@/pages/instructions";
 
 const ProtectedRoute = ({
   children,
@@ -123,38 +124,8 @@ export function AppRoutes() {
         }
       />
 
-      <Route
-        path="/help"
-        element={
-          <ProtectedRoute allowedRoles={[1, 2, 3]}>
-            <DashboardLayout>
-              <HelpPage />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
 
-      <Route
-        path="/chat"
-        element={
-          <ProtectedRoute allowedRoles={[1, 2, 3]}>
-            <DashboardLayout>
-              <ChatPage  />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute allowedRoles={[1]}>
-            <DashboardLayout>
-              <SettingsPage />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+     
 
       <Route
         path="/logs/checks"
@@ -217,6 +188,50 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={[1, 2]}>
             <DashboardLayout>
               <ParametersPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2, 3]}>
+            <DashboardLayout>
+              <ChatPage  />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+       <Route
+        path="/instructions"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout>
+              <InstructionsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />      
+
+       <Route
+        path="/settings"
+        element={
+          <ProtectedRoute allowedRoles={[1]}>
+            <DashboardLayout>
+              <SettingsPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/help"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2, 3]}>
+            <DashboardLayout>
+              <HelpPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
