@@ -12,7 +12,7 @@ import { EmployeesPage } from "@/pages/employees";
 import { TaskControlPage } from "@/pages/tasks/control";
 import { CreateTaskPage } from "@/pages/tasks/create";
 import { TaskViewPage } from "@/pages/tasks/view";
-// import { TaskPage } from "pages/task";
+import { TaskPage } from "@/pages/task"; // 👈 Раскомментировано и обновлен путь
 import { CalendarPage } from "@/pages/calendar";
 import { HelpPage } from "@/pages/help";
 import { SettingsPage } from "@/pages/settings";
@@ -20,7 +20,7 @@ import { CheckLogsPage } from "@/pages/logs/checks";
 import { DefectLogsPage } from "@/pages/logs/defects";
 import { ButtonsPage } from "@/pages/ui-kit/button";
 import { ObjectsPage } from "@/pages/objects";
-import { ObjectPage } from "@/pages/object"; // 👈 добавлено
+import { ObjectPage } from "@/pages/object";
 import { ObjectTypePage } from "@/pages/object-type";
 import { ParametersPage } from "@/pages/parameters";
 import { ChatPage } from "@/pages/chat";
@@ -113,6 +113,18 @@ export function AppRoutes() {
         }
       />
 
+      {/* НОВЫЙ МАРШРУТ для страницы "Задание" (Task detail) */}
+      <Route
+        path="/task/:taskId" // Это соответствует пути, используемому для навигации
+        element={
+          <ProtectedRoute allowedRoles={[1, 2, 3]}>
+            <DashboardLayout>
+              <TaskPage /> {/* Компонент страницы "Задание" */}
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/calendar"
         element={
@@ -123,9 +135,6 @@ export function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-
-     
 
       <Route
         path="/logs/checks"
@@ -198,13 +207,13 @@ export function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={[1, 2, 3]}>
             <DashboardLayout>
-              <ChatPage  />
+              <ChatPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
       />
 
-       <Route
+      <Route
         path="/instructions"
         element={
           <ProtectedRoute allowedRoles={[1]}>
@@ -213,9 +222,9 @@ export function AppRoutes() {
             </DashboardLayout>
           </ProtectedRoute>
         }
-      />      
+      />
 
-       <Route
+      <Route
         path="/settings"
         element={
           <ProtectedRoute allowedRoles={[1]}>
