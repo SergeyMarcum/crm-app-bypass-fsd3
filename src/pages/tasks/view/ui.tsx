@@ -70,7 +70,7 @@ interface Task {
 }
 
 // --- API Calls ---
-const BASE_URL = "http://192.168.0.185:82";
+const BASE_URL = "http://192.168.1.240:82";
 
 const getDomainTasks = async (
   domain: string,

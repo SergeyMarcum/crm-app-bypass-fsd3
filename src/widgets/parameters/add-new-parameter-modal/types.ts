@@ -1,4 +1,4 @@
-// src/widgets/add-new-parameter-modal/types.ts
+// src/widgets/parameters/add-new-parameter-modal/types.ts
 
 export type ParameterOption = {
   id: number;

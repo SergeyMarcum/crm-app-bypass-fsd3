@@ -1,4 +1,4 @@
-// src/widgets/object-task-table/types.ts
+// src/widgets/task/object-task-table/types.ts
 
 export type ObjectHistoryRecord = {
   id: number;

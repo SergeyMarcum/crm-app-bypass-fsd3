@@ -1,4 +1,4 @@
-// src/widgets/parameters-table/ui.tsx
+// src/widgets/parameters/parameters-table/ui.tsx
 import { CustomTable } from "@/widgets/table";
 import type { ObjectParameter } from "@/widgets/object-type/object-type-table/types";
 import type { FilterDefinition } from "@/widgets/table";

@@ -1,4 +1,4 @@
-// src/widgets/parameters/edit-parameter-modal/types.ts
+// src/widgets/parameters/parameters-table/types.ts
 export type Incongruity = {
   id: number;
   name: string;
