@@ -2,12 +2,6 @@
 import { z } from "zod";
 // import dayjs, { type Dayjs } from "dayjs"; // REMOVE or COMMENT OUT this line as dayjs/Dayjs are no longer directly used for schema validation within this file.
 
-// If 'dayjs' is still needed for type inference in CreateTaskStep1Form,
-// you might keep 'dayjs' import without 'Dayjs' type, but for Zod schema,
-// it's not strictly necessary here anymore if expecting native Date objects.
-// If 'dayjs' is only used for formatting in ui.tsx, it's fine.
-// For the purpose of this file's schema, it's not needed.
-
 // Схема первой страницы формы создания задания
 export const createTaskStep1Schema = z
   .object({
@@ -19,13 +13,13 @@ export const createTaskStep1Schema = z
     operatorId: z.string().min(1, "Пожалуйста, выберите оператора."),
     comment: z.string().optional(),
   })
-  .refine(data => data.checkDate !== null, {
+  .refine((data) => data.checkDate !== null, {
     message: "Пожалуйста, укажите дату проверки.",
-    path: ['checkDate'],
+    path: ["checkDate"],
   })
-  .refine(data => data.checkTime !== null, {
+  .refine((data) => data.checkTime !== null, {
     message: "Пожалуйста, укажите время начала проверки.",
-    path: ['checkTime'],
+    path: ["checkTime"],
   });
 
 // Типы для совместимости с react-hook-form

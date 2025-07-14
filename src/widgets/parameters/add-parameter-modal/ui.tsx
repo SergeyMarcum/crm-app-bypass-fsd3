@@ -1,4 +1,4 @@
-// src/widgets/add-parameter-modal/ui.tsx
+// src/widgets/parameters/add-parameter-modal/ui.tsx
 import {
   Dialog,
   DialogTitle,

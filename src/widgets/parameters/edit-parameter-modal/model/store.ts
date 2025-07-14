@@ -1,4 +1,4 @@
-// src/widgets/edit-parameter-modal/model/store.ts
+// src/widgets/parameters/edit-parameter-modal/model/store.ts
 import { create } from "zustand";
 import type { Incongruity } from "../types";
 

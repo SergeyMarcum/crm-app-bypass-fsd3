@@ -89,7 +89,7 @@ interface TaskDetail {
 }
 
 // --- Local useTask hook ---
-const BASE_URL = "http://192.168.0.185:82";
+const BASE_URL = "http://192.168.1.240:82";
 
 const useTask = (taskId?: string) => {
   const [task, setTask] = useState<TaskDetail | null>(null);
