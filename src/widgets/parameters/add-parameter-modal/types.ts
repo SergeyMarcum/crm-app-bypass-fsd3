@@ -1,1 +1,1 @@
-// src/widgets/add-parameter-modal/types.ts
+// src/widgets/parameters/add-parameter-modal/types.ts

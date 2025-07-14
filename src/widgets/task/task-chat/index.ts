@@ -1,2 +1,2 @@
-// src/widgets/task/task-chat/index.ts
+// src/widgets/task/task/task-chat/index.ts
 export * from "./ui";

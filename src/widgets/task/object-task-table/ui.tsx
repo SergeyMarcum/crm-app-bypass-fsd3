@@ -1,4 +1,4 @@
-// src/widgets/object-task-table/ui.tsx
+// src/widgets/task/object-task-table/ui.tsx
 import { forwardRef } from "react";
 import { CustomTable } from "@/widgets/table";
 import type { FilterDefinition } from "@/widgets/table";

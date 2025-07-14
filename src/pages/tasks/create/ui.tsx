@@ -35,7 +35,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 
 import dayjs from "dayjs";
-import customParseFormat from 'dayjs/plugin/customParseFormat';
+import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
 
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -43,17 +43,18 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 
-
 import { employeeApi } from "@/shared/api/task/employee";
-import {
-  objectApi,
-} from "@/shared/api/task/object";
+import { objectApi } from "@/shared/api/task/object";
 import {
   nonComplianceApi,
   NonComplianceCase,
 } from "@/shared/api/task/non-compliance";
 import type { User } from "@/shared/api/task/employee";
-import type { ObjectItem, GetObjectParametersResponse, InspectionParameter } from "@/shared/api/task/object/types";
+import type {
+  ObjectItem,
+  GetObjectParametersResponse,
+  InspectionParameter,
+} from "@/shared/api/task/object/types";
 
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import {
@@ -68,7 +69,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createTaskStep1Schema,
   CreateTaskStep1Form,
-  AddNewTaskPayload
+  AddNewTaskPayload,
 } from "@/features/tasks/task-form/model/task-schemas";
 import { taskApi } from "@/features/tasks/task-form/api/task";
 import { toast } from "sonner";
@@ -77,10 +78,9 @@ import axios, { AxiosError } from "axios";
 // Определяем интерфейс для деталей ошибки API
 interface ApiErrorDetail {
   loc?: (string | number)[]; // Например: ["body", "date_time"]
-  msg: string;               // Сообщение об ошибке
-  type?: string;             // Тип ошибки
+  msg: string; // Сообщение об ошибке
+  type?: string; // Тип ошибки
 }
-
 
 export function CreateTaskPage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -176,7 +176,7 @@ export function CreateTaskPage() {
       try {
         const response: GetObjectParametersResponse =
           await objectApi.getParametersAndObjectType(currentObjectId);
-        
+
         const transformedParameters: InspectionParameter[] =
           response.parameters
             ?.map((param: InspectionParameter) => {
@@ -275,7 +275,9 @@ export function CreateTaskPage() {
       // Условно добавляем date_time_previous_check только если это повторная проверка
       // и дата последней проверки существует.
       if (data.isRepeatInspection && data.lastCheckDate) {
-        payload.date_time_previous_check = dayjs(data.lastCheckDate).toISOString();
+        payload.date_time_previous_check = dayjs(
+          data.lastCheckDate
+        ).toISOString();
       }
 
       console.log("Payload перед отправкой:", payload); // <-- Оставляем этот лог
@@ -285,41 +287,52 @@ export function CreateTaskPage() {
     } catch (error: unknown) {
       console.error("Ошибка при отправке данных Шага 1:", error);
       if (axios.isAxiosError(error)) {
-        console.error("Полные данные ответа сервера (error.response.data):", error.response?.data);
+        console.error(
+          "Полные данные ответа сервера (error.response.data):",
+          error.response?.data
+        );
         let errorMessage = `Ошибка при создании задания: ${error.message}`;
         if (error.response) {
           errorMessage = `Ошибка при создании задания (статус: ${error.response.status}): `;
-          if (error.response.data && typeof error.response.data === 'object') {
-            if ('detail' in error.response.data) {
-                const detail = (error.response.data as { detail: unknown }).detail;
-                console.error("Содержимое 'detail' поля:", detail);
-                if (Array.isArray(detail)) {
-                    const detailsMessages = detail.map((item: ApiErrorDetail | string) => {
-                        if (typeof item === 'object' && item !== null && 'msg' in item) {
-                            if (Array.isArray(item.loc) && item.loc.length > 1) {
-                                return `Поле '${item.loc[1]}': ${item.msg}`;
-                            }
-                            return item.msg;
-                        }
-                        return String(item);
-                    }).filter(Boolean).join('; ');
-                    if (detailsMessages) {
-                        errorMessage += detailsMessages;
-                    } else {
-                        errorMessage += 'Сервер вернул пустые детали ошибки.';
+          if (error.response.data && typeof error.response.data === "object") {
+            if ("detail" in error.response.data) {
+              const detail = (error.response.data as { detail: unknown })
+                .detail;
+              console.error("Содержимое 'detail' поля:", detail);
+              if (Array.isArray(detail)) {
+                const detailsMessages = detail
+                  .map((item: ApiErrorDetail | string) => {
+                    if (
+                      typeof item === "object" &&
+                      item !== null &&
+                      "msg" in item
+                    ) {
+                      if (Array.isArray(item.loc) && item.loc.length > 1) {
+                        return `Поле '${item.loc[1]}': ${item.msg}`;
+                      }
+                      return item.msg;
                     }
-                } else if (typeof detail === 'string') {
-                    errorMessage += detail;
+                    return String(item);
+                  })
+                  .filter(Boolean)
+                  .join("; ");
+                if (detailsMessages) {
+                  errorMessage += detailsMessages;
                 } else {
-                    errorMessage += `Неизвестная структура деталей ошибки: ${JSON.stringify(detail)}`;
+                  errorMessage += "Сервер вернул пустые детали ошибки.";
                 }
-            } else if (typeof error.response.data.message === 'string') {
-                errorMessage += error.response.data.message;
+              } else if (typeof detail === "string") {
+                errorMessage += detail;
+              } else {
+                errorMessage += `Неизвестная структура деталей ошибки: ${JSON.stringify(detail)}`;
+              }
+            } else if (typeof error.response.data.message === "string") {
+              errorMessage += error.response.data.message;
             } else {
-                errorMessage += 'Неизвестная ошибка сервера.';
+              errorMessage += "Неизвестная ошибка сервера.";
             }
           } else {
-            errorMessage += 'Неизвестная ошибка сервера (нет данных ответа).';
+            errorMessage += "Неизвестная ошибка сервера (нет данных ответа).";
           }
         }
         toast.error(errorMessage);
