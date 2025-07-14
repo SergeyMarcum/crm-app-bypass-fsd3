@@ -6,32 +6,30 @@ import { z } from "zod";
 export const createTaskStep1Schema = z
   .object({
     objectId: z.string().min(1, "Пожалуйста, выберите объект для проверки."),
-    checkDate: z.date().nullable(),
-    checkTime: z.date().nullable(),
+    checkDate: z.date({ required_error: "Пожалуйста, укажите дату проверки." }),
+    checkTime: z.date({
+      required_error: "Пожалуйста, укажите время начала проверки.",
+    }),
     isRepeatInspection: z.boolean(),
     lastCheckDate: z.date().nullable().optional(),
     operatorId: z.string().min(1, "Пожалуйста, выберите оператора."),
     comment: z.string().optional(),
   })
-  .refine((data) => data.checkDate !== null, {
-    message: "Пожалуйста, укажите дату проверки.",
-    path: ["checkDate"],
-  })
-  .refine((data) => data.checkTime !== null, {
-    message: "Пожалуйста, укажите время начала проверки.",
-    path: ["checkTime"],
-  });
+  .refine(
+    (data) => {
+      if (data.isRepeatInspection) {
+        return data.lastCheckDate !== null && data.lastCheckDate !== undefined;
+      }
+      return true;
+    },
+    {
+      message: "Пожалуйста, укажите дату последней проверки.",
+      path: ["lastCheckDate"],
+    }
+  );
 
 // Типы для совместимости с react-hook-form
-export type CreateTaskStep1Form = {
-  objectId: string;
-  checkDate: Date | null; // Keep as Date | null
-  checkTime: Date | null; // Keep as Date | null
-  isRepeatInspection: boolean;
-  lastCheckDate?: Date | null; // Keep as Date | null
-  operatorId: string;
-  comment?: string;
-};
+export type CreateTaskStep1Form = z.infer<typeof createTaskStep1Schema>;
 
 // Схема payload для API создания задания
 export const addNewTaskPayloadSchema = z.object({
@@ -40,8 +38,8 @@ export const addNewTaskPayloadSchema = z.object({
   object_id: z.number(),
   shift_id: z.number(),
   checking_type_id: z.number(),
-  date_time: z.string(), // ISOString
-  date_time_previous_check: z.string().nullable().optional(),
+  date_time: z.string(), // Формат "YYYY-MM-DD HH:mm:ss"
+  date_previous_check: z.string().optional(), // Формат "YYYY-MM-DD"
   comment: z.string().optional(),
 });
 
