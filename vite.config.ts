@@ -19,13 +19,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // This is the correct proxy object.
       "/api": {
-        // Key for the proxy rule.
-        target: "http://192.168.1.240:82", // Your backend server
-        changeOrigin: true, // Changes the origin of the host header to the target URL
-        rewrite: (path: string) => path.replace(/^\/api/, ""), // Add type annotation for 'path'
-        secure: false, // For development with self-signed certs (if applicable)
+        target: "http://192.168.1.240:82", // backend server
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api/, ""),
+        secure: false,
       },
     },
   },
