@@ -73,14 +73,6 @@ import {
 } from "@/features/tasks/task-form/model/task-schemas";
 import { taskApi } from "@/features/tasks/task-form/api/task";
 import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
-
-// Определяем интерфейс для деталей ошибки API
-interface ApiErrorDetail {
-  loc?: (string | number)[]; // Например: ["body", "date_time"]
-  msg: string; // Сообщение об ошибке
-  type?: string; // Тип ошибки
-}
 
 export function CreateTaskPage() {
   const [activeStep, setActiveStep] = useState(0);
@@ -97,10 +89,10 @@ export function CreateTaskPage() {
     mode: "onChange",
     defaultValues: {
       objectId: "",
-      checkDate: null,
-      checkTime: null,
+      checkDate: undefined,
+      checkTime: undefined,
       isRepeatInspection: false,
-      lastCheckDate: null,
+      lastCheckDate: undefined,
       operatorId: "",
       comment: "",
     },
@@ -149,7 +141,7 @@ export function CreateTaskPage() {
   const fetchOperators = useCallback(async () => {
     try {
       const fetchedOperators = await employeeApi.getAllOperators();
-      setOperators(fetchedOperators);
+      setOperators(fetchedOperators as User[]);
     } catch (error) {
       console.error("Ошибка при загрузке операторов:", error);
       try {
@@ -157,7 +149,7 @@ export function CreateTaskPage() {
         const filteredOperators = searchedUsers.filter(
           (user) => user.role_id === 4
         );
-        setOperators(filteredOperators);
+        setOperators(filteredOperators as User[]);
       } catch (searchError) {
         console.error(
           "Ошибка при поиске пользователей/операторов:",
@@ -247,100 +239,43 @@ export function CreateTaskPage() {
 
   // --- Handlers for Stepper and Modals ---
 
-  const handleNextStep1 = handleSubmit(async (data: CreateTaskStep1Form) => {
-    console.log("Данные формы Шага 1:", data);
+  const handleNextStep1 = handleSubmit(async (data) => {
     try {
-      if (!data.checkDate || !data.checkTime) {
-        toast.error("Дата и время проверки должны быть указаны.");
+      const managerIdStr = localStorage.getItem("user_id");
+      if (!managerIdStr) {
+        toast.error(
+          "Ошибка: ID менеджера не найден. Пожалуйста, войдите в систему заново."
+        );
         return;
       }
+      const manager_id = parseInt(managerIdStr, 10);
 
-      // Объединяем дату и время и форматируем в ISOString
-      const combinedDateTime = dayjs(data.checkDate)
-        .hour(dayjs(data.checkTime).hour())
-        .minute(dayjs(data.checkTime).minute())
-        .second(0)
-        .toISOString();
+      const checkHour = dayjs(data.checkTime).hour();
+      const shift_id = checkHour >= 8 && checkHour < 22 ? 1 : 0; // 1 - дневная, 0 - ночная
 
       const payload: AddNewTaskPayload = {
         user_id: parseInt(data.operatorId, 10),
-        manager_id: 1, // Или извлеките фактический manager_id
+        manager_id,
         object_id: parseInt(data.objectId, 10),
-        shift_id: 1, // Или извлеките фактический shift_id
-        checking_type_id: data.isRepeatInspection ? 2 : 1,
-        date_time: combinedDateTime,
+        shift_id,
+        checking_type_id: data.isRepeatInspection ? 1 : 0, // 1 - повторная, 0 - первичная
+        date_time: dayjs(data.checkDate)
+          .hour(dayjs(data.checkTime).hour())
+          .minute(dayjs(data.checkTime).minute())
+          .second(0)
+          .format("YYYY-MM-DD HH:mm:ss"),
         comment: data.comment || undefined,
+        date_previous_check:
+          data.isRepeatInspection && data.lastCheckDate
+            ? dayjs(data.lastCheckDate).format("YYYY-MM-DD")
+            : undefined,
       };
 
-      // Условно добавляем date_time_previous_check только если это повторная проверка
-      // и дата последней проверки существует.
-      if (data.isRepeatInspection && data.lastCheckDate) {
-        payload.date_time_previous_check = dayjs(
-          data.lastCheckDate
-        ).toISOString();
-      }
-
-      console.log("Payload перед отправкой:", payload); // <-- Оставляем этот лог
-
       await createTaskMutation.mutateAsync(payload);
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    } catch (error: unknown) {
-      console.error("Ошибка при отправке данных Шага 1:", error);
-      if (axios.isAxiosError(error)) {
-        console.error(
-          "Полные данные ответа сервера (error.response.data):",
-          error.response?.data
-        );
-        let errorMessage = `Ошибка при создании задания: ${error.message}`;
-        if (error.response) {
-          errorMessage = `Ошибка при создании задания (статус: ${error.response.status}): `;
-          if (error.response.data && typeof error.response.data === "object") {
-            if ("detail" in error.response.data) {
-              const detail = (error.response.data as { detail: unknown })
-                .detail;
-              console.error("Содержимое 'detail' поля:", detail);
-              if (Array.isArray(detail)) {
-                const detailsMessages = detail
-                  .map((item: ApiErrorDetail | string) => {
-                    if (
-                      typeof item === "object" &&
-                      item !== null &&
-                      "msg" in item
-                    ) {
-                      if (Array.isArray(item.loc) && item.loc.length > 1) {
-                        return `Поле '${item.loc[1]}': ${item.msg}`;
-                      }
-                      return item.msg;
-                    }
-                    return String(item);
-                  })
-                  .filter(Boolean)
-                  .join("; ");
-                if (detailsMessages) {
-                  errorMessage += detailsMessages;
-                } else {
-                  errorMessage += "Сервер вернул пустые детали ошибки.";
-                }
-              } else if (typeof detail === "string") {
-                errorMessage += detail;
-              } else {
-                errorMessage += `Неизвестная структура деталей ошибки: ${JSON.stringify(detail)}`;
-              }
-            } else if (typeof error.response.data.message === "string") {
-              errorMessage += error.response.data.message;
-            } else {
-              errorMessage += "Неизвестная ошибка сервера.";
-            }
-          } else {
-            errorMessage += "Неизвестная ошибка сервера (нет данных ответа).";
-          }
-        }
-        toast.error(errorMessage);
-      } else if (error instanceof Error) {
-        toast.error(`Ошибка при создании задания: ${error.message}`);
-      } else {
-        toast.error("Ошибка при создании задания: Неизвестная ошибка");
-      }
+      setActiveStep((prev) => prev + 1);
+    } catch (error) {
+      // Ошибки уже обрабатываются в onError хука useCreateTask
+      console.error("Произошла ошибка при обработке формы на шаге 1:", error);
     }
   });
 

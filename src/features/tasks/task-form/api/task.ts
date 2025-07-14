@@ -1,45 +1,30 @@
 // src/features/tasks/task-form/api/task.ts
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import axios from "axios";
-import { AddNewTaskPayload } from "../model/task-schemas";
-import dayjs from "dayjs";
+import { api } from "@/shared/api/axios";
+import { getAuthParams } from "@/shared/lib/auth";
+import {
+  addNewTaskPayloadSchema,
+  AddNewTaskPayload,
+} from "../model/task-schemas"; // Исправленный импорт
+import { AxiosError } from "axios";
 
 /**
  * Хук для выполнения POST-запроса на добавление нового задания.
  * Использует `react-query` для управления состоянием мутации.
  */
 export const useCreateTask = () => {
-  return useMutation<object, Error, AddNewTaskPayload>({
+  return useMutation<
+    object,
+    AxiosError<{ detail: string | { loc: string[]; msg: string }[] }>,
+    AddNewTaskPayload
+  >({
     mutationFn: async (payload: AddNewTaskPayload) => {
-      // Получаем значения из localStorage
-      const domain = localStorage.getItem("auth_domain") || "";
-      const username = localStorage.getItem("username") || "";
-      const session_code = localStorage.getItem("session_token") || "";
-
-      // Формируем payload, исключая пустые даты
-      const formattedPayload: Partial<AddNewTaskPayload> = {
-        ...payload,
-      };
-
-      if (payload.date_time) {
-        formattedPayload.date_time = dayjs(payload.date_time).format(
-          "YYYY-MM-DD HH:mm:ss"
-        );
-      } else {
-        delete formattedPayload.date_time;
-      }
-      if (payload.date_time_previous_check) {
-        formattedPayload.date_time_previous_check = dayjs(
-          payload.date_time_previous_check
-        ).format("YYYY-MM-DD HH:mm:ss");
-      } else {
-        delete formattedPayload.date_time_previous_check;
-      }
-
-      const url = `/api/add-new-task?domain=${domain}&username=${username}&session_code=${session_code}`;
-
-      const response = await axios.post(url, formattedPayload);
+      const params = getAuthParams();
+      const validatedPayload = addNewTaskPayloadSchema.parse(payload); // Теперь схема доступна
+      const response = await api.post("/add-new-task", validatedPayload, {
+        params,
+      });
       return response.data;
     },
     onSuccess: (data) => {
@@ -47,14 +32,19 @@ export const useCreateTask = () => {
       console.log("Успешное создание задания:", data);
     },
     onError: (error) => {
-      toast.error("Ошибка при создании задания.");
       console.error("Ошибка при создании задания:", error);
-      if (axios.isAxiosError(error) && error.response) {
+      if (error.response) {
         console.error("Данные ошибки API:", error.response.data);
-        if (Array.isArray(error.response.data?.detail)) {
-          toast.error(`Ошибка: ${error.response.data.detail[0].msg}`);
+        const detail = error.response.data?.detail;
+        if (Array.isArray(detail)) {
+          const errorMessages = detail
+            .map((item) => `${item.loc[1]}: ${item.msg}`)
+            .join("; ");
+          toast.error(`Ошибка валидации: ${errorMessages}`);
+        } else if (typeof detail === "string") {
+          toast.error(`Ошибка: ${detail}`);
         } else {
-          toast.error(`Ошибка: ${error.response.data?.detail || error.message}`);
+          toast.error(`Ошибка: ${error.message}`);
         }
       } else {
         toast.error(`Сетевая ошибка: ${error.message}`);
