@@ -1,60 +1,74 @@
 // src/shared/api/user/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
-import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
+import { api } from "@/shared/api/axios";
 import { userSchema, editUserSchema } from "@shared/lib/schemas";
 import { EditUserPayload } from "@entities/user/types";
 import { z } from "zod";
 import { getAuthParams } from "@/shared/lib/auth";
 import { storage } from "@/shared/lib/storage";
 
+type UserSchemaType = z.infer<typeof userSchema>;
+
 export const userApi = {
   getCurrentUser: async () => {
     try {
       const userFromStorage = storage.get("auth_user");
       if (userFromStorage) {
-        // Парсим сохраненные данные пользователя и валидируем их схемой
         const userData = JSON.parse(userFromStorage);
-        return userSchema.parse(userData);
+        console.log("Raw user data from storage:", userData);
+        const normalizedData = {
+          ...userData,
+          id: userData.user_id ?? null, // Нормализуем user_id в id
+          status_id: userData.status_id ?? null,
+          domain: userData.domain ?? null,
+          name: userData.name ?? null,
+          photo: userData.photo ?? null,
+        };
+        return userSchema.parse(normalizedData);
       } else {
-        // Если пользовательские данные не найдены в localStorage,
-        // выбрасываем ошибку, чтобы сигнализировать об отсутствии авторизации.
         throw new Error("User data not found in local storage. Please log in.");
       }
     } catch (error) {
-      // Логируем ошибку только если она не является ожидаемой ошибкой отсутствия данных пользователя.
       if (
         error instanceof Error &&
         error.message === "User data not found in local storage. Please log in."
       ) {
-        // Это ожидаемое состояние (пользователь не авторизован), просто перебрасываем ошибку без дополнительного логирования.
+        // Ожидаемое состояние, не логируем
       } else {
         console.error(
           "Ошибка при получении текущего пользователя из хранилища:",
           error
         );
       }
-      throw error; // Перебрасываем ошибку для дальнейшей обработки
+      throw error;
     }
   },
 
   getCompanyUsers: async () => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const response = await api.get("/all-users-company", {
       params: getAuthParams(),
     });
+
+    const normalizedData = {
+      ...response.data,
+      users: response.data.users.map((user: UserSchemaType) => ({
+        ...user,
+        id: user.id ?? user.user_id ?? null, // Поддержка user_id или id
+        status_id: user.status_id ?? null,
+        photo: user.photo ?? null,
+      })),
+    };
 
     const users = z
       .object({
         users: userSchema.array(),
         departments: z.string().array().optional(),
       })
-      .parse(response.data);
+      .parse(normalizedData);
 
     return users;
   },
 
   editUser: async (payload: EditUserPayload) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const response = await api.put("/edit-user", payload, {
       params: getAuthParams(),
     });
@@ -69,7 +83,6 @@ export const userApi = {
   },
 
   dismissUser: async (userId: number) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put(
       "/dismiss-user",
       { user_id: userId },
@@ -78,7 +91,6 @@ export const userApi = {
   },
 
   makeMainAdmin: async (userId: number) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put(
       "/make-main-admin",
       { user_id: userId },
@@ -87,7 +99,6 @@ export const userApi = {
   },
 
   makeCompanyAdmin: async (userId: number) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put(
       "/make-company-admin",
       { user_id: userId },
@@ -96,7 +107,6 @@ export const userApi = {
   },
 
   makeShiftManager: async (userId: number) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put(
       "/make-shift-manager",
       { user_id: userId },
@@ -105,7 +115,6 @@ export const userApi = {
   },
 
   makeOperator: async (userId: number) => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put(
       "/make-operator",
       { user_id: userId },
@@ -114,7 +123,6 @@ export const userApi = {
   },
 
   getCompanyAdmins: async () => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const response = await api.get("/users-show-company-admins", {
       params: getAuthParams(),
     });
@@ -122,7 +130,6 @@ export const userApi = {
   },
 
   getShiftManagers: async () => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const response = await api.get("/users-show-shift-managers", {
       params: getAuthParams(),
     });
@@ -130,7 +137,6 @@ export const userApi = {
   },
 
   getOperators: async () => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const response = await api.get("/users-show-operators", {
       params: getAuthParams(),
     });

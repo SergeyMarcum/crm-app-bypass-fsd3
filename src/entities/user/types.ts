@@ -29,6 +29,7 @@ export interface NormalizedUser {
   company: string;
   position: string;
   name: string;
+  photo: string | null;
   [key: string]: unknown;
 }
 
