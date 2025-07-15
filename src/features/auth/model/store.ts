@@ -1,5 +1,5 @@
 // src/features/auth/model/store.ts
-import { create, StateCreator } from "zustand"; // Import StateCreator
+import { create, StateCreator } from "zustand";
 import { persist, PersistStorage } from "zustand/middleware";
 import { authApi } from "@shared/api/auth";
 import { AuthResponse, Domain, User, Credentials } from "../types";
@@ -13,30 +13,23 @@ interface AuthState {
   isSessionChecking: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  isTestMode: boolean; // Flag for test mode
+  isTestMode: boolean;
   login: (credentials: Credentials) => Promise<void>;
   logout: () => Promise<void>;
   fetchDomains: () => Promise<void>;
   initAuth: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
-  setIsTestMode: (mode: boolean) => void; // Setter for test mode
+  setIsTestMode: (mode: boolean) => void;
 }
 
-// 1. Define the type of the state that will actually be persisted.
-// This matches what `partialize` will return.
 type PersistedAuthState = Pick<AuthState, "token" | "user" | "isAuthenticated">;
 
-// 2. Create a custom storage object that correctly handles JSON serialization/deserialization
-// for Zustand's `persist` middleware, wrapping `localStorage`.
 const customStorage: PersistStorage<PersistedAuthState> = {
   getItem: (name) => {
     const item = localStorage.getItem(name);
-    // `persist` expects the stored item to be a `StorageValue` object,
-    // which contains the `state` and `version`.
     return item ? JSON.parse(item) : null;
   },
   setItem: (name, value) => {
-    // `value` here is the `StorageValue` object that `persist` provides.
     localStorage.setItem(name, JSON.stringify(value));
   },
   removeItem: (name) => {
@@ -44,11 +37,6 @@ const customStorage: PersistStorage<PersistedAuthState> = {
   },
 };
 
-// 3. Define the StateCreator for the core store logic explicitly.
-// The generic parameters are:
-//   - T: The full state type (AuthState)
-//   - Mps: Middleware that *precede* this StateCreator (none here, so [])
-//   - Mcs: Middleware that *wrap* this StateCreator (here, persist middleware which handles PersistedAuthState)
 const authStateCreator: StateCreator<
   AuthState,
   [],
@@ -71,10 +59,33 @@ const authStateCreator: StateCreator<
         password,
         domain,
       });
-      set({ user, token, isAuthenticated: true, isLoading: false });
+      // Нормализуем user_id в id для соответствия типу User
+      const normalizedUser: User = {
+        id: user.user_id,
+        login: user.login,
+        system_login: user.system_login,
+        full_name: user.full_name,
+        position: user.position,
+        email: user.email,
+        department: user.department,
+        company: user.company,
+        phone: user.phone,
+        address: user.address,
+        photo: user.photo,
+        role_id: user.role_id,
+        status_id: null, // API /login не возвращает status_id
+        domain: domain, // Используем domain из credentials
+        name: user.full_name, // Предполагаем, что name совпадает с full_name
+      };
+      set({
+        user: normalizedUser,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+      });
       storage.set("session_token", token);
       storage.set("username", username);
-      storage.set("auth_user", JSON.stringify(user));
+      storage.set("auth_user", JSON.stringify(normalizedUser));
       if (rememberMe) {
         storage.set("auth_domain", domain);
       }
@@ -128,8 +139,17 @@ const authStateCreator: StateCreator<
       const storedToken = storage.get("session_token");
       const storedUser = storage.get("auth_user");
       if (storedToken && storedUser) {
+        const userData = JSON.parse(storedUser);
+        // Нормализуем user_id в id
+        const normalizedUser: User = {
+          ...userData,
+          id: userData.user_id ?? userData.id ?? null,
+          status_id: userData.status_id ?? null,
+          domain: userData.domain ?? null,
+          name: userData.name ?? userData.full_name ?? null,
+        };
         set({
-          user: JSON.parse(storedUser),
+          user: normalizedUser,
           token: storedToken,
           isAuthenticated: true,
           isSessionChecking: false,
@@ -165,17 +185,13 @@ const authStateCreator: StateCreator<
 });
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    authStateCreator, // Pass the explicitly typed StateCreator here
-    {
-      name: "auth-storage", // Unique name for persistence
-      storage: customStorage, // Use the custom storage object defined above
-      partialize: (state) => ({
-        token: state.token,
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        // `isTestMode` is typically a runtime flag and not persisted
-      }),
-    }
-  )
+  persist(authStateCreator, {
+    name: "auth-storage",
+    storage: customStorage,
+    partialize: (state) => ({
+      token: state.token,
+      user: state.user,
+      isAuthenticated: state.isAuthenticated,
+    }),
+  })
 );

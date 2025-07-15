@@ -21,7 +21,7 @@ export const statusMap: { [key: number]: string } = {
 };
 
 export const normalizeUser = (user: User): NormalizedUser => ({
-  id: user.id,
+  id: user.id ?? 0,
   fullName: user.full_name || "",
   department: user.department || "",
   email: user.email || "",
@@ -30,7 +30,8 @@ export const normalizeUser = (user: User): NormalizedUser => ({
   status: user.status_id ? statusMap[user.status_id] : "Неизвестно",
   company: user.company || "",
   position: user.position || "",
-  name: user.name,
+  name: user.name ?? "", // Преобразуем undefined в ""
+  photo: user.photo ?? null,
 });
 
 export const normalizeUsers = (users: User[]): NormalizedUser[] =>

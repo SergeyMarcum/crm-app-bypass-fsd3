@@ -1,19 +1,28 @@
 // src/shared/ui/Logo.tsx
 import * as React from "react";
-import { Box } from "@mui/material";
+import { Box, BoxProps } from "@mui/material";
 
-export function Logo(): React.ReactNode {
-  console.log("Rendering Logo");
+interface LogoProps extends BoxProps {}
+
+export function Logo({ sx, ...props }: LogoProps): React.ReactNode {
   return (
     <Box
       component="img"
-      src="/logo.png" // Предполагается, что logo.png находится в public/
+      src="/logo.png"
       alt="CRM App Logo"
-      sx={{ height: 40, mx: 2 }}
-      onError={(e) => {
-        console.error("Logo image failed to load:", e);
-        e.currentTarget.src = "/fallback-logo.png"; // Запасной путь
+      sx={{
+        height: 40,
+        mx: 1,
+        my: 0.5,
+        filter: (theme) =>
+          theme.palette.mode === "dark" ? "brightness(1.2)" : "none",
+        ...sx,
       }}
+      onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+        console.error("Logo image failed to load:", e);
+        e.currentTarget.src = "/fallback-logo.png";
+      }}
+      {...props}
     />
   );
 }

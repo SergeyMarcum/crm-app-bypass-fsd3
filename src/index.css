@@ -1,38 +1,341 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+/* src/index.css */
+:root,
+.light {
+  font-family: Inter, Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+
+  /* Фирменные цвета (Pantone 300 CV) */
+  --mui-palette-primary-50: #e0f2fb;
+  --mui-palette-primary-100: #b3ddf3;
+  --mui-palette-primary-200: #80c7ec;
+  --mui-palette-primary-300: #4db0e4;
+  --mui-palette-primary-400: #269fdc;
+  --mui-palette-primary-500: #0079c2;
+  --mui-palette-primary-600: #006bb0;
+  --mui-palette-primary-700: #005799;
+  --mui-palette-primary-800: #004280;
+  --mui-palette-primary-900: #003766;
+  --mui-palette-primary-light: #4db0e4;
+  --mui-palette-primary-main: #0079c2;
+  --mui-palette-primary-dark: #005799;
+  --mui-palette-primary-contrastText: #ffffff;
+  --mui-palette-primary-mainChannel: 0 121 194;
+  --mui-palette-primary-lightChannel: 77 176 228;
+  --mui-palette-primary-darkChannel: 0 87 153;
+
+  /* Secondary palette */
+  --mui-palette-secondary-main: #dc004e;
+  --mui-palette-secondary-light: #f73378;
+  --mui-palette-secondary-dark: #9a0036;
+  --mui-palette-secondary-contrastText: #ffffff;
+  --mui-palette-secondary-mainChannel: 220 0 78;
+  --mui-palette-secondary-lightChannel: 247 51 120;
+  --mui-palette-secondary-darkChannel: 154 0 54;
+
+  /* Neutral palette */
+  --mui-palette-neutral-50: #fafafa;
+  --mui-palette-neutral-100: #f5f5f5;
+  --mui-palette-neutral-200: #eeeeee;
+  --mui-palette-neutral-300: #e0e0e0;
+  --mui-palette-neutral-400: #bdbdbd;
+  --mui-palette-neutral-500: #9e9e9e;
+  --mui-palette-neutral-600: #757575;
+  --mui-palette-neutral-700: #616161;
+  --mui-palette-neutral-800: #424242;
+  --mui-palette-neutral-900: #212121;
+
+  /* Text */
+  --mui-palette-text-primary: #212121;
+  --mui-palette-text-secondary: #757575;
+  --mui-palette-text-disabled: #bdbdbd;
+
+  /* Common */
+  --mui-palette-common-black: #000000;
+  --mui-palette-common-white: #ffffff;
+  --mui-palette-common-background: #fff;
+  --mui-palette-common-onBackground: #000;
+  --mui-palette-common-backgroundChannel: 255 255 255;
+  --mui-palette-common-onBackgroundChannel: 0 0 0;
+
+  /* Background */
+  --mui-palette-background-default: #f5f5f5;
+  --mui-palette-background-defaultChannel: 245 245 245;
+  --mui-palette-background-paper: #ffffff;
+  --mui-palette-background-paperChannel: 255 255 255;
+  --mui-palette-background-level1: var(--mui-palette-neutral-50);
+  --mui-palette-background-level2: var(--mui-palette-neutral-100);
+  --mui-palette-background-level3: var(--mui-palette-neutral-200);
+
+  /* Divider */
+  --mui-palette-divider: #e0e0e0;
+  --mui-palette-dividerChannel: 224 224 224;
+
+  /* Error palette */
+  --mui-palette-error-50: #fef3f2;
+  --mui-palette-error-100: #fee4e2;
+  --mui-palette-error-200: #ffcdc9;
+  --mui-palette-error-300: #fdaaa4;
+  --mui-palette-error-400: #f97970;
+  --mui-palette-error-500: #f04438;
+  --mui-palette-error-600: #de3024;
+  --mui-palette-error-700: #bb241a;
+  --mui-palette-error-800: #9a221a;
+  --mui-palette-error-900: #80231c;
+  --mui-palette-error-950: #460d09;
+  --mui-palette-error-light: #f97970;
+  --mui-palette-error-main: #f04438;
+  --mui-palette-error-dark: #de3024;
+  --mui-palette-error-contrastText: var(--mui-palette-common-white);
+  --mui-palette-error-mainChannel: 240 68 56;
+  --mui-palette-error-lightChannel: 249 121 112;
+  --mui-palette-error-darkChannel: 222 48 36;
+
+  /* Action */
+  --mui-palette-action-disabledBackground: rgba(0, 0, 0, 0.06);
+  --mui-palette-action-active: rgba(0, 0, 0, 0.54);
+  --mui-palette-action-hover: rgba(0, 0, 0, 0.04);
+  --mui-palette-action-hoverOpacity: 0.04;
+  --mui-palette-action-selected: rgba(0, 0, 0, 0.08);
+  --mui-palette-action-selectedOpacity: 0.08;
+  --mui-palette-action-disabled: rgba(0, 0, 0, 0.26);
+  --mui-palette-action-disabledOpacity: 0.38;
+  --mui-palette-action-focus: rgba(0, 0, 0, 0.12);
+  --mui-palette-action-focusOpacity: 0.12;
+  --mui-palette-action-activatedOpacity: 0.12;
+  --mui-palette-action-activeChannel: 0 0 0;
+  --mui-palette-action-selectedChannel: 0 0 0;
+
+  /* Shadow */
+  --mui-palette-shadow: rgba(0, 0, 0, 0.2);
+  --mui-shadows-0: none;
+  --mui-shadows-1: 0px 1px 2px var(--mui-palette-shadow);
+  --mui-shadows-2: 0px 1px 5px var(--mui-palette-shadow);
+  --mui-shadows-3: 0px 1px 8px var(--mui-palette-shadow);
+  --mui-shadows-4: 0px 1px 10px var(--mui-palette-shadow);
+  --mui-shadows-5: 0px 1px 14px var(--mui-palette-shadow);
+  --mui-shadows-6: 0px 1px 18px var(--mui-palette-shadow);
+  --mui-shadows-7: 0px 2px 16px var(--mui-palette-shadow);
+  --mui-shadows-8: 0px 3px 14px var(--mui-palette-shadow);
+  --mui-shadows-9: 0px 3px 16px var(--mui-palette-shadow);
+  --mui-shadows-10: 0px 4px 18px var(--mui-palette-shadow);
+  --mui-shadows-11: 0px 4px 20px var(--mui-palette-shadow);
+  --mui-shadows-12: 0px 5px 22px var(--mui-palette-shadow);
+  --mui-shadows-13: 0px 5px 24px var(--mui-palette-shadow);
+  --mui-shadows-14: 0px 5px 26px var(--mui-palette-shadow);
+  --mui-shadows-15: 0px 6px 28px var(--mui-palette-shadow);
+  --mui-shadows-16: 0px 6px 30px var(--mui-palette-shadow);
+  --mui-shadows-17: 0px 6px 32px var(--mui-palette-shadow);
+  --mui-shadows-18: 0px 7px 34px var(--mui-palette-shadow);
+  --mui-shadows-19: 0px 7px 36px var(--mui-palette-shadow);
+  --mui-shadows-20: 0px 8px 38px var(--mui-palette-shadow);
+  --mui-shadows-21: 0px 8px 40px var(--mui-palette-shadow);
+  --mui-shadows-22: 0px 8px 42px var(--mui-palette-shadow);
+  --mui-shadows-23: 0px 9px 44px var(--mui-palette-shadow);
+  --mui-shadows-24: 0px 9px 46px var(--mui-palette-shadow);
+
+  /* Spacing and Shape */
+  --mui-spacing: 8px;
+  --mui-shape-borderRadius: 8px;
+
+  /* zIndex */
+  --mui-zIndex-mobileStepper: 1000;
+  --mui-zIndex-fab: 1050;
+  --mui-zIndex-speedDial: 1050;
+  --mui-zIndex-appBar: 1100;
+  --mui-zIndex-drawer: 1200;
+  --mui-zIndex-modal: 1300;
+  --mui-zIndex-snackbar: 1400;
+  --mui-zIndex-tooltip: 1500;
+
+  /* Typography */
+  --mui-font-body1: 400 1rem / 1.5 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-body2: 400 0.875rem / 1.57 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-button: 500 0.875rem / 1.75 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-caption: 400 0.75rem / 1.66 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-subtitle1: 500 1rem / 1.57 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-subtitle2: 500 0.875rem / 1.57 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-overline: 500 0.75rem / 2.5 "Inter", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --mui-font-h1: 500 3.5rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-h2: 500 3rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-h3: 500 2.25rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-h4: 500 2rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-h5: 500 1.5rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-h6: 500 1.125rem / 1.2 "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --mui-font-inherit: inherit inherit / inherit inherit;
+
+  /* Font sizes and icons */
+  --fontSize-xs: 0.75rem;
+  --fontSize-sm: 0.875rem;
+  --fontSize-md: 1rem;
+  --fontSize-lg: 1.125rem;
+  --fontSize-xl: 1.25rem;
+  --fontSize-2xl: 1.5rem;
+  --icon-fontSize-sm: 1rem;
+  --icon-fontSize-md: 1.25rem;
+  --icon-fontSize-lg: 1.5rem;
+
+  /* Max widths */
+  --maxWidth-xs: 0;
+  --maxWidth-sm: 600px;
+  --maxWidth-md: 900px;
+  --maxWidth-lg: 1200px;
+  --maxWidth-xl: 1440px;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Primary palette (adjusted for dark theme) */
+  --mui-palette-primary-50: #e0f2fb;
+  --mui-palette-primary-100: #b3ddf3;
+  --mui-palette-primary-200: #80c7ec;
+  --mui-palette-primary-300: #4db0e4;
+  --mui-palette-primary-400: #269fdc;
+  --mui-palette-primary-500: #0079c2;
+  --mui-palette-primary-600: #006bb0;
+  --mui-palette-primary-700: #005799;
+  --mui-palette-primary-800: #004280;
+  --mui-palette-primary-900: #003766;
+  --mui-palette-primary-light: #80c7ec; /* Светлее для тёмной темы */
+  --mui-palette-primary-main: #4db0e4; /* Светлее основной цвет */
+  --mui-palette-primary-dark: #006bb0; /* Темнее для контраста */
+  --mui-palette-primary-contrastText: #ffffff;
+  --mui-palette-primary-mainChannel: 77 176 228;
+  --mui-palette-primary-lightChannel: 128 199 236;
+  --mui-palette-primary-darkChannel: 0 107 176;
+
+  /* Secondary palette */
+  --mui-palette-secondary-main: #f48fb1;
+  --mui-palette-secondary-light: #fce4ec;
+  --mui-palette-secondary-dark: #f06292;
+  --mui-palette-secondary-contrastText: #ffffff;
+  --mui-palette-secondary-mainChannel: 244 143 177;
+  --mui-palette-secondary-lightChannel: 252 228 236;
+  --mui-palette-secondary-darkChannel: 240 98 146;
+
+  /* Neutral palette */
+  --mui-palette-neutral-50: #eceff1;
+  --mui-palette-neutral-100: #cfd8dc;
+  --mui-palette-neutral-200: #b0bec5;
+  --mui-palette-neutral-300: #90a4ae;
+  --mui-palette-neutral-400: #78909c;
+  --mui-palette-neutral-500: #607d8b;
+  --mui-palette-neutral-600: #546e7a;
+  --mui-palette-neutral-700: #455a64;
+  --mui-palette-neutral-800: #37474f;
+  --mui-palette-neutral-900: #263238;
+
+  /* Text */
+  --mui-palette-text-primary: #ffffff;
+  --mui-palette-text-secondary: #b0bec5;
+  --mui-palette-text-disabled: #78909c;
+
+  /* Common */
+  --mui-palette-common-black: #000000;
+  --mui-palette-common-white: #ffffff;
+  --mui-palette-common-background: #121212;
+  --mui-palette-common-onBackground: #ffffff;
+  --mui-palette-common-backgroundChannel: 18 18 18;
+  --mui-palette-common-onBackgroundChannel: 255 255 255;
+
+  /* Background */
+  --mui-palette-background-default: #121212;
+  --mui-palette-background-defaultChannel: 18 18 18;
+  --mui-palette-background-paper: #1d1d1d;
+  --mui-palette-background-paperChannel: 29 29 29;
+  --mui-palette-background-level1: var(--mui-palette-neutral-900);
+  --mui-palette-background-level2: var(--mui-palette-neutral-800);
+  --mui-palette-background-level3: var(--mui-palette-neutral-700);
+
+  /* Divider */
+  --mui-palette-divider: #455a64;
+  --mui-palette-dividerChannel: 69 90 100;
+
+  /* Error palette */
+  --mui-palette-error-50: #fef3f2;
+  --mui-palette-error-100: #fee4e2;
+  --mui-palette-error-200: #ffcdc9;
+  --mui-palette-error-300: #fdaaa4;
+  --mui-palette-error-400: #f97970;
+  --mui-palette-error-500: #f04438;
+  --mui-palette-error-600: #de3024;
+  --mui-palette-error-700: #bb241a;
+  --mui-palette-error-800: #9a221a;
+  --mui-palette-error-900: #80231c;
+  --mui-palette-error-950: #460d09;
+  --mui-palette-error-light: #f97970;
+  --mui-palette-error-main: #f04438;
+  --mui-palette-error-dark: #de3024;
+  --mui-palette-error-contrastText: var(--mui-palette-common-white);
+  --mui-palette-error-mainChannel: 240 68 56;
+  --mui-palette-error-lightChannel: 249 121 112;
+  --mui-palette-error-darkChannel: 222 48 36;
+
+  /* Action */
+  --mui-palette-action-disabledBackground: rgba(255, 255, 255, 0.06);
+  --mui-palette-action-active: rgba(255, 255, 255, 0.54);
+  --mui-palette-action-hover: rgba(255, 255, 255, 0.04);
+  --mui-palette-action-hoverOpacity: 0.04;
+  --mui-palette-action-selected: rgba(255, 255, 255, 0.08);
+  --mui-palette-action-selectedOpacity: 0.08;
+  --mui-palette-action-disabled: rgba(255, 255, 255, 0.26);
+  --mui-palette-action-disabledOpacity: 0.38;
+  --mui-palette-action-focus: rgba(255, 255, 255, 0.12);
+  --mui-palette-action-focusOpacity: 0.12;
+  --mui-palette-action-activatedOpacity: 0.12;
+  --mui-palette-action-activeChannel: 255 255 255;
+  --mui-palette-action-selectedChannel: 255 255 255;
+
+  /* Shadow */
+  --mui-palette-shadow: rgba(0, 0, 0, 0.4);
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a {
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--mui-palette-primary-main);
+}
+
+a:hover {
+  color: var(--mui-palette-primary-dark);
 }
 
 button {
@@ -42,27 +345,19 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  border-color: var(--mui-palette-primary-main);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:focus,
+button:focus-visible {
+  outline: 4px auto var(--mui-palette-primary-main);
+}
+
+.toast-progress {
+  background: var(--mui-palette-primary-main) !important;
 }

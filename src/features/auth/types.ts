@@ -1,24 +1,4 @@
 // src/features/auth/types.ts
-
-export interface User {
-  id: number | null;
-  full_name: string | null;
-  company: string | null;
-  email: string | null;
-  role_id: number;
-  status_id: number | null;
-  domain: string | null;
-  name: string | null;
-  position: string | null;
-  department: string | null;
-  phone: string | null;
-  login?: string | null;
-  system_login?: string | null;
-  address?: string | null;
-  photo?: string | null;
-  tech_support_email?: string | null;
-}
-
 export interface Credentials {
   username: string;
   password: string;
@@ -26,13 +6,44 @@ export interface Credentials {
   rememberMe?: boolean;
 }
 
-export interface AuthResponse {
-  status: "OK" | "ERROR";
-  token: string;
-  user: User;
+export interface Domain {
+  id: string;
+  name: string;
 }
 
-export interface Domain {
-  id: string; // Например, "orenburg" или "irf"
-  name: string; // Например, "Оренбургский филиал (тестовый)"
+export interface User {
+  id: number | null;
+  login: string | null;
+  system_login: string | null;
+  full_name: string | null;
+  position: string | null;
+  email: string | null;
+  department: string | null;
+  company: string | null;
+  phone: string | null;
+  address: string | null;
+  photo: string | null;
+  role_id: number;
+  status_id: number | null;
+  domain: string | null;
+  name: string | null;
+}
+
+export interface AuthResponse {
+  status: string;
+  token: string;
+  user: {
+    login: string;
+    system_login: string;
+    full_name: string | null;
+    position: string | null;
+    email: string | null;
+    department: string | null;
+    company: string | null;
+    phone: string | null;
+    address: string | null;
+    photo: string | null;
+    role_id: number;
+    user_id: number; // Соответствует API
+  };
 }

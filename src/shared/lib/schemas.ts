@@ -9,32 +9,43 @@ export const loginSchema = z.object({
 });
 
 export const loginResponseSchema = z.object({
+  status: z.string(),
   token: z.string(),
   user: z.object({
-    id: z.string(), // ID в ответе на логин может быть строкой
-    name: z.string(),
+    login: z.string(),
+    system_login: z.string(),
+    full_name: z.string().nullable(),
+    position: z.string().nullable(),
+    email: z.string().nullable(),
+    department: z.string().nullable(),
+    company: z.string().nullable(),
+    phone: z.string().nullable(),
+    address: z.string().nullable(),
+    photo: z.string().nullable(),
     role_id: z.number(),
+    user_id: z.number(), // Соответствует API
   }),
 });
 
 export const domainListSchema = z.record(z.string());
 
 export const userSchema = z.object({
-  id: z.number().optional().nullable(), // ИСПРАВЛЕНО: 'id' теперь опциональный и может быть null
+  id: z.number().nullable(),
   login: z.string().optional().nullable(),
   system_login: z.string().optional().nullable(),
   full_name: z.string().nullable(),
   company: z.string().nullable(),
   email: z.string().nullable(),
   role_id: z.number(),
-  status_id: z.number().nullable().optional(),
-  domain: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
+  status_id: z.number().nullable(),
+  domain: z.string().nullable(),
+  name: z.string().nullable(),
   position: z.string().nullable(),
   department: z.string().nullable(),
   phone: z.string().nullable(),
   address: z.string().nullable().optional(),
   photo: z.string().nullable().optional(),
+  user_id: z.number().optional(), // Добавлено для поддержки API
 });
 
 export const companyUsersResponseSchema = z.object({
