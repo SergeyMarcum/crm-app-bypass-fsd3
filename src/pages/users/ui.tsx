@@ -22,7 +22,6 @@ import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User, EditUserPayload } from "@/entities/user/types";
 import type { JSX } from "react";
-// import { storage } from "@/shared/lib/storage"; // Удален неиспользуемый импорт
 
 const statusTabs = [
   { label: "Все", value: null },
@@ -56,8 +55,6 @@ export const UsersPage = (): JSX.Element => {
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  // const [currentUser, setCurrentUser] = useState<User | null>(null); // Удалена неиспользуемая переменная
-
   const gridRef = useRef<AgGridReact<User>>(null);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editedUser, setEditedUser] = useState<Partial<User>>({});
@@ -66,10 +63,16 @@ export const UsersPage = (): JSX.Element => {
     const load = async () => {
       try {
         const company = await userApi.getCompanyUsers();
-        // const userFromStorage = storage.get("auth_user"); // Удалено, так как currentUser не используется
-
-        setUsers(company.users);
-        // setCurrentUser(userFromStorage ? JSON.parse(userFromStorage) : null); // Удалено, так как currentUser не используется
+        // Приводим company.users к типу User[], преобразуя undefined в null
+        const normalizedUsers: User[] = company.users.map((user) => ({
+          ...user,
+          id: user.id ?? null,
+          status_id: user.status_id ?? null,
+          domain: user.domain ?? null,
+          name: user.name ?? null, // Нормализация name
+          photo: user.photo ?? null,
+        }));
+        setUsers(normalizedUsers);
 
         const departmentList = Array.from(
           new Set(
@@ -90,6 +93,7 @@ export const UsersPage = (): JSX.Element => {
   }, []);
 
   const handleEdit = (user: User): void => {
+    if (user.id == null) return; // Проверяем, что id не null/undefined
     setEditingUserId(user.id);
     setEditedUser({ ...user });
   };
@@ -113,11 +117,9 @@ export const UsersPage = (): JSX.Element => {
 
     try {
       await userApi.editUser(payload);
-      // Обновляем локальное состояние, что автоматически вызовет перерисовку AgGridReact через пропс rowData
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, ...payload } : u))
       );
-      // Удален ручной вызов refreshCells, так как setUsers должен справиться с этим
     } catch (err) {
       console.error("Ошибка при сохранении:", err);
     }
@@ -136,7 +138,7 @@ export const UsersPage = (): JSX.Element => {
     .filter((u) =>
       statusFilter !== null ? u.status_id === statusFilter : true
     )
-    .sort((a, b) => b.id - a.id);
+    .sort((a, b) => (b.id ?? 0) - (a.id ?? 0)); // Обработка null/undefined для id
 
   const columns = [
     { headerName: "", checkboxSelection: true, width: 40 },
@@ -300,13 +302,15 @@ export const UsersPage = (): JSX.Element => {
       field: "actions",
       cellRenderer: (params: ICellRendererParams<User>) =>
         editingUserId === params.data?.id ? (
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => handleSave(params.data!.id)}
-          >
-            <SaveIcon fontSize="small" />
-          </IconButton>
+          params.data?.id != null ? (
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => handleSave(params.data!.id!)}
+            >
+              <SaveIcon fontSize="small" />
+            </IconButton>
+          ) : null
         ) : (
           <IconButton
             color="secondary"
@@ -342,7 +346,7 @@ export const UsersPage = (): JSX.Element => {
         ref={gridRef}
         rowData={filtered}
         columnDefs={columns}
-        getRowId={(row) => row.id.toString()}
+        getRowId={(row) => (row.id ?? "0").toString()}
         filters={filterDefinitions}
       />
     </Box>

@@ -25,15 +25,11 @@ import {
   InputLabel,
   TablePagination,
 } from "@mui/material";
-// Corrected import path for useAuthStore
-import { useAuthStore } from "@/features/auth/model/store";
-// Corrected import and aliasing for Employee (now User from entities/user/types)
-import { User as Employee } from "@/entities/user/types"; // This now points to the comprehensive User
-// Corrected import for getEmployeesByDepartment due to file refactoring
-import { getEmployeesByDepartment } from "@/shared/api/employee";
-// Importing User and statusMap from user entities, and renaming roleMap
-import { User, statusMap, roleMap as _roleMap } from "@/entities/user/model/normalize"; // Renamed roleMap
-
+import { useAuthStore } from "@features/auth/model/store";
+import { User } from "@entities/user/types";
+import { getEmployeesByDepartment } from "@shared/api/employee";
+import { statusMap } from "@entities/user/model/normalize";
+import { useThemeStore } from "@shared/processes/theme/store";
 import {
   Person as PersonIcon,
   Brightness4 as Brightness4Icon,
@@ -46,62 +42,57 @@ import {
 const cardSx = {
   borderRadius: 2,
   boxShadow: "0px 4px 12px rgba(0,0,0,0.1)",
-  bgcolor: "background.paper",
-
+  bgcolor: "var(--mui-palette-background-paper)",
   minWidth: "1300px",
   mx: "auto",
 };
 
-// Интерфейсы
 interface ProfileTabProps {
-  formData: Partial<User>; // formData still uses Partial<User>
+  formData: Partial<User>;
   isCurrentUser: boolean;
   isAdmin: boolean;
 }
 
 interface EmployeeTabProps {
-  employees: Employee[];
+  employees: User[];
 }
 
-// Компонент вкладки "Мой профиль"
 const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
   const { updateUser, logout } = useAuthStore();
-
-  // State for user editable fields
   const [fullName, setFullName] = useState(formData.full_name || "");
   const [phone, setPhone] = useState(formData.phone || "");
-
-  // Convert status_id to string label for UI, then back to id for saving
-  const getStatusLabelFromId = (id: number | null | undefined): string => {
-    if (id === null || id === undefined) return "Неизвестно";
-    return statusMap[id] || "Неизвестно";
-  };
-
-  const getStatusIdFromLabel = (label: string): number | null => {
-    const entry = Object.entries(statusMap).find(([, value]) => value === label);
-    return entry ? parseInt(entry[0]) : null;
-  };
-
   const [selectedStatusLabel, setSelectedStatusLabel] = useState(
-    getStatusLabelFromId(formData.status_id)
+    formData.status_id !== undefined && formData.status_id !== null
+      ? statusMap[formData.status_id] || "Неизвестно"
+      : "Неизвестно"
   );
   const [techSupportEmail, setTechSupportEmail] = useState(
     formData.tech_support_email || ""
   );
 
   useEffect(() => {
-    // Update local state when formData changes (e.g., after initAuth)
     setFullName(formData.full_name || "");
     setPhone(formData.phone || "");
-    setSelectedStatusLabel(getStatusLabelFromId(formData.status_id));
+    setSelectedStatusLabel(
+      formData.status_id !== undefined && formData.status_id !== null
+        ? statusMap[formData.status_id] || "Неизвестно"
+        : "Неизвестно"
+    );
     setTechSupportEmail(formData.tech_support_email || "");
   }, [formData]);
+
+  const getStatusIdFromLabel = (label: string): number | null => {
+    const entry = Object.entries(statusMap).find(
+      ([, value]) => value === label
+    );
+    return entry ? parseInt(entry[0]) : null;
+  };
 
   const handleSave = () => {
     const updatedData: Partial<User> = {
       full_name: fullName,
       phone: phone,
-      status_id: getStatusIdFromLabel(selectedStatusLabel), // Save status_id
+      status_id: getStatusIdFromLabel(selectedStatusLabel),
     };
     if (isAdmin) {
       updatedData.tech_support_email = techSupportEmail;
@@ -110,8 +101,6 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
   };
 
   const handleDelete = () => {
-    // Assuming 2 is the status_id for 'Уволен(а)'
-    // The type of User for updateUser is now consistent
     updateUser({ status_id: 2 });
     logout();
   };
@@ -120,19 +109,21 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
     <Card sx={cardSx}>
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: "primary.main" }}>
+          <Avatar sx={{ bgcolor: "var(--mui-palette-primary-main)" }}>
             <PersonIcon />
           </Avatar>
         }
         title="Мой профиль"
         titleTypographyProps={{ variant: "h5", fontWeight: 600 }}
         subheader="Обновите информацию о вашем профиле"
-        subheaderTypographyProps={{ variant: "body2", color: "text.secondary" }}
+        subheaderTypographyProps={{
+          variant: "body2",
+          color: "var(--mui-palette-text-secondary)",
+        }}
       />
       <CardContent>
         <Stack spacing={3}>
           <Stack direction="row" spacing={2} alignItems="center">
-            {/* Corrected property name from avatar to photo */}
             <Avatar
               src={formData.photo || "/assets/avatar.png"}
               sx={{ width: 64, height: 64 }}
@@ -147,6 +138,14 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
             disabled
             fullWidth
             variant="outlined"
+            sx={{
+              "& .MuiInputBase-input": {
+                color: "var(--mui-palette-text-primary)",
+              },
+              "& .MuiInputLabel-root": {
+                color: "var(--mui-palette-text-secondary)",
+              },
+            }}
           />
           {isAdmin && (
             <TextField
@@ -156,6 +155,14 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
               fullWidth
               variant="outlined"
               helperText="Это поле видно только администраторам филиала"
+              sx={{
+                "& .MuiInputBase-input": {
+                  color: "var(--mui-palette-text-primary)",
+                },
+                "& .MuiInputLabel-root": {
+                  color: "var(--mui-palette-text-secondary)",
+                },
+              }}
             />
           )}
           <TextField
@@ -164,13 +171,28 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
             onChange={(e) => setPhone(e.target.value)}
             fullWidth
             variant="outlined"
+            sx={{
+              "& .MuiInputBase-input": {
+                color: "var(--mui-palette-text-primary)",
+              },
+              "& .MuiInputLabel-root": {
+                color: "var(--mui-palette-text-secondary)",
+              },
+            }}
           />
           <FormControl fullWidth>
-            <InputLabel>Статус</InputLabel>
+            <InputLabel sx={{ color: "var(--mui-palette-text-secondary)" }}>
+              Статус
+            </InputLabel>
             <Select
               value={selectedStatusLabel}
               onChange={(e) => setSelectedStatusLabel(e.target.value as string)}
               label="Статус"
+              sx={{
+                "& .MuiSelect-select": {
+                  color: "var(--mui-palette-text-primary)",
+                },
+              }}
             >
               {Object.entries(statusMap).map(([id, label]) => (
                 <MenuItem key={id} value={label}>
@@ -182,10 +204,20 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
         </Stack>
       </CardContent>
       <CardActions sx={{ justifyContent: "space-between", p: 2 }}>
-        <Button variant="outlined" color="error" onClick={handleDelete}>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={handleDelete}
+          sx={{ borderColor: "var(--mui-palette-error-main)" }}
+        >
           Удалить профиль
         </Button>
-        <Button variant="contained" color="primary" onClick={handleSave}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleSave}
+          sx={{ bgcolor: "var(--mui-palette-primary-main)" }}
+        >
           Сохранить
         </Button>
       </CardActions>
@@ -193,46 +225,52 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
   );
 };
 
-// Компонент вкладки "Настройки"
 const ThemeTab: React.FC = () => {
-  // Assuming theme and setTheme are part of useAuthStore or another context
-  // For now, I will mock them to avoid compilation errors if not defined.
-  // You should ensure theme management is properly implemented.
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const { themeMode, setThemeMode } = useThemeStore();
 
   const handleThemeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setTheme(event.target.value as "light" | "dark" | "system");
+    setThemeMode(event.target.value as "light" | "dark" | "system");
   };
 
   return (
     <Card sx={cardSx}>
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: "primary.main" }}>
+          <Avatar sx={{ bgcolor: "var(--mui-palette-primary-main)" }}>
             <Brightness4Icon />
           </Avatar>
         }
         title="Настройки темы"
         titleTypographyProps={{ variant: "h5", fontWeight: 600 }}
         subheader="Выберите предпочитаемый режим отображения"
-        subheaderTypographyProps={{ variant: "body2", color: "text.secondary" }}
+        subheaderTypographyProps={{
+          variant: "body2",
+          color: "var(--mui-palette-text-secondary)",
+        }}
       />
       <CardContent>
         <FormControl component="fieldset">
-          <RadioGroup value={theme} onChange={handleThemeChange}>
+          <RadioGroup value={themeMode} onChange={handleThemeChange}>
             <FormControlLabel
               value="light"
               control={<Radio />}
               label={
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar
-                    sx={{ bgcolor: "neutral.100", width: 40, height: 40 }}
+                    sx={{
+                      bgcolor: "var(--mui-palette-neutral-100)",
+                      width: 40,
+                      height: 40,
+                    }}
                   >
                     <LightModeIcon />
                   </Avatar>
                   <Box>
                     <Typography variant="subtitle1">Светлый режим</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      color="var(--mui-palette-text-secondary)"
+                    >
                       Лучше всего подходит для яркого окружения
                     </Typography>
                   </Box>
@@ -246,13 +284,20 @@ const ThemeTab: React.FC = () => {
               label={
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar
-                    sx={{ bgcolor: "neutral.100", width: 40, height: 40 }}
+                    sx={{
+                      bgcolor: "var(--mui-palette-neutral-100)",
+                      width: 40,
+                      height: 40,
+                    }}
                   >
                     <Brightness4Icon />
                   </Avatar>
                   <Box>
                     <Typography variant="subtitle1">Темный режим</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      color="var(--mui-palette-text-secondary)"
+                    >
                       Рекомендуется для темных помещений
                     </Typography>
                   </Box>
@@ -266,13 +311,20 @@ const ThemeTab: React.FC = () => {
               label={
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar
-                    sx={{ bgcolor: "neutral.100", width: 40, height: 40 }}
+                    sx={{
+                      bgcolor: "var(--mui-palette-neutral-100)",
+                      width: 40,
+                      height: 40,
+                    }}
                   >
                     <SystemIcon />
                   </Avatar>
                   <Box>
                     <Typography variant="subtitle1">Система</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      color="var(--mui-palette-text-secondary)"
+                    >
                       Адаптируется к теме вашего устройства
                     </Typography>
                   </Box>
@@ -286,7 +338,6 @@ const ThemeTab: React.FC = () => {
   );
 };
 
-// Компонент вкладки "Мой отдел"
 const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
   const sortedEmployees = [...employees].sort((a, b) => {
     const positionOrder: { [key: string]: number } = {
@@ -300,7 +351,6 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
     return aOrder - bOrder;
   });
 
-  // Состояния для пагинации
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -308,12 +358,13 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  // Вычисляем отображаемые строки
   const displayedEmployees = sortedEmployees.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
@@ -323,15 +374,17 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
     <Card sx={cardSx}>
       <CardHeader
         avatar={
-          <Avatar sx={{ bgcolor: "primary.main" }}>
+          <Avatar sx={{ bgcolor: "var(--mui-palette-primary-main)" }}>
             <GroupIcon />
           </Avatar>
         }
-        // department property now exists on User/Employee
         title={`Мой отдел: ${employees[0]?.department || "Не указано"}`}
         titleTypographyProps={{ variant: "h5", fontWeight: 600 }}
         subheader="Список сотрудников вашего отдела"
-        subheaderTypographyProps={{ variant: "body2", color: "text.secondary" }}
+        subheaderTypographyProps={{
+          variant: "body2",
+          color: "var(--mui-palette-text-secondary)",
+        }}
       />
       <CardContent>
         <Table>
@@ -350,16 +403,21 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
                 <TableCell>{page * rowsPerPage + index + 1}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    {/* Assuming employee also has a 'photo' property */}
                     <Avatar
                       src={employee.photo || "/assets/avatar.png"}
                       sx={{ width: 40, height: 40 }}
                     />
                     <Box>
-                      <Typography variant="body1">
+                      <Typography
+                        variant="body1"
+                        color="var(--mui-palette-text-primary)"
+                      >
                         {employee.full_name}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        color="var(--mui-palette-text-secondary)"
+                      >
                         {employee.email}
                       </Typography>
                     </Box>
@@ -368,8 +426,8 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
                 <TableCell>{employee.position || "Не указано"}</TableCell>
                 <TableCell>{employee.phone || "Не указано"}</TableCell>
                 <TableCell>
-                  {/* Using statusMap directly from imported normalize.ts */}
-                  {employee.status_id !== undefined && employee.status_id !== null
+                  {employee.status_id !== undefined &&
+                  employee.status_id !== null
                     ? statusMap[employee.status_id] || "Неизвестно"
                     : "Не указано"}
                 </TableCell>
@@ -383,7 +441,7 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
         component="div"
         count={sortedEmployees.length}
         rowsPerPage={rowsPerPage}
-        page={page} // Added the missing page prop
+        page={page}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         labelRowsPerPage="Строк на странице:"
@@ -395,44 +453,33 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
   );
 };
 
-// Основной компонент страницы настроек
 const SettingsPage: React.FC = () => {
-  const { user, isTestMode } = useAuthStore(); // isTestMode is now available
-
+  const { user, isTestMode } = useAuthStore();
   const [tab, setTab] = useState(1);
-  const [departmentEmployees, setDepartmentEmployees] = useState<Employee[]>(
-    []
-  );
+  const [departmentEmployees, setDepartmentEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Определяем, является ли пользователь администратором филиала (role_id: 2)
   const isAdmin = user?.role_id === 2;
 
-  // Данные текущего пользователя, ensuring type compatibility with User interface
   const currentUserFormData: Partial<User> = {
-    id: user?.id || null, // Ensure ID is handled
+    id: user?.id || null,
     full_name: user?.full_name || null,
     email: user?.email || null,
     phone: user?.phone || null,
-    status_id: user?.status_id || null, // Pass status_id directly
-    photo: user?.photo || null, // Use photo instead of avatar
-    department: user?.department || null, // Now exists on User
+    status_id: user?.status_id || null,
+    photo: user?.photo || null,
+    department: user?.department || null,
     tech_support_email: user?.tech_support_email || null,
     role_id: user?.role_id,
-    company: user?.company || null, // Now exists on User
-    domain: user?.domain || null, // Now exists on User
-    name: user?.name || null, // Now exists on User
-    position: user?.position || null, // Now exists on User
-    login: user?.login || null, // Now exists on User, handling null correctly
-    system_login: user?.system_login || null, // Now exists on User
-    address: user?.address || null, // Now exists on User
+    company: user?.company || null,
+    domain: user?.domain || null,
+    name: user?.name || null,
+    position: user?.position || null,
+    login: user?.login || null,
+    system_login: user?.system_login || null,
+    address: user?.address || null,
   };
-
-  useEffect(() => {
-    console.log("Auth user:", user);
-    console.log("currentUserFormData:", currentUserFormData);
-  }, [user, currentUserFormData]);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -477,27 +524,35 @@ const SettingsPage: React.FC = () => {
           <Typography
             variant="h6"
             fontWeight={600}
-            color="text.primary"
+            color="var(--mui-palette-text-primary)"
           >
             Настройки
           </Typography>
           {user ? (
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
-                src={currentUserFormData.photo || "/assets/avatar.png"} // Use photo here as well
+                src={currentUserFormData.photo || "/assets/avatar.png"}
                 sx={{ width: 40, height: 40 }}
               />
               <Box>
-                <Typography variant="subtitle1">
+                <Typography
+                  variant="subtitle1"
+                  color="var(--mui-palette-text-primary)"
+                >
                   {currentUserFormData.full_name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  color="var(--mui-palette-text-secondary)"
+                >
                   {currentUserFormData.email}
                 </Typography>
               </Box>
             </Stack>
           ) : (
-            <Typography color="error">Пользователь не авторизован</Typography>
+            <Typography color="var(--mui-palette-error-main)">
+              Пользователь не авторизован
+            </Typography>
           )}
         </Stack>
         <Stack spacing={1}>
@@ -505,8 +560,12 @@ const SettingsPage: React.FC = () => {
             startIcon={<PersonIcon />}
             sx={{
               justifyContent: "flex-start",
-              color: tab === 1 ? "primary.main" : "text.primary",
-              bgcolor: tab === 1 ? "primary.50" : "transparent",
+              color:
+                tab === 1
+                  ? "var(--mui-palette-primary-main)"
+                  : "var(--mui-palette-text-primary)",
+              bgcolor:
+                tab === 1 ? "var(--mui-palette-primary-50)" : "transparent",
               p: 1.5,
               borderRadius: 1,
               textTransform: "none",
@@ -520,8 +579,12 @@ const SettingsPage: React.FC = () => {
             startIcon={<Brightness4Icon />}
             sx={{
               justifyContent: "flex-start",
-              color: tab === 2 ? "primary.main" : "text.primary",
-              bgcolor: tab === 2 ? "primary.50" : "transparent",
+              color:
+                tab === 2
+                  ? "var(--mui-palette-primary-main)"
+                  : "var(--mui-palette-text-primary)",
+              bgcolor:
+                tab === 2 ? "var(--mui-palette-primary-50)" : "transparent",
               p: 1.5,
               borderRadius: 1,
               textTransform: "none",
@@ -535,8 +598,12 @@ const SettingsPage: React.FC = () => {
             startIcon={<GroupIcon />}
             sx={{
               justifyContent: "flex-start",
-              color: tab === 3 ? "primary.main" : "text.primary",
-              bgcolor: tab === 3 ? "primary.50" : "transparent",
+              color:
+                tab === 3
+                  ? "var(--mui-palette-primary-main)"
+                  : "var(--mui-palette-text-primary)",
+              bgcolor:
+                tab === 3 ? "var(--mui-palette-primary-50)" : "transparent",
               p: 1.5,
               borderRadius: 1,
               textTransform: "none",
@@ -560,18 +627,32 @@ const SettingsPage: React.FC = () => {
         }}
       >
         {tab === 1 && (
-          <ProfileTab formData={currentUserFormData} isCurrentUser isAdmin={isAdmin} />
+          <ProfileTab
+            formData={currentUserFormData}
+            isCurrentUser
+            isAdmin={isAdmin}
+          />
         )}
         {tab === 2 && <ThemeTab />}
         {tab === 3 && (
           <>
-            {loading && <Typography>Загрузка...</Typography>}
-            {error && <Typography color="error">{error}</Typography>}
+            {loading && (
+              <Typography color="var(--mui-palette-text-primary)">
+                Загрузка...
+              </Typography>
+            )}
+            {error && (
+              <Typography color="var(--mui-palette-error-main)">
+                {error}
+              </Typography>
+            )}
             {!loading && !error && departmentEmployees.length > 0 && (
               <DepartmentTab employees={departmentEmployees} />
             )}
             {!loading && !error && departmentEmployees.length === 0 && (
-              <Typography>Сотрудники в вашем отделе не найдены.</Typography>
+              <Typography color="var(--mui-palette-text-primary)">
+                Сотрудники в вашем отделе не найдены.
+              </Typography>
             )}
           </>
         )}
