@@ -18,16 +18,31 @@ declare module "@mui/material/styles" {
       900: string;
     };
   }
+  // Расширение Palette для поддержки neutral
+  interface Palette {
+    neutral: {
+      50: string;
+      100: string;
+      200: string;
+      300: string;
+      400: string;
+      500: string;
+      600: string;
+      700: string;
+      800: string;
+      900: string;
+    };
+  }
 }
 
 const lightTheme: ThemeOptions = {
   palette: {
     mode: "light",
     primary: {
-      main: "#0079c2", // --mui-palette-primary-main
-      light: "#4db0e4", // --mui-palette-primary-light
-      dark: "#005799", // --mui-palette-primary-dark
-      contrastText: "#ffffff", // --mui-palette-primary-contrastText
+      main: "#0079c2",
+      light: "#4db0e4",
+      dark: "#005799",
+      contrastText: "#ffffff",
       50: "#e0f2fb",
       100: "#b3ddf3",
       200: "#80c7ec",
@@ -40,10 +55,10 @@ const lightTheme: ThemeOptions = {
       900: "#003766",
     },
     secondary: {
-      main: "#dc004e", // --mui-palette-secondary-main
-      light: "#f73378", // --mui-palette-secondary-light
-      dark: "#9a0036", // --mui-palette-secondary-dark
-      contrastText: "#ffffff", // --mui-palette-secondary-contrastText
+      main: "#dc004e",
+      light: "#f73378",
+      dark: "#9a0036",
+      contrastText: "#ffffff",
       50: "#fce4ec",
       100: "#f8bbd0",
       200: "#f48fb1",
@@ -101,10 +116,10 @@ const lightTheme: ThemeOptions = {
       900: "#e65100",
     },
     error: {
-      main: "#f04438", // --mui-palette-error-main
-      light: "#f97970", // --mui-palette-error-light
-      dark: "#de3024", // --mui-palette-error-dark
-      contrastText: "#ffffff", // --mui-palette-error-contrastText
+      main: "#f04438",
+      light: "#f97970",
+      dark: "#de3024",
+      contrastText: "#ffffff",
       50: "#fef3f2",
       100: "#fee4e2",
       200: "#ffcdc9",
@@ -117,166 +132,126 @@ const lightTheme: ThemeOptions = {
       900: "#80231c",
     },
     text: {
-      primary: "#212121", // --mui-palette-text-primary
-      secondary: "#757575", // --mui-palette-text-secondary
-      disabled: "#bdbdbd", // --mui-palette-text-disabled
+      primary: "#212121",
+      secondary: "#757575",
+      disabled: "#bdbdbd",
     },
-    divider: "#e0e0e0", // --mui-palette-divider
+    divider: "#e0e0e0",
     neutral: {
-      50: "#fafafa", // --mui-palette-neutral-50
-      100: "#f5f5f5", // --mui-palette-neutral-100
-      200: "#eeeeee", // --mui-palette-neutral-200
-      300: "#e0e0e0", // --mui-palette-neutral-300
-      400: "#bdbdbd", // --mui-palette-neutral-400
-      500: "#9e9e9e", // --mui-palette-neutral-500
-      600: "#757575", // --mui-palette-neutral-600
-      700: "#616161", // --mui-palette-neutral-700
-      800: "#424242", // --mui-palette-neutral-800
-      900: "#212121", // --mui-palette-neutral-900
+      50: "#fafafa",
+      100: "#f5f5f5",
+      200: "#eeeeee",
+      300: "#e0e0e0",
+      400: "#bdbdbd",
+      500: "#9e9e9e",
+      600: "#757575",
+      700: "#616161",
+      800: "#424242",
+      900: "#212121",
     },
     background: {
-      default: "#f5f5f5", // --mui-palette-background-default
-      paper: "#ffffff", // --mui-palette-background-paper
+      default: "#f5f5f5",
+      paper: "#ffffff",
     },
     common: {
-      black: "#000000", // --mui-palette-common-black
-      white: "#ffffff", // --mui-palette-common-white
+      black: "#000000",
+      white: "#ffffff",
     },
   },
   typography: {
-    fontFamily: "Inter, Roboto, sans-serif", // --mui-font-body1
-    h1: {
-      fontSize: "3.5rem", // --mui-font-h1
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    h2: {
-      fontSize: "3rem", // --mui-font-h2
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    h3: {
-      fontSize: "2.25rem", // --mui-font-h3
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    h4: {
-      fontSize: "2rem", // --mui-font-h4
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    h5: {
-      fontSize: "1.5rem", // --mui-font-h5
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    h6: {
-      fontSize: "1.125rem", // --mui-font-h6
-      fontWeight: 500,
-      lineHeight: 1.2,
-    },
-    body1: {
-      fontSize: "1rem", // --mui-font-body1
-      fontWeight: 400,
-      lineHeight: 1.5,
-    },
-    body2: {
-      fontSize: "0.875rem", // --mui-font-body2
-      fontWeight: 400,
-      lineHeight: 1.57,
-    },
+    fontFamily: "Inter, Roboto, sans-serif",
+    h1: { fontSize: "3.5rem", fontWeight: 500, lineHeight: 1.2 },
+    h2: { fontSize: "3rem", fontWeight: 500, lineHeight: 1.2 },
+    h3: { fontSize: "2.25rem", fontWeight: 500, lineHeight: 1.2 },
+    h4: { fontSize: "2rem", fontWeight: 500, lineHeight: 1.2 },
+    h5: { fontSize: "1.5rem", fontWeight: 500, lineHeight: 1.2 },
+    h6: { fontSize: "1.125rem", fontWeight: 500, lineHeight: 1.2 },
+    body1: { fontSize: "1rem", fontWeight: 400, lineHeight: 1.5 },
+    body2: { fontSize: "0.875rem", fontWeight: 400, lineHeight: 1.57 },
     button: {
-      fontSize: "0.875rem", // --mui-font-button
+      fontSize: "0.875rem",
       fontWeight: 500,
       lineHeight: 1.75,
       textTransform: "none",
     },
-    caption: {
-      fontSize: "0.75rem", // --mui-font-caption
-      fontWeight: 400,
-      lineHeight: 1.66,
-    },
-    subtitle1: {
-      fontSize: "1rem", // --mui-font-subtitle1
-      fontWeight: 500,
-      lineHeight: 1.57,
-    },
-    subtitle2: {
-      fontSize: "0.875rem", // --mui-font-subtitle2
-      fontWeight: 500,
-      lineHeight: 1.57,
-    },
-    overline: {
-      fontSize: "0.75rem", // --mui-font-overline
-      fontWeight: 500,
-      lineHeight: 2.5,
-    },
+    caption: { fontSize: "0.75rem", fontWeight: 400, lineHeight: 1.66 },
+    subtitle1: { fontSize: "1rem", fontWeight: 500, lineHeight: 1.57 },
+    subtitle2: { fontSize: "0.875rem", fontWeight: 500, lineHeight: 1.57 },
+    overline: { fontSize: "0.75rem", fontWeight: 500, lineHeight: 2.5 },
   },
   shape: {
-    borderRadius: 8, // --mui-shape-borderRadius
+    borderRadius: 8,
   },
-  spacing: 8, // --mui-spacing
+  spacing: 8,
   zIndex: {
-    mobileStepper: 1000, // --mui-zIndex-mobileStepper
-    fab: 1050, // --mui-zIndex-fab
-    speedDial: 1050, // --mui-zIndex-speedDial
-    appBar: 1100, // --mui-zIndex-appBar
-    drawer: 1200, // --mui-zIndex-drawer
-    modal: 1300, // --mui-zIndex-modal
-    snackbar: 1400, // --mui-zIndex-snackbar
-    tooltip: 1500, // --mui-zIndex-tooltip
+    mobileStepper: 1000,
+    fab: 1050,
+    speedDial: 1050,
+    appBar: 1100,
+    drawer: 1200,
+    modal: 1300,
+    snackbar: 1400,
+    tooltip: 1500,
   },
   shadows: [
-    "none", // --mui-shadows-0
-    "0px 1px 2px rgba(0, 0, 0, 0.2)", // --mui-shadows-1
-    "0px 1px 5px rgba(0, 0, 0, 0.2)", // --mui-shadows-2
-    "0px 1px 8px rgba(0, 0, 0, 0.2)", // --mui-shadows-3
-    "0px 1px 10px rgba(0, 0, 0, 0.2)", // --mui-shadows-4
-    "0px 1px 14px rgba(0, 0, 0, 0.2)", // --mui-shadows-5
-    "0px 1px 18px rgba(0, 0, 0, 0.2)", // --mui-shadows-6
-    "0px 2px 16px rgba(0, 0, 0, 0.2)", // --mui-shadows-7
-    "0px 3px 14px rgba(0, 0, 0, 0.2)", // --mui-shadows-8
-    "0px 3px 16px rgba(0, 0, 0, 0.2)", // --mui-shadows-9
-    "0px 4px 18px rgba(0, 0, 0, 0.2)", // --mui-shadows-10
-    "0px 4px 20px rgba(0, 0, 0, 0.2)", // --mui-shadows-11
-    "0px 5px 22px rgba(0, 0, 0, 0.2)", // --mui-shadows-12
-    "0px 5px 24px rgba(0, 0, 0, 0.2)", // --mui-shadows-13
-    "0px 5px 26px rgba(0, 0, 0, 0.2)", // --mui-shadows-14
-    "0px 6px 28px rgba(0, 0, 0, 0.2)", // --mui-shadows-15
-    "0px 6px 30px rgba(0, 0, 0, 0.2)", // --mui-shadows-16
-    "0px 6px 32px rgba(0, 0, 0, 0.2)", // --mui-shadows-17
-    "0px 7px 34px rgba(0, 0, 0, 0.2)", // --mui-shadows-18
-    "0px 7px 36px rgba(0, 0, 0, 0.2)", // --mui-shadows-19
-    "0px 8px 38px rgba(0, 0, 0, 0.2)", // --mui-shadows-20
-    "0px 8px 40px rgba(0, 0, 0, 0.2)", // --mui-shadows-21
-    "0px 8px 42px rgba(0, 0, 0, 0.2)", // --mui-shadows-22
-    "0px 9px 44px rgba(0, 0, 0, 0.2)", // --mui-shadows-23
-    "0px 9px 46px rgba(0, 0, 0, 0.2)", // --mui-shadows-24
+    "none",
+    "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
+    "0px 1px 5px rgba(0, 0, 0, 0.2)",
+    "0px 1px 8px rgba(0, 0, 0, 0.2)",
+    "0px 1px 10px rgba(0, 0, 0, 0.2)",
+    "0px 1px 14px rgba(0, 0, 0, 0.2)",
+    "0px 1px 18px rgba(0, 0, 0, 0.2)",
+    "0px 2px 16px rgba(0, 0, 0, 0.2)",
+    "0px 3px 14px rgba(0, 0, 0, 0.2)",
+    "0px 3px 16px rgba(0, 0, 0, 0.2)",
+    "0px 4px 18px rgba(0, 0, 0, 0.2)",
+    "0px 4px 20px rgba(0, 0, 0, 0.2)",
+    "0px 5px 22px rgba(0, 0, 0, 0.2)",
+    "0px 5px 24px rgba(0, 0, 0, 0.2)",
+    "0px 5px 26px rgba(0, 0, 0, 0.2)",
+    "0px 6px 28px rgba(0, 0, 0, 0.2)",
+    "0px 6px 30px rgba(0, 0, 0, 0.2)",
+    "0px 6px 32px rgba(0, 0, 0, 0.2)",
+    "0px 7px 34px rgba(0, 0, 0, 0.2)",
+    "0px 7px 36px rgba(0, 0, 0, 0.2)",
+    "0px 8px 38px rgba(0, 0, 0, 0.2)",
+    "0px 8px 40px rgba(0, 0, 0, 0.2)",
+    "0px 8px 42px rgba(0, 0, 0, 0.2)",
+    "0px 9px 44px rgba(0, 0, 0, 0.2)",
+    "0px 9px 46px rgba(0, 0, 0, 0.2)",
   ],
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: "none",
-          borderRadius: 8, // --mui-shape-borderRadius
+          borderRadius: 8,
         },
+        text: ({ theme }: { theme: Theme }) =>
+          ({
+            padding: theme.spacing(0.5, 1),
+            "& .MuiButton-endIcon": {
+              marginLeft: theme.spacing(0.5),
+            },
+          }) as Interpolation<{ theme: Theme }>,
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          boxShadow: "0px 1px 10px rgba(0, 0, 0, 0.2)", // --mui-shadows-4
+          boxShadow: "0px 1px 10px rgba(0, 0, 0, 0.2)",
           borderBottom: "none",
-          backgroundColor: "#005799", // --mui-palette-primary-dark
-          color: "#ffffff", // --mui-palette-text-primary
+          backgroundColor: "#005799",
+          color: "#ffffff",
         },
       },
     },
     MuiIconButton: {
       styleOverrides: {
-        root: {
-          color: "#ffffff", // --mui-palette-text-primary
-        },
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            color: theme.palette.text.secondary, // #757575 for light theme
+          }) as Interpolation<{ theme: Theme }>,
       },
     },
     MuiMenu: {
@@ -285,8 +260,8 @@ const lightTheme: ThemeOptions = {
           ({
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
-            boxShadow: theme.shadows[16], // --mui-shadows-16
-            borderRadius: theme.shape.borderRadius, // 8px
+            boxShadow: theme.shadows[16],
+            borderRadius: theme.shape.borderRadius,
             border: `1px solid ${theme.palette.divider}`,
             maxWidth: "320px",
             transition: "box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)",
@@ -297,16 +272,16 @@ const lightTheme: ThemeOptions = {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            padding: theme.spacing(1, 2), // gutters: 8px 16px
-            fontSize: theme.typography.body1.fontSize, // 1rem
-            lineHeight: theme.typography.body1.lineHeight, // 1.5
+            padding: theme.spacing(1, 2),
+            fontSize: theme.typography.body1.fontSize,
+            lineHeight: theme.typography.body1.lineHeight,
             "&:hover": {
-              backgroundColor: theme.palette.action.hover, // rgba(0, 0, 0, 0.04) или rgba(255, 255, 255, 0.04)
+              backgroundColor: theme.palette.action.hover,
             },
             "&.Mui-disabled": {
               color: theme.palette.text.disabled,
               pointerEvents: "none",
-              opacity: theme.palette.action.disabledOpacity, // 0.38
+              opacity: theme.palette.action.disabledOpacity,
             },
           }) as Interpolation<{ theme: Theme }>,
       },
@@ -316,7 +291,7 @@ const lightTheme: ThemeOptions = {
         root: ({ theme }: { theme: Theme }) =>
           ({
             backgroundColor: theme.palette.divider,
-            margin: theme.spacing(1, 0), // 8px сверху и снизу
+            margin: theme.spacing(1, 0),
           }) as Interpolation<{ theme: Theme }>,
       },
     },
@@ -324,7 +299,7 @@ const lightTheme: ThemeOptions = {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            padding: theme.spacing(1, 0), // 8px сверху и снизу
+            padding: theme.spacing(1, 0),
           }) as Interpolation<{ theme: Theme }>,
       },
     },
@@ -332,10 +307,74 @@ const lightTheme: ThemeOptions = {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            minWidth: "32px", // Отступ для иконки
+            minWidth: "32px",
             color: theme.palette.text.primary,
             "& svg": {
-              fontSize: theme.typography.body1.fontSize, // 1rem
+              fontSize: theme.typography.body1.fontSize,
+            },
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            boxShadow: theme.shadows[1],
+            borderRadius: "20px",
+            backgroundImage: "none",
+            transition: "box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+            overflow: "hidden",
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            padding: theme.spacing(2),
+          }) as Interpolation<{ theme: Theme }>,
+        title: ({ theme }: { theme: Theme }) =>
+          ({
+            fontSize: theme.typography.h6.fontSize,
+            fontWeight: theme.typography.h6.fontWeight,
+            lineHeight: theme.typography.h6.lineHeight,
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            padding: theme.spacing(2),
+            "&:last-child": {
+              paddingBottom: theme.spacing(2),
+            },
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiCardActions: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            padding: theme.spacing(2),
+            justifyContent: "flex-end",
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiAvatar: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            width: 48,
+            height: 48,
+            fontSize: theme.typography.body1.fontSize,
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            boxShadow: theme.shadows[8],
+            "& svg": {
+              fontSize: "1.5rem",
             },
           }) as Interpolation<{ theme: Theme }>,
       },
@@ -347,10 +386,10 @@ const darkTheme: ThemeOptions = {
   palette: {
     mode: "dark",
     primary: {
-      main: "#4db0e4", // --mui-palette-primary-main
-      light: "#80c7ec", // --mui-palette-primary-light
-      dark: "#006bb0", // --mui-palette-primary-dark
-      contrastText: "#ffffff", // --mui-palette-primary-contrastText
+      main: "#4db0e4",
+      light: "#80c7ec",
+      dark: "#006bb0",
+      contrastText: "#ffffff",
       50: "#e0f2fb",
       100: "#b3ddf3",
       200: "#80c7ec",
@@ -363,10 +402,10 @@ const darkTheme: ThemeOptions = {
       900: "#003766",
     },
     secondary: {
-      main: "#f48fb1", // --mui-palette-secondary-main
-      light: "#fce4ec", // --mui-palette-secondary-light
-      dark: "#f06292", // --mui-palette-secondary-dark
-      contrastText: "#ffffff", // --mui-palette-secondary-contrastText
+      main: "#f48fb1",
+      light: "#fce4ec",
+      dark: "#f06292",
+      contrastText: "#ffffff",
       50: "#fce4ec",
       100: "#f8bbd0",
       200: "#f48fb1",
@@ -424,10 +463,10 @@ const darkTheme: ThemeOptions = {
       900: "#e65100",
     },
     error: {
-      main: "#f04438", // --mui-palette-error-main
-      light: "#f97970", // --mui-palette-error-light
-      dark: "#de3024", // --mui-palette-error-dark
-      contrastText: "#ffffff", // --mui-palette-error-contrastText
+      main: "#f04438",
+      light: "#f97970",
+      dark: "#de3024",
+      contrastText: "#ffffff",
       50: "#fef3f2",
       100: "#fee4e2",
       200: "#ffcdc9",
@@ -440,30 +479,30 @@ const darkTheme: ThemeOptions = {
       900: "#80231c",
     },
     text: {
-      primary: "#ffffff", // --mui-palette-text-primary
-      secondary: "#b0bec5", // --mui-palette-text-secondary
-      disabled: "#78909c", // --mui-palette-text-disabled
+      primary: "#ffffff",
+      secondary: "#b0bec5",
+      disabled: "#78909c",
     },
-    divider: "#455a64", // --mui-palette-divider
+    divider: "#455a64",
     neutral: {
-      50: "#eceff1", // --mui-palette-neutral-50
-      100: "#cfd8dc", // --mui-palette-neutral-100
-      200: "#b0bec5", // --mui-palette-neutral-200
-      300: "#90a4ae", // --mui-palette-neutral-300
-      400: "#78909c", // --mui-palette-neutral-400
-      500: "#607d8b", // --mui-palette-neutral-500
-      600: "#546e7a", // --mui-palette-neutral-600
-      700: "#455a64", // --mui-palette-neutral-700
-      800: "#37474f", // --mui-palette-neutral-800
-      900: "#263238", // --mui-palette-neutral-900
+      50: "#eceff1",
+      100: "#cfd8dc",
+      200: "#b0bec5",
+      300: "#90a4ae",
+      400: "#78909c",
+      500: "#607d8b",
+      600: "#546e7a",
+      700: "#455a64",
+      800: "#37474f",
+      900: "#263238",
     },
     background: {
-      default: "#121212", // --mui-palette-background-default
-      paper: "#1d1d1d", // --mui-palette-background-paper
+      default: "#121212",
+      paper: "#1d1d1d",
     },
     common: {
-      black: "#000000", // --mui-palette-common-black
-      white: "#ffffff", // --mui-palette-common-white
+      black: "#000000",
+      white: "#ffffff",
     },
   },
   typography: lightTheme.typography,
@@ -471,108 +510,112 @@ const darkTheme: ThemeOptions = {
   spacing: lightTheme.spacing,
   zIndex: lightTheme.zIndex,
   shadows: [
-    "none", // --mui-shadows-0
-    "0px 1px 2px rgba(0, 0, 0, 0.4)", // --mui-shadows-1
-    "0px 1px 5px rgba(0, 0, 0, 0.4)", // --mui-shadows-2
-    "0px 1px 8px rgba(0, 0, 0, 0.4)", // --mui-shadows-3
-    "0px 1px 10px rgba(0, 0, 0, 0.4)", // --mui-shadows-4
-    "0px 1px 14px rgba(0, 0, 0, 0.4)", // --mui-shadows-5
-    "0px 1px 18px rgba(0, 0, 0, 0.4)", // --mui-shadows-6
-    "0px 2px 16px rgba(0, 0, 0, 0.4)", // --mui-shadows-7
-    "0px 3px 14px rgba(0, 0, 0, 0.4)", // --mui-shadows-8
-    "0px 3px 16px rgba(0, 0, 0, 0.4)", // --mui-shadows-9
-    "0px 4px 18px rgba(0, 0, 0, 0.4)", // --mui-shadows-10
-    "0px 4px 20px rgba(0, 0, 0, 0.4)", // --mui-shadows-11
-    "0px 5px 22px rgba(0, 0, 0, 0.4)", // --mui-shadows-12
-    "0px 5px 24px rgba(0, 0, 0, 0.4)", // --mui-shadows-13
-    "0px 5px 26px rgba(0, 0, 0, 0.4)", // --mui-shadows-14
-    "0px 6px 28px rgba(0, 0, 0, 0.4)", // --mui-shadows-15
-    "0px 6px 30px rgba(0, 0, 0, 0.4)", // --mui-shadows-16
-    "0px 6px 32px rgba(0, 0, 0, 0.4)", // --mui-shadows-17
-    "0px 7px 34px rgba(0, 0, 0, 0.4)", // --mui-shadows-18
-    "0px 7px 36px rgba(0, 0, 0, 0.4)", // --mui-shadows-19
-    "0px 8px 38px rgba(0, 0, 0, 0.4)", // --mui-shadows-20
-    "0px 8px 40px rgba(0, 0, 0, 0.4)", // --mui-shadows-21
-    "0px 8px 42px rgba(0, 0, 0, 0.4)", // --mui-shadows-22
-    "0px 9px 44px rgba(0, 0, 0, 0.4)", // --mui-shadows-23
-    "0px 9px 46px rgba(0, 0, 0, 0.4)", // --mui-shadows-24
+    "none",
+    "rgba(0, 0, 0, 0.04) 0px 5px 22px 0px, rgba(0, 0, 0, 0.06) 0px 0px 0px 1px",
+    "0px 1px 5px rgba(0, 0, 0, 0.4)",
+    "0px 1px 8px rgba(0, 0, 0, 0.4)",
+    "0px 1px 10px rgba(0, 0, 0, 0.4)",
+    "0px 1px 14px rgba(0, 0, 0, 0.4)",
+    "0px 1px 18px rgba(0, 0, 0, 0.4)",
+    "0px 2px 16px rgba(0, 0, 0, 0.4)",
+    "0px 3px 14px rgba(0, 0, 0, 0.4)",
+    "0px 3px 16px rgba(0, 0, 0, 0.4)",
+    "0px 4px 18px rgba(0, 0, 0, 0.4)",
+    "0px 4px 20px rgba(0, 0, 0, 0.4)",
+    "0px 5px 22px rgba(0, 0, 0, 0.4)",
+    "0px 5px 24px rgba(0, 0, 0, 0.4)",
+    "0px 5px 26px rgba(0, 0, 0, 0.4)",
+    "0px 6px 28px rgba(0, 0, 0, 0.4)",
+    "0px 6px 30px rgba(0, 0, 0, 0.4)",
+    "0px 6px 32px rgba(0, 0, 0, 0.4)",
+    "0px 7px 34px rgba(0, 0, 0, 0.4)",
+    "0px 7px 36px rgba(0, 0, 0, 0.4)",
+    "0px 8px 38px rgba(0, 0, 0, 0.4)",
+    "0px 8px 40px rgba(0, 0, 0, 0.4)",
+    "0px 8px 42px rgba(0, 0, 0, 0.4)",
+    "0px 9px 44px rgba(0, 0, 0, 0.4)",
+    "0px 9px 46px rgba(0, 0, 0, 0.4)",
   ],
   components: {
     ...lightTheme.components,
     MuiAppBar: {
       styleOverrides: {
         root: {
-          boxShadow: "0px 1px 10px rgba(0, 0, 0, 0.4)", // --mui-shadows-4
+          boxShadow: "0px 1px 10px rgba(0, 0, 0, 0.4)",
           borderBottom: "none",
-          backgroundColor: "#78909c", // --mui-palette-neutral-400
-          color: "#ffffff", // --mui-palette-text-primary
+          backgroundColor: "#78909c",
+          color: "#ffffff",
         },
       },
     },
     MuiIconButton: {
       styleOverrides: {
-        root: {
-          color: "#ffffff", // --mui-palette-text-primary
-        },
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            color: theme.palette.neutral[100], // #cfd8dc for dark theme
+          }) as Interpolation<{ theme: Theme }>,
       },
     },
-    MuiMenu: {
+    MuiCard: {
       styleOverrides: {
-        paper: ({ theme }: { theme: Theme }) =>
+        root: ({ theme }: { theme: Theme }) =>
           ({
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
-            boxShadow: theme.shadows[16], // --mui-shadows-16
-            borderRadius: theme.shape.borderRadius, // 8px
-            border: `1px solid ${theme.palette.divider}`,
-            maxWidth: "320px",
+            boxShadow: theme.shadows[1],
+            borderRadius: "20px",
+            backgroundImage: "none",
             transition: "box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+            overflow: "hidden",
           }) as Interpolation<{ theme: Theme }>,
       },
     },
-    MuiMenuItem: {
+    MuiCardHeader: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            padding: theme.spacing(1, 2), // gutters: 8px 16px
-            fontSize: theme.typography.body1.fontSize, // 1rem
-            lineHeight: theme.typography.body1.lineHeight, // 1.5
-            "&:hover": {
-              backgroundColor: theme.palette.action.hover, // rgba(0, 0, 0, 0.04) или rgba(255, 255, 255, 0.04)
+            padding: theme.spacing(2),
+          }) as Interpolation<{ theme: Theme }>,
+        title: ({ theme }: { theme: Theme }) =>
+          ({
+            fontSize: theme.typography.h6.fontSize,
+            fontWeight: theme.typography.h6.fontWeight,
+            lineHeight: theme.typography.h6.lineHeight,
+          }) as Interpolation<{ theme: Theme }>,
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: ({ theme }: { theme: Theme }) =>
+          ({
+            padding: theme.spacing(2),
+            "&:last-child": {
+              paddingBottom: theme.spacing(2),
             },
-            "&.Mui-disabled": {
-              color: theme.palette.text.disabled,
-              pointerEvents: "none",
-              opacity: theme.palette.action.disabledOpacity, // 0.38
-            },
           }) as Interpolation<{ theme: Theme }>,
       },
     },
-    MuiDivider: {
+    MuiCardActions: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            backgroundColor: theme.palette.divider,
-            margin: theme.spacing(1, 0), // 8px сверху и снизу
+            padding: theme.spacing(2),
+            justifyContent: "flex-end",
           }) as Interpolation<{ theme: Theme }>,
       },
     },
-    MuiList: {
+    MuiAvatar: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) =>
           ({
-            padding: theme.spacing(1, 0), // 8px сверху и снизу
-          }) as Interpolation<{ theme: Theme }>,
-      },
-    },
-    MuiListItemIcon: {
-      styleOverrides: {
-        root: ({ theme }: { theme: Theme }) =>
-          ({
-            minWidth: "32px", // Отступ для иконки
+            width: 48,
+            height: 48,
+            fontSize: theme.typography.body1.fontSize,
+            backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
+            boxShadow: theme.shadows[8],
             "& svg": {
-              fontSize: theme.typography.body1.fontSize, // 1rem
+              fontSize: "1.5rem",
             },
           }) as Interpolation<{ theme: Theme }>,
       },

@@ -1,7 +1,8 @@
 // src/pages/object-type/ui.tsx
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Box, Typography, Select, MenuItem, Button } from "@mui/material";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
+//import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import RuleIcon from "@mui/icons-material/Rule";
 import { AgGridReact } from "ag-grid-react";
 
 import { objectTypeApi } from "@/shared/api/object-type";
@@ -81,7 +82,7 @@ export function ObjectTypePage() {
     {
       key: "parameter",
       label: "Параметры проверки",
-      icon: <FilterAltIcon />,
+      icon: <RuleIcon />,
     },
   ];
 
