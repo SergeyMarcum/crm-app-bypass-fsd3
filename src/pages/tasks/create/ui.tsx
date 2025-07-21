@@ -82,7 +82,7 @@ export function CreateTaskPage() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors, isValid }, // errors и isValid здесь
     reset,
   } = useForm<CreateTaskStep1Form>({
     resolver: zodResolver(createTaskStep1Schema),
@@ -97,6 +97,9 @@ export function CreateTaskPage() {
       comment: "",
     },
   });
+  // Временно! Для проверки объекта ошибок
+  console.log("Ошибки формы:", errors);
+  console.log("Форма действительна:", isValid);
 
   const isRepeatInspection = watch("isRepeatInspection");
   const objectId = watch("objectId");
@@ -931,7 +934,6 @@ export function CreateTaskPage() {
                     sx={{ mt: 1, mr: 1 }}
                     disabled={
                       (activeStep === 0 && !isValid) ||
-                      (activeStep === 0 && createTaskMutation.isPending) ||
                       (activeStep === 1 &&
                         selectedInspectionParameters.length === 0)
                     }
