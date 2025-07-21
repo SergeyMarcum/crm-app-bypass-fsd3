@@ -5,6 +5,8 @@ import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
 import { ObjectModal } from "@/widgets/object/object-modal";
 import { useNavigate } from "react-router-dom";
+import DomainIcon from "@mui/icons-material/Domain";
+import HolidayVillageIcon from "@mui/icons-material/HolidayVillage";
 
 import type { JSX } from "react";
 
@@ -17,8 +19,8 @@ interface ObjectData {
 }
 
 const filterDefinitions: FilterDefinition<ObjectData>[] = [
-  { key: "name", label: "Объекты" },
-  { key: "object_type", label: "Тип объекта" },
+  { key: "name", label: "Объекты", icon: <DomainIcon /> },
+  { key: "object_type", label: "Тип объекта", icon: <HolidayVillageIcon /> },
 ];
 
 export function ObjectsPage(): JSX.Element {
