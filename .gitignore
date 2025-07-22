@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+src/assets/Icon/icons/phosphor-icons
+src/shared/ui/Icon/icons/phosphor-icons
 *.local
 .env
 .env.test

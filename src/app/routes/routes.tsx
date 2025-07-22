@@ -3,9 +3,8 @@ import { ReactElement } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@features/auth/model/store";
 
-import { DashboardLayout, LoginLayout } from "@widgets/layout";
+import { DashboardLayout, LoginLayout } from "@/app/layout";
 
-import { DashboardPage } from "@/pages/dashboard";
 import { LoginPage } from "@/pages/login";
 import { UsersPage } from "@/pages/users";
 import { EmployeesPage } from "@/pages/employees";
@@ -25,6 +24,7 @@ import { ObjectTypePage } from "@/pages/object-type";
 import { ParametersPage } from "@/pages/parameters";
 import { ChatPage } from "@/pages/chat";
 import { InstructionsPage } from "@/pages/instructions";
+import { DashboardPage } from "@/pages";
 
 const ProtectedRoute = ({
   children,

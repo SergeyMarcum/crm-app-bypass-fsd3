@@ -1,4 +1,4 @@
-// src/pages/dashboard/ui.tsx
+// src/pages/dashboard/ui/DashboardPage/DashboardPage.tsx
 import {
   Box,
   Typography,
