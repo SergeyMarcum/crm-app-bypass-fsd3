@@ -1,4 +1,5 @@
 // src/shared/api/index.ts
+export { api } from "./axios";
 export * as authApi from "./auth/client";
 export * as userApi from "./user/client";
 export * as taskApi from "./task/client";

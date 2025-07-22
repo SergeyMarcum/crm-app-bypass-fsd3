@@ -1,10 +1,14 @@
 // src/shared/api/axios.ts
 import Axios from "axios";
 import { storage } from "@/shared/lib/storage"; // Используем алиас для @shared/lib/storage
+import { CONFIG } from "../config";
 
 // Основной экземпляр Axios для взаимодействия с production/main API
 export const api = Axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // URL основного API из .env
+  baseURL: CONFIG.API_URL, // URL основного API из .env
+  /*headers: {
+    "Content-Type": "application/json",
+  },*/
   withCredentials: true, // Отправлять куки с запросами
 });
 

@@ -1,4 +1,4 @@
-// src/widgets/layout/dashboard-layout.tsx
+// src/app/layout/dashboard-layout.tsx
 import { ReactElement, useState } from "react";
 import { Box } from "@mui/material";
 import { Header } from "@widgets/header";
