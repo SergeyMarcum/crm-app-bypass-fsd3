@@ -1,4 +1,4 @@
-// src/pages/dashboard/AppUsageChart.tsx
+// src/pages/dashboard/ui/DashboardPage/AppUsageChart.tsx
 import {
   BarChart,
   Bar,

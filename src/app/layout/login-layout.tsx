@@ -1,4 +1,4 @@
-// src/widgets/layout/login-layout.tsx
+// src/app/layout/login-layout.tsx
 import { ReactElement } from "react";
 import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
