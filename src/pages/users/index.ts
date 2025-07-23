@@ -1,2 +1,2 @@
 // src/pages/users/index.ts
-export { UsersPage } from "./ui";
+export { EmployeesPage, ProfilePage, UsersPage } from "./ui/";
