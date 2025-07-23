@@ -5,26 +5,29 @@ import { useAuthStore } from "@features/auth/model/store";
 
 import { DashboardLayout, LoginLayout } from "@/app/layout";
 
-import { LoginPage } from "@/pages/login";
-import { UsersPage } from "@/pages/users";
-import { EmployeesPage } from "@/pages/employees";
-import { TaskControlPage } from "@/pages/tasks/control";
-import { CreateTaskPage } from "@/pages/tasks/create";
-import { TaskViewPage } from "@/pages/tasks/view";
-import { TaskPage } from "@/pages/task"; // 👈 Раскомментировано и обновлен путь
-import { CalendarPage } from "@/pages/calendar";
-import { HelpPage } from "@/pages/help";
-import { SettingsPage } from "@/pages/settings";
 import { CheckLogsPage } from "@/pages/logs/checks";
 import { DefectLogsPage } from "@/pages/logs/defects";
 import { ButtonsPage } from "@/pages/ui-kit/button";
-import { ObjectsPage } from "@/pages/objects";
-import { ObjectPage } from "@/pages/object";
-import { ObjectTypePage } from "@/pages/object-type";
-import { ParametersPage } from "@/pages/parameters";
-import { ChatPage } from "@/pages/chat";
-import { InstructionsPage } from "@/pages/instructions";
-import { DashboardPage } from "@/pages";
+
+import {
+  CalendarPage,
+  ChatPage,
+  DashboardPage,
+  EmployeesPage,
+  HelpPage,
+  InstructionsPage,
+  LoginPage,
+  ObjectPage,
+  ObjectTypePage,
+  ObjectsPage,
+  ParametersPage,
+  SettingsPage,
+  TaskPage,
+  CreateTaskPage,
+  TaskControlPage,
+  TaskViewPage,
+  UsersPage,
+} from "@/pages";
 
 const ProtectedRoute = ({
   children,
