@@ -1,2 +1,2 @@
 // src/pages/chat/index.ts
-export { default as ChatPage } from './ui';
+export { ChatPage } from "./ui/";

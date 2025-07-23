@@ -1,2 +1,2 @@
 // src/pages/instructions/index.ts
-export { default as InstructionsPage } from './ui';
+export { InstructionsPage } from "./ui/";
