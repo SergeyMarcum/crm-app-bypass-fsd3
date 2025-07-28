@@ -7,7 +7,6 @@ import { DashboardLayout, LoginLayout } from "@/app/layout";
 
 import { CheckLogsPage } from "@/pages/logs/checks";
 import { DefectLogsPage } from "@/pages/logs/defects";
-import { ButtonsPage } from "@/pages/ui-kit/button";
 
 import {
   CalendarPage,
@@ -249,7 +248,6 @@ export function AppRoutes() {
         }
       />
 
-      <Route path="/ui-kit/buttons" element={<ButtonsPage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
