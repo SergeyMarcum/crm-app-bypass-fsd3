@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { ThemeProvider } from "@mui/material/styles";
 import { useAuthStore } from "@features/auth/model/store";
-import { useThemeStore } from "@shared/processes/theme/store";
+import { useThemeStore } from "@/app/stores/theme/store";
 import { getTheme } from "@shared/config/theme";
 import { AppRoutes } from "@app/routes";
 import { AppInit } from "@app/init";

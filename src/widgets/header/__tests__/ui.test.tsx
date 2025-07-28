@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { Header } from "../ui";
 import { useUser } from "@shared/hooks/use-user";
-import { useNotifications } from "@shared/processes/notifications/hooks/use-notifications";
+import { useNotifications } from "@/app/stores/notifications/hooks/use-notifications";
 
 jest.mock("@shared/hooks/use-user");
 jest.mock("@shared/processes/notifications/hooks/use-notifications");
