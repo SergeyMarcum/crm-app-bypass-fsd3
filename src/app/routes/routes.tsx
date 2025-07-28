@@ -1,4 +1,4 @@
-// src/app/routes.tsx
+// src/app/routes/routes.tsx
 import { ReactElement } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@features/auth/model/store";
