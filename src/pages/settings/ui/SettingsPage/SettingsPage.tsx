@@ -29,7 +29,7 @@ import { useAuthStore } from "@features/auth/model/store";
 import { User } from "@entities/user/types";
 import { getEmployeesByDepartment } from "@shared/api/employee";
 import { statusMap } from "@entities/user/model/normalize";
-import { useThemeStore } from "@shared/processes/theme/store";
+import { useThemeStore } from "@/app/stores/theme/store";
 import {
   Person as PersonIcon,
   Brightness4 as Brightness4Icon,

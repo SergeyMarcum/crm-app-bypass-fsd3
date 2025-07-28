@@ -1,7 +1,6 @@
 // src/app/error-boundary.tsx
 import { Component, ReactNode } from "react";
 import { Typography, Button, Container } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 
 interface ErrorBoundaryProps {
   children: ReactNode;

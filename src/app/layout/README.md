@@ -1,4 +1,4 @@
-// src/widgets/layout/README.md
+// src/app/layout/README.md
 
 # Layout Widget
 

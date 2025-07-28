@@ -13,7 +13,6 @@ import {
   Stack,
   Divider,
   Avatar,
-  AvatarGroup,
   Button,
   Modal,
   TablePagination,

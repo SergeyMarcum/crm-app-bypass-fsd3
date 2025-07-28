@@ -1,4 +1,4 @@
-// src/shared/processes/theme/store.ts
+// src/app/stores/theme/store.ts
 import { create } from "zustand";
 
 type ThemeMode = "light" | "dark" | "system";

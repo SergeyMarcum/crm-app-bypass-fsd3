@@ -24,7 +24,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import PersonIcon from "@mui/icons-material/Person";
 import { useUser } from "@shared/hooks/use-user";
 import { useAuthStore } from "@features/auth/model/store";
-import { useNotifications } from "@shared/processes/notifications/hooks/use-notifications";
+import { useNotifications } from "@/app/stores/notifications/hooks/use-notifications";
 import { Logo } from "@shared/ui/Logo";
 import type { HeaderProps } from "./types";
 

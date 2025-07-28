@@ -25,7 +25,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { Dayjs } from "dayjs";
 
-import { CustomTable, FilterDefinition } from "@/widgets/table"; // Assuming CustomTable handles pagination internally
+import { CustomTable } from "@/widgets/table"; // Assuming CustomTable handles pagination internally
 import type { JSX } from "react";
 
 // --- Mock API and Types (Replace with actual API integration) ---
