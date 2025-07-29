@@ -1,4 +1,4 @@
-// src/pages/calendar/CheckModal.tsx
+// src/pages/calendar/ui/CheckModal/CheckModal.tsx
 import {
   Modal,
   Box,
