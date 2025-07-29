@@ -5,13 +5,12 @@ import { useAuthStore } from "@features/auth/model/store";
 
 import { DashboardLayout, LoginLayout } from "@/app/layout";
 
-import { CheckLogsPage } from "@/pages/logs/checks";
-import { DefectLogsPage } from "@/pages/logs/defects";
-
 import {
   CalendarPage,
   ChatPage,
+  CheckLogsPage,
   DashboardPage,
+  DefectLogsPage,
   EmployeesPage,
   HelpPage,
   InstructionsPage,
