@@ -9,6 +9,7 @@ export { ObjectPage } from "./object";
 export { ObjectTypePage } from "./object-type";
 export { ObjectsPage } from "./objects";
 export { ParametersPage } from "./parameters";
+export { NonCompliancePage } from "./non-compliance";
 export { SettingsPage } from "./settings";
 export { TaskPage } from "./task";
 export { CreateTaskPage } from "./task-create";

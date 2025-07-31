@@ -6,7 +6,6 @@ import {
   ModuleRegistry,
   PaginationModule,
   RowSelectionModule,
-  // SelectionChangedEvent,
 } from "ag-grid-community";
 import {
   Button,
@@ -15,6 +14,8 @@ import {
   DialogTitle,
   TextField,
   IconButton,
+  CircularProgress,
+  Box,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { z } from "zod";
@@ -43,6 +44,7 @@ type Props<TRow extends object> = {
   pageSize?: number;
   filters?: FilterDefinition<TRow>[];
   onSelectionChanged?: AgGridReactProps["onSelectionChanged"];
+  loading?: boolean; // Добавляем пропс loading
 };
 
 function CustomTableInner<T extends object>(
@@ -54,6 +56,7 @@ function CustomTableInner<T extends object>(
     filters = [],
     pageSize = 20,
     onSelectionChanged,
+    loading = false, // Значение по умолчанию
   }: Props<T>,
   ref: ForwardedRef<AgGridReact>
 ): JSX.Element {
@@ -109,7 +112,28 @@ function CustomTableInner<T extends object>(
   }, [rowData, globalFilters]);
 
   return (
-    <div className="ag-theme-alpine" style={{ height: 600 }}>
+    <div
+      className="ag-theme-alpine"
+      style={{ height: 600, position: "relative" }}
+    >
+      {loading && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            zIndex: 10,
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {filters.map((filter) => {
           const isActive = !!globalFilters[filter.key as string];
@@ -174,12 +198,13 @@ function CustomTableInner<T extends object>(
         columnDefs={columnDefs}
         pagination={pagination}
         paginationPageSize={pageSize}
-        paginationPageSizeSelector={[10, 20, 50, 100]} // Изменено: явное указание опций
+        paginationPageSizeSelector={[10, 20, 50, 100]}
         rowSelection="multiple"
         animateRows
         domLayout="normal"
         getRowId={({ data }) => getRowId(data)}
         onSelectionChanged={onSelectionChanged}
+        loadingOverlayComponent={loading ? "loadingOverlay" : undefined} // Поддержка индикатора загрузки
       />
     </div>
   );
