@@ -1,12 +1,16 @@
 // src/shared/api/calendar/client.ts
-import { api, testApi } from "@/shared/api/axios";
+import { api } from "@/shared/api/axios";
 // ИСПРАВЛЕНИЕ: Изменен путь импорта, чтобы он указывал на 'model/store'
-import { useAuthStore } from "@/features/auth/model/store"; // <-- ИЗМЕНЕНО
-import { CalendarFilter, Check, Object, Operator } from "@/features/calendar/types";
+// import { useAuthStore } from "@/features/auth/model/store"; // <-- ИЗМЕНЕНО
+import {
+  CalendarFilter,
+  Check,
+  Object,
+  Operator,
+} from "@/features/calendar/types";
 
 export const getChecks = async (filters: CalendarFilter): Promise<Check[]> => {
-  const isTestMode = useAuthStore.getState().isTestMode;
-  const client = isTestMode ? testApi : api;
+  const client = api;
 
   try {
     const response = await client.get("/checks", {
@@ -24,8 +28,7 @@ export const getChecks = async (filters: CalendarFilter): Promise<Check[]> => {
 };
 
 export const getObjects = async (): Promise<Object[]> => {
-  const isTestMode = useAuthStore.getState().isTestMode;
-  const client = isTestMode ? testApi : api;
+  const client = api;
 
   try {
     const response = await client.get("/all-domain-objects");
@@ -37,8 +40,8 @@ export const getObjects = async (): Promise<Object[]> => {
 };
 
 export const getOperators = async (): Promise<Operator[]> => {
-  const isTestMode = useAuthStore.getState().isTestMode;
-  const client = isTestMode ? testApi : api;
+  //const isTestMode = useAuthStore.getState().isTestMode;
+  const client = api;
 
   try {
     const response = await client.get("/operators");

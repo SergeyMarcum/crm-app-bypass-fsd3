@@ -60,9 +60,10 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
     pathname.startsWith("/objects")
   );
 
-  const handleLogout = async () => { // Сделаем handleLogout асинхронным
+  const handleLogout = async () => {
+    // Сделаем handleLogout асинхронным
     await logout(); // Дождемся завершения logout
-    navigate('/login'); // Перенаправляем на страницу логина после выхода
+    navigate("/login"); // Перенаправляем на страницу логина после выхода
   };
 
   const NavItem = ({
@@ -198,6 +199,10 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
               <NestedNavItem
                 to="/objects/parameters"
                 text="Список параметров"
+              />
+              <NestedNavItem
+                to="/objects/non-compliance"
+                text="Список несоответствий"
               />
             </List>
           </Collapse>

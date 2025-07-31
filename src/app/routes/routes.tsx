@@ -25,6 +25,8 @@ import {
   TaskControlPage,
   TaskViewPage,
   UsersPage,
+  //ProfilePage,
+  NonCompliancePage,
 } from "@/pages";
 
 const ProtectedRoute = ({
@@ -198,6 +200,16 @@ export function AppRoutes() {
           <ProtectedRoute allowedRoles={[1, 2]}>
             <DashboardLayout>
               <ParametersPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/objects/non-compliance"
+        element={
+          <ProtectedRoute allowedRoles={[1, 2]}>
+            <DashboardLayout>
+              <NonCompliancePage />
             </DashboardLayout>
           </ProtectedRoute>
         }

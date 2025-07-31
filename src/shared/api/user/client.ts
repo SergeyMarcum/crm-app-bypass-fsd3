@@ -17,7 +17,7 @@ export const userApi = {
         console.log("Raw user data from storage:", userData);
         const normalizedData = {
           ...userData,
-          id: userData.user_id ?? null, // Нормализуем user_id в id
+          id: userData.user_id ?? null,
           status_id: userData.status_id ?? null,
           domain: userData.domain ?? null,
           name: userData.name ?? null,
@@ -44,28 +44,44 @@ export const userApi = {
   },
 
   getCompanyUsers: async () => {
-    const response = await api.get("/all-users-company", {
-      params: getAuthParams(),
-    });
+    try {
+      const response = await api.get("/all-users-company", {
+        params: getAuthParams(),
+      });
 
-    const normalizedData = {
-      ...response.data,
-      users: response.data.users.map((user: UserSchemaType) => ({
-        ...user,
-        id: user.id ?? user.user_id ?? null, // Поддержка user_id или id
-        status_id: user.status_id ?? null,
-        photo: user.photo ?? null,
-      })),
-    };
+      console.log("Raw response from /all-users-company:", response.data);
 
-    const users = z
-      .object({
-        users: userSchema.array(),
-        departments: z.string().array().optional(),
-      })
-      .parse(normalizedData);
+      // Проверяем, есть ли поле users в ответе
+      if (!response.data || !response.data.users) {
+        console.error(
+          "Response does not contain 'users' field:",
+          response.data
+        );
+        throw new Error("Invalid response format: 'users' field is missing");
+      }
 
-    return users;
+      const normalizedData = {
+        users: response.data.users.map((user: UserSchemaType) => ({
+          ...user,
+          id: user.id ?? user.user_id ?? null,
+          status_id: user.status_id ?? null,
+          photo: user.photo ?? null,
+        })),
+        departments: response.data.departments ?? [], // departments может быть необязательным
+      };
+
+      const users = z
+        .object({
+          users: userSchema.array(),
+          departments: z.string().array().optional(),
+        })
+        .parse(normalizedData);
+
+      return users;
+    } catch (error) {
+      console.error("Error in getCompanyUsers:", error);
+      throw error;
+    }
   },
 
   editUser: async (payload: EditUserPayload) => {
