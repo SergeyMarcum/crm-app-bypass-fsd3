@@ -1,4 +1,4 @@
-// src/pages/tasks/ui/CreateTaskPage/CreateTaskPage.tsx
+// src/pages/task-create/ui/CreateTaskPage/CreateTaskPage.tsx
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
@@ -25,14 +25,16 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip,
   InputLabel,
   FormControl,
   FormHelperText,
+  Autocomplete,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useNavigate } from "react-router-dom";
 
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -49,12 +51,14 @@ import {
   nonComplianceApi,
   NonComplianceCase,
 } from "@/shared/api/task/non-compliance";
+import { taskHistoryApi } from "@/shared/api/task/history";
 import type { User } from "@/shared/api/task/employee";
 import type {
   ObjectItem,
   GetObjectParametersResponse,
   InspectionParameter,
 } from "@/shared/api/task/object/types";
+import type { TaskHistoryItem } from "@/shared/api/task/history/types";
 
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import {
@@ -69,47 +73,72 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createTaskStep1Schema,
   CreateTaskStep1Form,
+  addNewTaskPayloadSchema,
   AddNewTaskPayload,
 } from "@/features/tasks/task-form/model/task-schemas";
 import { taskApi } from "@/features/tasks/task-form/api/task";
 import { toast } from "sonner";
+import { useAuthStore } from "@/features/auth/model/store";
 
 export function CreateTaskPage() {
+  const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
+  const [taskId, setTaskId] = useState<number | null>(null);
+  const [filterModalOpen, setFilterModalOpen] = useState<string | null>(null);
+  const [filterValues, setFilterValues] = useState<
+    Record<
+      "dateFilter" | "reportDateFilter" | "parameterFilter" | "operatorFilter",
+      string | undefined
+    >
+  >({
+    dateFilter: undefined,
+    reportDateFilter: undefined,
+    parameterFilter: undefined,
+    operatorFilter: undefined,
+  });
+  const [historyItems, setHistoryItems] = useState<TaskHistoryItem[]>([]);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
 
   const {
     control,
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid }, // errors и isValid здесь
+    formState: { errors, isValid },
     reset,
+    getValues,
+    trigger,
   } = useForm<CreateTaskStep1Form>({
     resolver: zodResolver(createTaskStep1Schema),
     mode: "onChange",
     defaultValues: {
       objectId: "",
-      checkDate: undefined,
-      checkTime: undefined,
+      checkDate: null,
+      checkTime: null,
       isRepeatInspection: false,
-      lastCheckDate: undefined,
+      lastCheckDate: null,
+      periodic: 0,
       operatorId: "",
       comment: "",
     },
   });
-  // Временно! Для проверки объекта ошибок
-  console.log("Ошибки формы:", errors);
-  console.log("Форма действительна:", isValid);
 
   const isRepeatInspection = watch("isRepeatInspection");
   const objectId = watch("objectId");
+  const checkTime = watch("checkTime");
+  const shiftText = useMemo(() => {
+    if (!checkTime) return "";
+    const hour = dayjs(checkTime).hour();
+    return hour >= 8 && hour < 22 ? "Дневная смена" : "Ночная смена";
+  }, [checkTime]);
 
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [operators, setOperators] = useState<User[]>([]);
-
   const [inspectionParameters, setInspectionParameters] = useState<
     InspectionParameter[]
   >([]);
+  const [allParameters, setAllParameters] = useState<InspectionParameter[]>([]);
   const [selectedInspectionParameters, setSelectedInspectionParameters] =
     useState<InspectionParameter[]>([]);
   const [parameterEditModalOpen, setParameterEditModalOpen] = useState(false);
@@ -119,8 +148,16 @@ export function CreateTaskPage() {
     nonCompliancesForCurrentParameter,
     setNonCompliancesForCurrentParameter,
   ] = useState<NonComplianceCase[]>([]);
-
+  const [selectedNonCompliances, setSelectedNonCompliances] = useState<
+    NonComplianceCase[]
+  >([]);
   const [addParameterModalOpen, setAddParameterModalOpen] = useState(false);
+  const [newParameter, setNewParameter] = useState<InspectionParameter | null>(
+    null
+  );
+  const [allNonCompliances, setAllNonCompliances] = useState<
+    NonComplianceCase[]
+  >([]);
 
   const createTaskMutation = taskApi.useCreateTask();
 
@@ -130,11 +167,13 @@ export function CreateTaskPage() {
     try {
       const fetchedObjects = await objectApi.getAllObjects();
       setObjects(fetchedObjects);
+      console.log("Fetched objects:", fetchedObjects);
     } catch (error) {
       console.error("Ошибка при загрузке объектов:", error);
       try {
         const searchedObjects = await objectApi.searchObjects("");
         setObjects(searchedObjects);
+        console.log("Searched objects:", searchedObjects);
       } catch (searchError) {
         console.error("Ошибка при поиске объектов:", searchError);
       }
@@ -145,6 +184,7 @@ export function CreateTaskPage() {
     try {
       const fetchedOperators = await employeeApi.getAllOperators();
       setOperators(fetchedOperators as User[]);
+      console.log("Fetched operators:", fetchedOperators);
     } catch (error) {
       console.error("Ошибка при загрузке операторов:", error);
       try {
@@ -153,6 +193,7 @@ export function CreateTaskPage() {
           (user) => user.role_id === 4
         );
         setOperators(filteredOperators as User[]);
+        console.log("Filtered operators:", filteredOperators);
       } catch (searchError) {
         console.error(
           "Ошибка при поиске пользователей/операторов:",
@@ -171,21 +212,21 @@ export function CreateTaskPage() {
       try {
         const response: GetObjectParametersResponse =
           await objectApi.getParametersAndObjectType(currentObjectId);
-
-        const transformedParameters: InspectionParameter[] =
-          response.parameters
-            ?.map((param: InspectionParameter) => {
-              return {
-                id: param.id,
-                name: param.name,
-                type: param.type || "N/A",
-              };
-            })
-            .filter(
-              (param): param is InspectionParameter =>
-                param != null && param.id != null
-            ) || [];
-        setInspectionParameters(transformedParameters);
+        // Нормализация параметров
+        const normalizedParameters: InspectionParameter[] =
+          response.parameters.map((param, index) => {
+            const name = Object.keys(param)[0] || "Без названия";
+            const nonCompliances = param[name];
+            return {
+              id: index + 1, // Замените на param.id, если API предоставляет ID
+              name,
+              type: "unknown", // Обновите, если API возвращает тип
+              nonCompliances: nonCompliances || null,
+            };
+          });
+        setInspectionParameters(normalizedParameters);
+        console.log("Raw API response for parameters:", response.parameters);
+        console.log("Normalized inspection parameters:", normalizedParameters);
       } catch (error) {
         console.error(
           `Ошибка при загрузке параметров для объекта ${currentObjectId}:`,
@@ -197,6 +238,31 @@ export function CreateTaskPage() {
     []
   );
 
+  const fetchAllParameters = useCallback(async () => {
+    try {
+      const parameters = await objectApi.getAllParameters();
+      // Нормализация параметров
+      const normalizedParameters: InspectionParameter[] = parameters.map(
+        (
+          param: { id?: number; name: string; type?: string },
+          index: number
+        ) => ({
+          id: param.id || index + 1,
+          name: param.name || "Без названия",
+          type: param.type || "unknown",
+        })
+      );
+      setAllParameters(normalizedParameters);
+      console.log(
+        "Fetched and normalized all parameters:",
+        normalizedParameters
+      );
+    } catch (error) {
+      console.error("Ошибка при загрузке всех параметров:", error);
+      setAllParameters([]);
+    }
+  }, []);
+
   const fetchNonCompliancesForParameter = useCallback(
     async (parameterId: string) => {
       try {
@@ -205,6 +271,7 @@ export function CreateTaskPage() {
             parameterId
           );
         setNonCompliancesForCurrentParameter(nonCompliances);
+        console.log("Fetched non-compliances for parameter:", nonCompliances);
       } catch (error) {
         console.error(
           `Ошибка при загрузке несоответствий для параметра ${parameterId}:`,
@@ -216,17 +283,54 @@ export function CreateTaskPage() {
     []
   );
 
+  const fetchAllNonCompliances = useCallback(async () => {
+    try {
+      const nonCompliances = await nonComplianceApi.getAllNonCompliances();
+      setAllNonCompliances(nonCompliances);
+      console.log("Fetched all non-compliances:", nonCompliances);
+    } catch (error) {
+      console.error("Ошибка при загрузке всех несоответствий:", error);
+      setAllNonCompliances([]);
+    }
+  }, []);
+
+  const fetchTaskHistory = useCallback(async (currentObjectId: string) => {
+    if (!currentObjectId) {
+      setHistoryItems([]);
+      return;
+    }
+    try {
+      const history = await taskHistoryApi.getObjectTasks(currentObjectId);
+      setHistoryItems(history);
+      console.log("Fetched task history:", history);
+    } catch (error) {
+      console.error(
+        `Ошибка при загрузке истории задач для объекта ${currentObjectId}:`,
+        error
+      );
+      setHistoryItems([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchObjects();
     fetchOperators();
-  }, [fetchObjects, fetchOperators]);
+    fetchAllParameters();
+    fetchAllNonCompliances();
+  }, [
+    fetchObjects,
+    fetchOperators,
+    fetchAllParameters,
+    fetchAllNonCompliances,
+  ]);
 
   useEffect(() => {
     if (objectId) {
       fetchInspectionParameters(objectId);
+      fetchTaskHistory(objectId);
       setSelectedInspectionParameters([]);
     }
-  }, [objectId, fetchInspectionParameters]);
+  }, [objectId, fetchInspectionParameters, fetchTaskHistory]);
 
   useEffect(() => {
     if (parameterEditModalOpen && currentParameterInModal) {
@@ -240,28 +344,43 @@ export function CreateTaskPage() {
     fetchNonCompliancesForParameter,
   ]);
 
+  // --- Debug Form State ---
+  useEffect(() => {
+    console.log("Form state:", { isValid, errors, values: getValues() });
+  }, [isValid, errors, getValues]);
+
   // --- Handlers for Stepper and Modals ---
 
+  const { user } = useAuthStore();
+
   const handleNextStep1 = handleSubmit(async (data) => {
+    console.log("handleNextStep1 called with data:", data);
     try {
-      const managerIdStr = localStorage.getItem("user_id");
-      if (!managerIdStr) {
+      if (!user || !user.id) {
+        console.error(
+          "Пользователь или ID пользователя не найден в хранилище аутентификации"
+        );
         toast.error(
-          "Ошибка: ID менеджера не найден. Пожалуйста, войдите в систему заново."
+          "Ошибка: Данные пользователя не найдены. Пожалуйста, войдите в систему заново."
         );
         return;
       }
-      const manager_id = parseInt(managerIdStr, 10);
+      const manager_id = user.id;
+      if (isNaN(manager_id)) {
+        console.error("Invalid manager_id:", user.id);
+        toast.error("Ошибка: Неверный ID менеджера.");
+        return;
+      }
 
       const checkHour = dayjs(data.checkTime).hour();
-      const shift_id = checkHour >= 8 && checkHour < 22 ? 1 : 0; // 1 - дневная, 0 - ночная
+      const shift_id = checkHour >= 8 && checkHour < 22 ? 1 : 0;
 
       const payload: AddNewTaskPayload = {
         user_id: parseInt(data.operatorId, 10),
         manager_id,
         object_id: parseInt(data.objectId, 10),
         shift_id,
-        checking_type_id: data.isRepeatInspection ? 1 : 0, // 1 - повторная, 0 - первичная
+        checking_type_id: data.isRepeatInspection ? 1 : 0,
         date_time: dayjs(data.checkDate)
           .hour(dayjs(data.checkTime).hour())
           .minute(dayjs(data.checkTime).minute())
@@ -272,47 +391,107 @@ export function CreateTaskPage() {
           data.isRepeatInspection && data.lastCheckDate
             ? dayjs(data.lastCheckDate).format("YYYY-MM-DD")
             : undefined,
+        periodic: data.periodic,
       };
 
-      await createTaskMutation.mutateAsync(payload);
-      setActiveStep((prev) => prev + 1);
+      // Валидация payload с использованием addNewTaskPayloadSchema
+      const validatedPayload = addNewTaskPayloadSchema.parse(payload);
+      console.log("Validated payload:", validatedPayload);
+
+      const response = await createTaskMutation.mutateAsync(validatedPayload);
+      console.log("API response:", response);
+      setTaskId(response.new_task_id);
+      setActiveStep((prev) => {
+        console.log("Advancing to step:", prev + 1);
+        return prev + 1;
+      });
     } catch (error) {
-      // Ошибки уже обрабатываются в onError хука useCreateTask
-      console.error("Произошла ошибка при обработке формы на шаге 1:", error);
+      console.error("Ошибка при создании задания:", error);
+      if (error instanceof z.ZodError) {
+        error.errors.forEach((err) => {
+          toast.error(
+            `Ошибка валидации: ${err.message} (${err.path.join(".")})`
+          );
+        });
+      } else {
+        toast.error("Ошибка при создании задания: " + (error as Error).message);
+      }
     }
   });
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    console.log(
+      "handleNext called, isValid:",
+      isValid,
+      "form values:",
+      getValues()
+    );
     if (activeStep === 0) {
-      handleNextStep1();
+      const valid = await trigger();
+      console.log("Form valid after trigger:", valid);
+      if (valid) {
+        await handleNextStep1();
+      } else {
+        console.log("Form errors:", errors);
+        toast.error("Пожалуйста, заполните все обязательные поля корректно.");
+      }
     } else if (activeStep === 1) {
       if (selectedInspectionParameters.length === 0) {
-        alert("Пожалуйста, выберите хотя бы один параметр проверки на Шаге 2.");
+        toast.error("Выберите хотя бы один параметр проверки.");
         return;
       }
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setActiveStep((prev) => {
+        console.log("Advancing to step:", prev + 1);
+        return prev + 1;
+      });
     } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setActiveStep((prev) => {
+        console.log("Advancing to step:", prev + 1);
+        return prev + 1;
+      });
     }
   };
 
   const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setActiveStep((prev) => {
+      console.log("Returning to step:", prev - 1);
+      return prev - 1;
+    });
   };
 
-  const handleSaveTask = () => {
-    console.log("Сохранение задания:", {
-      formData: watch(),
-      selectedInspectionParameters,
-    });
-    alert("Задание сохранено!");
-    reset();
-    setActiveStep(0);
-    setSelectedInspectionParameters([]);
-    setParameterEditModalOpen(false);
-    setCurrentParameterInModal(null);
-    setNonCompliancesForCurrentParameter([]);
-    setAddParameterModalOpen(false);
+  const handleSaveTask = async () => {
+    try {
+      if (!taskId) {
+        toast.error("ID задания не найден.");
+        return;
+      }
+      const paramsNonComps = selectedInspectionParameters.reduce(
+        (acc, param) => {
+          const nonComps = selectedNonCompliances
+            .filter((nc) => nc.parameter_id === param.id)
+            .map((nc) => nc.id);
+          if (nonComps.length > 0) {
+            acc[param.id] = nonComps;
+          }
+          return acc;
+        },
+        {} as { [key: string]: number[] }
+      );
+
+      await nonComplianceApi.addParameterNonCompliance(taskId, paramsNonComps);
+      toast.success("Задание успешно сохранено!");
+      navigate(`/tasks/${taskId}`);
+      reset();
+      setSelectedInspectionParameters([]);
+      setParameterEditModalOpen(false);
+      setCurrentParameterInModal(null);
+      setNonCompliancesForCurrentParameter([]);
+      setAddParameterModalOpen(false);
+      setTaskId(null);
+    } catch (error) {
+      console.error("Ошибка при сохранении задания:", error);
+      toast.error("Ошибка при сохранении задания.");
+    }
   };
 
   // --- Handlers for Parameter Modals ---
@@ -326,16 +505,26 @@ export function CreateTaskPage() {
     setParameterEditModalOpen(false);
     setCurrentParameterInModal(null);
     setNonCompliancesForCurrentParameter([]);
+    setSelectedNonCompliances((prev) =>
+      prev.filter((nc) => nc.parameter_id !== currentParameterInModal?.id)
+    );
   };
 
-  const handleSaveParameterChanges = () => {
-    console.log(
-      "Сохранение изменений параметра:",
-      currentParameterInModal,
-      nonCompliancesForCurrentParameter
-    );
-    alert("Изменения параметра сохранены (TODO: Реализовать сохранение в БД)!");
-    handleCloseParameterEditModal();
+  const handleSaveParameterChanges = async () => {
+    if (!currentParameterInModal || !taskId) return;
+    try {
+      const nonCompIds = selectedNonCompliances
+        .filter((nc) => nc.parameter_id === currentParameterInModal.id)
+        .map((nc) => nc.id);
+      await nonComplianceApi.addParameterNonCompliance(taskId, {
+        [currentParameterInModal.id]: nonCompIds,
+      });
+      toast.success("Несоответствия параметра сохранены.");
+      handleCloseParameterEditModal();
+    } catch (error) {
+      console.error("Ошибка при сохранении несоответствий:", error);
+      toast.error("Ошибка при сохранении несоответствий.");
+    }
   };
 
   const handleOpenAddParameterModal = () => {
@@ -344,13 +533,110 @@ export function CreateTaskPage() {
 
   const handleCloseAddParameterModal = () => {
     setAddParameterModalOpen(false);
+    setNewParameter(null);
+    setSelectedNonCompliances((prev) =>
+      prev.filter((nc) => nc.parameter_id !== newParameter?.id)
+    );
   };
 
-  const handleSaveNewParameter = () => {
-    console.log(
-      "Сохранение нового параметра (TODO: Реализовать сохранение в БД)"
-    );
-    handleCloseAddParameterModal();
+  const handleSaveNewParameter = async () => {
+    if (!newParameter || !taskId) return;
+    try {
+      const nonCompIds = selectedNonCompliances
+        .filter((nc) => nc.parameter_id === newParameter.id)
+        .map((nc) => nc.id);
+      await nonComplianceApi.addParameterNonCompliance(taskId, {
+        [newParameter.id]: nonCompIds,
+      });
+      setInspectionParameters([...inspectionParameters, newParameter]);
+      setSelectedInspectionParameters([
+        ...selectedInspectionParameters,
+        newParameter,
+      ]);
+      toast.success("Новый параметр добавлен.");
+      handleCloseAddParameterModal();
+    } catch (error) {
+      console.error("Ошибка при добавлении параметра:", error);
+      toast.error("Ошибка при добавлении параметра.");
+    }
+  };
+
+  // --- Handlers for Filters ---
+
+  const handleOpenFilterModal = (filterKey: string) => {
+    setFilterModalOpen(filterKey);
+  };
+
+  const handleCloseFilterModal = () => {
+    setFilterModalOpen(null);
+  };
+
+  const handleApplyFilter = (
+    filterKey: keyof typeof filterValues,
+    value: string
+  ) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [filterKey]: prev[filterKey] === value ? undefined : value,
+    }));
+    handleCloseFilterModal();
+  };
+
+  const handleResetFilters = () => {
+    setFilterValues({
+      dateFilter: undefined,
+      reportDateFilter: undefined,
+      parameterFilter: undefined,
+      operatorFilter: undefined,
+    });
+  };
+
+  const filteredHistoryItems = useMemo(() => {
+    return historyItems.filter((item) => {
+      if (filterValues.dateFilter) {
+        const date = dayjs(item.date_time).format("DD.MM.YYYY");
+        if (date !== filterValues.dateFilter) return false;
+      }
+      if (filterValues.reportDateFilter) {
+        const reportDate = item.date_time_report_loading
+          ? dayjs(item.date_time_report_loading).format("DD.MM.YYYY")
+          : null;
+        if (reportDate !== filterValues.reportDateFilter) return false;
+      }
+      if (filterValues.operatorFilter) {
+        if (item.user_name !== filterValues.operatorFilter) return false;
+      }
+      if (filterValues.parameterFilter) {
+        const params = Object.keys(item.parameters || {});
+        if (
+          !params.some((p) =>
+            p
+              .toLowerCase()
+              .includes(filterValues.parameterFilter!.toLowerCase())
+          )
+        )
+          return false;
+      }
+      return true;
+    });
+  }, [historyItems, filterValues]);
+
+  // --- Handlers for Image Modal ---
+
+  const handleOpenImageModal = async (nonCompId: string) => {
+    try {
+      const image = await taskHistoryApi.getNonComplianceImage(nonCompId);
+      setCurrentImage(image);
+      setImageModalOpen(true);
+    } catch (error) {
+      console.error("Ошибка при загрузке изображения:", error);
+      toast.error("Ошибка при загрузке изображения.");
+    }
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setCurrentImage(null);
   };
 
   // --- CustomTable Configuration ---
@@ -376,20 +662,17 @@ export function CreateTaskPage() {
         resizable: false,
       },
       {
-        headerName: "Наименование параметра проверки объекта.",
+        headerName: "№",
+        valueGetter: (params) =>
+          params.node?.rowIndex ? params.node.rowIndex + 1 : 1,
+        width: 60,
+      },
+      {
+        headerName: "Наименование параметра проверки объекта",
         field: "name",
         flex: 1,
         minWidth: 200,
-        valueFormatter: (params: ValueFormatterParams) => {
-          if (
-            params.value === null ||
-            params.value === undefined ||
-            params.value.trim() === ""
-          ) {
-            return "N/A";
-          }
-          return params.value;
-        },
+        valueFormatter: (params: ValueFormatterParams) => params.value || "N/A",
       },
       {
         headerName: "Действия",
@@ -419,21 +702,95 @@ export function CreateTaskPage() {
     [selectedInspectionParameters]
   );
 
+  const historyColumnDefs: ColDef<TaskHistoryItem>[] = useMemo(
+    () => [
+      {
+        headerName: "№",
+        valueGetter: (params) =>
+          params.node?.rowIndex ? params.node.rowIndex + 1 : 1,
+        width: 60,
+      },
+      {
+        headerName: "Дата проверки",
+        field: "date_time",
+        valueFormatter: (params) =>
+          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
+        width: 120,
+      },
+      {
+        headerName: "Повторная проверка",
+        field: "is_repeat_inspection",
+        valueFormatter: (params) => (params.value ? "Да" : "Нет"),
+        width: 120,
+      },
+      {
+        headerName: "ФИО оператора",
+        field: "user_name",
+        valueFormatter: (params) => params.value ?? "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Дата загрузки отчета",
+        field: "date_time_report_loading",
+        valueFormatter: (params) =>
+          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
+        width: 120,
+      },
+      {
+        headerName: "Список параметров",
+        field: "parameters",
+        valueFormatter: (params) =>
+          params.value
+            ? Object.keys(params.value)
+                .filter((key) => params.value[key] !== null)
+                .join(", ")
+            : "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Список несоответствий",
+        field: "parameters",
+        valueFormatter: (params) =>
+          params.value
+            ? Object.values(params.value)
+                .filter((val): val is string[] => val !== null)
+                .flat()
+                .join(", ")
+            : "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Фото",
+        field: undefined,
+        width: 80,
+        cellRenderer: (params: ICellRendererParams<TaskHistoryItem>) => (
+          <IconButton
+            onClick={() => handleOpenImageModal(params.data!.id.toString())}
+          >
+            <VisibilityIcon />
+          </IconButton>
+        ),
+      },
+    ],
+    []
+  );
+
   const onSelectionChanged = useCallback((event: SelectionChangedEvent) => {
     const selectedRows = event.api.getSelectedRows() as InspectionParameter[];
     setSelectedInspectionParameters(selectedRows);
   }, []);
 
   const getInspectionParameterRowId = useCallback(
-    (data: InspectionParameter | undefined | null) => {
-      if (data && data.id) {
-        return data.id.toString();
-      }
-      console.warn(
-        "getRowId received undefined/null data or missing ID. Generating random ID."
-      );
-      return `temp-id-${Math.random().toString(36).substr(2, 9)}`;
-    },
+    (data: InspectionParameter | undefined | null) =>
+      data?.id?.toString() ||
+      `temp-id-${Math.random().toString(36).substr(2, 9)}`,
+    []
+  );
+
+  const getHistoryRowId = useCallback(
+    (data: TaskHistoryItem | undefined | null) =>
+      data?.id?.toString() ||
+      `temp-id-${Math.random().toString(36).substr(2, 9)}`,
     []
   );
 
@@ -444,6 +801,16 @@ export function CreateTaskPage() {
       content: (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <Box sx={{ mt: 2, mb: 2 }}>
+            {/* Debug Form Errors and State */}
+            {Object.keys(errors).length > 0 && (
+              <Typography color="error" sx={{ mb: 2 }}>
+                Ошибки формы: {JSON.stringify(errors, null, 2)}
+              </Typography>
+            )}
+            <Typography sx={{ mb: 2 }}>
+              Статус формы: {isValid ? "Валидна" : "Невалидна"}
+            </Typography>
+
             <Controller
               name="objectId"
               control={control}
@@ -462,9 +829,13 @@ export function CreateTaskPage() {
                     labelId="object-select-label"
                     label="Выбор объекта для проверки"
                     displayEmpty
+                    onChange={(e) => {
+                      field.onChange(e);
+                      console.log("objectId changed:", e.target.value);
+                    }}
                   >
                     <MenuItem value="" disabled>
-                      Выбор объекта для проверки
+                      Выберите объект
                     </MenuItem>
                     {objects.map((obj) => (
                       <MenuItem key={obj.id} value={obj.id.toString()}>
@@ -486,9 +857,10 @@ export function CreateTaskPage() {
                 <DatePicker
                   label="Дата проверки"
                   value={field.value ? dayjs(field.value) : null}
-                  onChange={(date) =>
-                    field.onChange(date ? date.toDate() : null)
-                  }
+                  onChange={(date) => {
+                    field.onChange(date ? date.toDate() : null);
+                    console.log("checkDate changed:", date);
+                  }}
                   sx={{ mb: 2, width: "100%" }}
                   slotProps={{
                     textField: {
@@ -498,33 +870,38 @@ export function CreateTaskPage() {
                       helperText: errors.checkDate?.message,
                     },
                   }}
+                  format="DD.MM.YYYY"
                 />
               )}
             />
 
-            <Controller
-              name="checkTime"
-              control={control}
-              render={({ field }) => (
-                <TimePicker
-                  label="Время начала проверки"
-                  value={field.value ? dayjs(field.value) : null}
-                  onChange={(time) =>
-                    field.onChange(time ? time.toDate() : null)
-                  }
-                  ampm={false}
-                  sx={{ mb: 2, width: "100%" }}
-                  slotProps={{
-                    textField: {
-                      required: true,
-                      fullWidth: true,
-                      error: !!errors.checkTime,
-                      helperText: errors.checkTime?.message,
-                    },
-                  }}
-                />
-              )}
-            />
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Controller
+                name="checkTime"
+                control={control}
+                render={({ field }) => (
+                  <TimePicker
+                    label="Время начала проверки"
+                    value={field.value ? dayjs(field.value) : null}
+                    onChange={(time) => {
+                      field.onChange(time ? time.toDate() : null);
+                      console.log("checkTime changed:", time);
+                    }}
+                    ampm={false}
+                    sx={{ width: "100%" }}
+                    slotProps={{
+                      textField: {
+                        required: true,
+                        fullWidth: true,
+                        error: !!errors.checkTime,
+                        helperText: errors.checkTime?.message,
+                      },
+                    }}
+                  />
+                )}
+              />
+              {shiftText && <Typography sx={{ ml: 2 }}>{shiftText}</Typography>}
+            </Box>
 
             <Controller
               name="isRepeatInspection"
@@ -540,6 +917,10 @@ export function CreateTaskPage() {
                         if (!e.target.checked) {
                           setValue("lastCheckDate", null);
                         }
+                        console.log(
+                          "isRepeatInspection changed:",
+                          e.target.checked
+                        );
                       }}
                     />
                   }
@@ -556,9 +937,10 @@ export function CreateTaskPage() {
                   <DatePicker
                     label="Дата последней проверки"
                     value={field.value ? dayjs(field.value) : null}
-                    onChange={(date) =>
-                      field.onChange(date ? date.toDate() : null)
-                    }
+                    onChange={(date) => {
+                      field.onChange(date ? date.toDate() : null);
+                      console.log("lastCheckDate changed:", date);
+                    }}
                     sx={{ mb: 2, width: "100%" }}
                     slotProps={{
                       textField: {
@@ -568,10 +950,40 @@ export function CreateTaskPage() {
                         helperText: errors.lastCheckDate?.message,
                       },
                     }}
+                    format="DD.MM.YYYY"
                   />
                 )}
               />
             )}
+
+            <Controller
+              name="periodic"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.periodic}>
+                  <InputLabel id="periodic-select-label">
+                    Периодическая проверка
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="periodic-select-label"
+                    label="Периодическая проверка"
+                    value={field.value.toString()}
+                    onChange={(e) => {
+                      field.onChange(Number(e.target.value));
+                      console.log("periodic changed:", e.target.value);
+                    }}
+                  >
+                    <MenuItem value="0">Не выбрана</MenuItem>
+                    <MenuItem value="1">Каждая неделя</MenuItem>
+                    <MenuItem value="2">Каждый месяц</MenuItem>
+                  </Select>
+                  {errors.periodic && (
+                    <FormHelperText>{errors.periodic.message}</FormHelperText>
+                  )}
+                </FormControl>
+              )}
+            />
 
             <Controller
               name="operatorId"
@@ -591,9 +1003,13 @@ export function CreateTaskPage() {
                     labelId="operator-select-label"
                     label="Выбор оператора"
                     displayEmpty
+                    onChange={(e) => {
+                      field.onChange(e);
+                      console.log("operatorId changed:", e.target.value);
+                    }}
                   >
                     <MenuItem value="" disabled>
-                      Выбор оператора
+                      Выберите оператора
                     </MenuItem>
                     {operators.map((op) => (
                       <MenuItem key={op.id} value={op.id.toString()}>
@@ -621,6 +1037,10 @@ export function CreateTaskPage() {
                   sx={{ mb: 2 }}
                   error={!!errors.comment}
                   helperText={errors.comment?.message}
+                  onChange={(e) => {
+                    field.onChange(e);
+                    console.log("comment changed:", e.target.value);
+                  }}
                 />
               )}
             />
@@ -634,16 +1054,30 @@ export function CreateTaskPage() {
       subtitle: "Список параметров по проверке объекта филиала",
       content: (
         <Box sx={{ mt: 2, mb: 2 }}>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-            <Tooltip title="Добавить новый параметр проверки">
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAddParameterModal}
-              >
-                Добавить параметр
-              </Button>
-            </Tooltip>
+          <Box
+            sx={{ display: "flex", justifyContent: "flex-end", mb: 2, gap: 1 }}
+          >
+            <Button
+              variant={filterValues.parameterFilter ? "outlined" : "contained"}
+              onClick={() => handleOpenFilterModal("parameterFilter")}
+            >
+              Параметр проверки
+              {filterValues.parameterFilter && (
+                <Typography sx={{ ml: 1 }}>
+                  {filterValues.parameterFilter}
+                </Typography>
+              )}
+            </Button>
+            <Button variant="outlined" onClick={handleResetFilters}>
+              Сбросить фильтры
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddParameterModal}
+            >
+              Добавить параметр
+            </Button>
           </Box>
 
           {inspectionParameters.length > 0 ? (
@@ -652,7 +1086,13 @@ export function CreateTaskPage() {
               style={{ height: 400, width: "100%" }}
             >
               <CustomTable<InspectionParameter>
-                rowData={inspectionParameters}
+                rowData={inspectionParameters.filter((param) =>
+                  filterValues.parameterFilter
+                    ? param.name
+                        .toLowerCase()
+                        .includes(filterValues.parameterFilter.toLowerCase())
+                    : true
+                )}
                 columnDefs={parameterColumnDefs}
                 getRowId={getInspectionParameterRowId}
                 pagination={true}
@@ -699,37 +1139,106 @@ export function CreateTaskPage() {
               <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
                 Список несоответствий
               </Typography>
-              {nonCompliancesForCurrentParameter.length > 0 ? (
-                <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          onChange={(e) => {
+                            setSelectedNonCompliances(
+                              e.target.checked
+                                ? [
+                                    ...selectedNonCompliances,
+                                    ...nonCompliancesForCurrentParameter.map(
+                                      (nc) => ({
+                                        ...nc,
+                                        parameter_id:
+                                          currentParameterInModal?.id ?? 0,
+                                      })
+                                    ),
+                                  ]
+                                : selectedNonCompliances.filter(
+                                    (nc) =>
+                                      !nonCompliancesForCurrentParameter.some(
+                                        (c) => c.id === nc.id
+                                      )
+                                  )
+                            );
+                          }}
+                          checked={
+                            nonCompliancesForCurrentParameter.length > 0 &&
+                            nonCompliancesForCurrentParameter.every((nc) =>
+                              selectedNonCompliances.some(
+                                (snc) => snc.id === nc.id
+                              )
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>№</TableCell>
+                      <TableCell>Наименование несоответствия</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {nonCompliancesForCurrentParameter.map((nc, index) => (
+                      <TableRow key={nc.id}>
                         <TableCell padding="checkbox">
-                          <Checkbox />
+                          <Checkbox
+                            checked={selectedNonCompliances.some(
+                              (snc) => snc.id === nc.id
+                            )}
+                            onChange={(e) => {
+                              setSelectedNonCompliances((prev) =>
+                                e.target.checked
+                                  ? [
+                                      ...prev,
+                                      {
+                                        ...nc,
+                                        parameter_id:
+                                          currentParameterInModal?.id ?? 0,
+                                      },
+                                    ]
+                                  : prev.filter((snc) => snc.id !== nc.id)
+                              );
+                            }}
+                          />
                         </TableCell>
-                        <TableCell>Наименование несоответствия.</TableCell>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{nc.name}</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {nonCompliancesForCurrentParameter.map((nc) => (
-                        <TableRow key={nc.id}>
-                          <TableCell padding="checkbox">
-                            <Checkbox />
-                          </TableCell>
-                          <TableCell>{nc.name}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography>
-                  Несоответствия для этого параметра не найдены.
-                </Typography>
-              )}
-              <Button sx={{ mt: 2 }} variant="outlined" startIcon={<AddIcon />}>
-                Добавить
-              </Button>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Autocomplete
+                options={allNonCompliances.filter(
+                  (nc) =>
+                    !nonCompliancesForCurrentParameter.some(
+                      (existing) => existing.id === nc.id
+                    )
+                )}
+                getOptionLabel={(option) => option.name}
+                onChange={(e, value) => {
+                  if (value && currentParameterInModal) {
+                    setNonCompliancesForCurrentParameter((prev) => [
+                      ...prev,
+                      { ...value, parameter_id: currentParameterInModal.id },
+                    ]);
+                    setSelectedNonCompliances((prev) => [
+                      ...prev,
+                      { ...value, parameter_id: currentParameterInModal.id },
+                    ]);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Добавить несоответствие"
+                    sx={{ mt: 2 }}
+                  />
+                )}
+              />
             </DialogContent>
             <DialogActions>
               <Button onClick={handleCloseParameterEditModal}>Отмена</Button>
@@ -761,29 +1270,84 @@ export function CreateTaskPage() {
               </IconButton>
             </DialogTitle>
             <DialogContent dividers>
-              <Typography variant="subtitle1" gutterBottom>
-                Выпадающий список наименований параметров проверки объекта
-                (TODO: с поиском)
-              </Typography>
-              <TextField
-                select
-                fullWidth
-                label="Наименование параметра"
-                sx={{ mb: 2 }}
-              >
-                <MenuItem value="">Выбрать параметр</MenuItem>
-              </TextField>
+              <Autocomplete
+                options={allParameters.filter(
+                  (param) =>
+                    !inspectionParameters.some((p) => p.id === param.id)
+                )}
+                getOptionLabel={(option) => option.name}
+                onChange={(e, value) => setNewParameter(value)}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Наименование параметра"
+                    sx={{ mb: 2 }}
+                  />
+                )}
+              />
 
               <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
                 Список несоответствий
               </Typography>
-              <Typography>
-                Таблица несоответствий для нового параметра (TODO: с
-                добавлением/удалением и поиском)
-              </Typography>
-              <Button sx={{ mt: 2 }} variant="outlined" startIcon={<AddIcon />}>
-                Добавить несоответствие
-              </Button>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>№</TableCell>
+                      <TableCell>Наименование несоответствия</TableCell>
+                      <TableCell>Действия</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedNonCompliances
+                      .filter((nc) => nc.parameter_id === newParameter?.id)
+                      .map((nc, index) => (
+                        <TableRow key={nc.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{nc.name}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              onClick={() =>
+                                setSelectedNonCompliances((prev) =>
+                                  prev.filter((snc) => snc.id !== nc.id)
+                                )
+                              }
+                            >
+                              Удалить
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Autocomplete
+                options={allNonCompliances.filter(
+                  (nc) =>
+                    !selectedNonCompliances.some(
+                      (existing) => existing.id === nc.id
+                    )
+                )}
+                getOptionLabel={(option) => option.name}
+                onChange={(e, value) => {
+                  if (value && newParameter) {
+                    setSelectedNonCompliances((prev) => [
+                      ...prev,
+                      { ...value, parameter_id: newParameter.id },
+                    ]);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Добавить несоответствие"
+                    sx={{ mt: 2 }}
+                  />
+                )}
+              />
             </DialogContent>
             <DialogActions>
               <Button onClick={handleCloseAddParameterModal}>Отмена</Button>
@@ -797,6 +1361,7 @@ export function CreateTaskPage() {
     },
     {
       label: "Краткий отчет",
+      title: "Краткий отчет",
       content: (
         <Box sx={{ mt: 2, mb: 2 }}>
           <Typography variant="h6" gutterBottom>
@@ -875,9 +1440,8 @@ export function CreateTaskPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>#</TableCell>
+                    <TableCell>№</TableCell>
                     <TableCell>Параметр</TableCell>
-                    <TableCell>Тип</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -885,7 +1449,6 @@ export function CreateTaskPage() {
                     <TableRow key={param.id}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{param.name}</TableCell>
-                      <TableCell>{param.type}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -930,7 +1493,9 @@ export function CreateTaskPage() {
                 <div>
                   <Button
                     variant="contained"
-                    onClick={handleNext}
+                    onClick={
+                      index === steps.length - 1 ? handleSaveTask : handleNext
+                    }
                     sx={{ mt: 1, mr: 1 }}
                     disabled={
                       (activeStep === 0 && !isValid) ||
@@ -953,21 +1518,199 @@ export function CreateTaskPage() {
           </Step>
         ))}
       </Stepper>
-      {activeStep === steps.length && (
-        <Paper square elevation={0} sx={{ p: 3 }}>
-          <Typography>Все шаги выполнены - Задание готово!</Typography>
+
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          История проверки объекта
+        </Typography>
+        <Box
+          sx={{ display: "flex", justifyContent: "flex-end", mb: 2, gap: 1 }}
+        >
           <Button
-            onClick={handleSaveTask}
-            variant="contained"
-            sx={{ mt: 1, mr: 1 }}
+            variant={filterValues.dateFilter ? "outlined" : "contained"}
+            onClick={() => handleOpenFilterModal("dateFilter")}
           >
-            Сохранить задание
+            Дата проверки
+            {filterValues.dateFilter && (
+              <Typography sx={{ ml: 1 }}>{filterValues.dateFilter}</Typography>
+            )}
           </Button>
-          <Button onClick={() => setActiveStep(0)} sx={{ mt: 1, mr: 1 }}>
-            Создать новое задание
+          <Button
+            variant={filterValues.reportDateFilter ? "outlined" : "contained"}
+            onClick={() => handleOpenFilterModal("reportDateFilter")}
+          >
+            Дата загрузки
+            {filterValues.reportDateFilter && (
+              <Typography sx={{ ml: 1 }}>
+                {filterValues.reportDateFilter}
+              </Typography>
+            )}
           </Button>
-        </Paper>
-      )}
+          <Button
+            variant={filterValues.parameterFilter ? "outlined" : "contained"}
+            onClick={() => handleOpenFilterModal("parameterFilter")}
+          >
+            Параметр проверки
+            {filterValues.parameterFilter && (
+              <Typography sx={{ ml: 1 }}>
+                {filterValues.parameterFilter}
+              </Typography>
+            )}
+          </Button>
+          <Button
+            variant={filterValues.operatorFilter ? "outlined" : "contained"}
+            onClick={() => handleOpenFilterModal("operatorFilter")}
+          >
+            Оператор
+            {filterValues.operatorFilter && (
+              <Typography sx={{ ml: 1 }}>
+                {filterValues.operatorFilter}
+              </Typography>
+            )}
+          </Button>
+          <Button variant="outlined" onClick={handleResetFilters}>
+            Сбросить фильтры
+          </Button>
+        </Box>
+
+        <div className="ag-theme-alpine" style={{ height: 400, width: "100%" }}>
+          <CustomTable<TaskHistoryItem>
+            rowData={filteredHistoryItems}
+            columnDefs={historyColumnDefs}
+            getRowId={getHistoryRowId}
+            pagination={true}
+            pageSize={10}
+            filters={[]}
+          />
+        </div>
+
+        <Dialog
+          open={filterModalOpen !== null}
+          onClose={handleCloseFilterModal}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>
+            {filterModalOpen === "dateFilter" && "Фильтрация по дате проверки"}
+            {filterModalOpen === "reportDateFilter" &&
+              "Фильтрация по дате загрузки"}
+            {filterModalOpen === "parameterFilter" &&
+              "Фильтрация по параметрам проверки объекта"}
+            {filterModalOpen === "operatorFilter" && "Фильтрация по оператору"}
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseFilterModal}
+              sx={{
+                position: "absolute",
+                right: 8,
+                top: 8,
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            {filterModalOpen === "dateFilter" ||
+            filterModalOpen === "reportDateFilter" ? (
+              <DatePicker
+                label={
+                  filterModalOpen === "dateFilter"
+                    ? "Дата проверки"
+                    : "Дата загрузки"
+                }
+                value={
+                  filterValues[filterModalOpen as keyof typeof filterValues]
+                    ? dayjs(
+                        filterValues[
+                          filterModalOpen as keyof typeof filterValues
+                        ],
+                        "DD.MM.YYYY"
+                      )
+                    : null
+                }
+                onChange={(date) =>
+                  handleApplyFilter(
+                    filterModalOpen as keyof typeof filterValues,
+                    date ? date.format("DD.MM.YYYY") : ""
+                  )
+                }
+                sx={{ width: "100%" }}
+                slotProps={{ textField: { fullWidth: true } }}
+                format="DD.MM.YYYY"
+              />
+            ) : (
+              <TextField
+                label={
+                  filterModalOpen === "parameterFilter"
+                    ? "Параметр проверки"
+                    : "Оператор"
+                }
+                fullWidth
+                onChange={(e) =>
+                  handleApplyFilter(
+                    filterModalOpen as keyof typeof filterValues,
+                    e.target.value
+                  )
+                }
+                value={
+                  filterValues[filterModalOpen as keyof typeof filterValues] ||
+                  ""
+                }
+              />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseFilterModal}>Отмена</Button>
+            <Button
+              onClick={() =>
+                handleApplyFilter(
+                  filterModalOpen as keyof typeof filterValues,
+                  filterValues[filterModalOpen as keyof typeof filterValues] ||
+                    ""
+                )
+              }
+              variant="contained"
+            >
+              Применить
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={imageModalOpen}
+          onClose={handleCloseImageModal}
+          fullWidth
+          maxWidth="md"
+        >
+          <DialogTitle>
+            Фото несоответствия
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseImageModal}
+              sx={{
+                position: "absolute",
+                right: 8,
+                top: 8,
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            {currentImage ? (
+              <img
+                src={currentImage}
+                alt="Несоответствие"
+                style={{ width: "100%" }}
+              />
+            ) : (
+              <Typography>Изображение не найдено.</Typography>
+            )}
+          </DialogContent>
+        </Dialog>
+      </Box>
     </Box>
   );
 }

@@ -6,8 +6,14 @@ import { getAuthParams } from "@/shared/lib/auth";
 import {
   addNewTaskPayloadSchema,
   AddNewTaskPayload,
-} from "../model/task-schemas"; // Исправленный импорт
+} from "../model/task-schemas";
 import { AxiosError } from "axios";
+
+export type CreateTaskResponse = {
+  status: string;
+  message: string;
+  new_task_id: number;
+};
 
 /**
  * Хук для выполнения POST-запроса на добавление нового задания.
@@ -15,13 +21,13 @@ import { AxiosError } from "axios";
  */
 export const useCreateTask = () => {
   return useMutation<
-    object,
+    CreateTaskResponse,
     AxiosError<{ detail: string | { loc: string[]; msg: string }[] }>,
     AddNewTaskPayload
   >({
     mutationFn: async (payload: AddNewTaskPayload) => {
       const params = getAuthParams();
-      const validatedPayload = addNewTaskPayloadSchema.parse(payload); // Теперь схема доступна
+      const validatedPayload = addNewTaskPayloadSchema.parse(payload);
       const response = await api.post("/add-new-task", validatedPayload, {
         params,
       });
