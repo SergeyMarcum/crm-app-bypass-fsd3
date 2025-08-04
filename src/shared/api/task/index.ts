@@ -1,5 +1,5 @@
 // src/shared/api/task/index.ts
-import axiosInstance from "@/shared/api/axios";
+import { api } from "@/shared/api/axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import { AddNewTaskPayload } from "@features/tasks/task-form/model/task-schemas"; // Убедитесь, что путь корректен
 
@@ -11,7 +11,7 @@ export const taskApi = {
    */
   addNewTask: async (payload: AddNewTaskPayload) => {
     try {
-      const response = await axiosInstance.post("/add-new-task", payload, {
+      const response = await api.post("/add-new-task", payload, {
         params: getAuthParams(), // Предполагается, что API требует параметры авторизации
       });
       return response.data;
