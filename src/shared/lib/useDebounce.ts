@@ -1,6 +1,6 @@
+// src/shared/lib/useDebounce.ts
 import { useEffect, useState } from "react";
 
-// src/shared/lib/useDebounce.ts
 export function useDebounce<T>(value: T, delay: number) {
   const [debouncedValue, setDebouncedValue] = useState(value);
 

@@ -1,5 +1,5 @@
 // src/shared/api/auth/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+
 import { api } from "../axios"; // Теперь импортируем именованный экспорт 'api'
 
 import { Credentials } from "@/features/auth/types"; // Используем алиас
@@ -18,11 +18,11 @@ export const authApi = {
     return response.data;
   },
 
-   /**
+  /**
    * Выполняет выход пользователя из системы.
    * @returns Promise<void>
    */
-  logout: async (): Promise<void> => {    
+  logout: async (): Promise<void> => {
     // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
     await api.get("/logout");
   },
@@ -34,7 +34,6 @@ export const authApi = {
    * @returns Promise<AuthResponse>
    */
   checkAuth: async (): Promise<AuthResponse> => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
     const response = await api.get("/check-auth");
     return response.data;
   },

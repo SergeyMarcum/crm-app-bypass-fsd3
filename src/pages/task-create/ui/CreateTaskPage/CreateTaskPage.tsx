@@ -29,10 +29,13 @@ import {
   FormControl,
   FormHelperText,
   Autocomplete,
+  Tooltip,
+  Badge,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useNavigate } from "react-router-dom";
 
@@ -60,7 +63,7 @@ import type {
 } from "@/shared/api/task/object/types";
 import type { TaskHistoryItem } from "@/shared/api/task/history/types";
 
-import { CustomTable, FilterDefinition } from "@/widgets/table";
+import { CustomTable } from "@/widgets/table";
 import {
   ColDef,
   ICellRendererParams,
@@ -79,6 +82,7 @@ import {
 import { taskApi } from "@/features/tasks/task-form/api/task";
 import { toast } from "sonner";
 import { useAuthStore } from "@/features/auth/model/store";
+import { z } from "zod";
 
 export function CreateTaskPage() {
   const navigate = useNavigate();
@@ -167,13 +171,11 @@ export function CreateTaskPage() {
     try {
       const fetchedObjects = await objectApi.getAllObjects();
       setObjects(fetchedObjects);
-      console.log("Fetched objects:", fetchedObjects);
     } catch (error) {
       console.error("Ошибка при загрузке объектов:", error);
       try {
         const searchedObjects = await objectApi.searchObjects("");
         setObjects(searchedObjects);
-        console.log("Searched objects:", searchedObjects);
       } catch (searchError) {
         console.error("Ошибка при поиске объектов:", searchError);
       }
@@ -184,7 +186,6 @@ export function CreateTaskPage() {
     try {
       const fetchedOperators = await employeeApi.getAllOperators();
       setOperators(fetchedOperators as User[]);
-      console.log("Fetched operators:", fetchedOperators);
     } catch (error) {
       console.error("Ошибка при загрузке операторов:", error);
       try {
@@ -193,7 +194,6 @@ export function CreateTaskPage() {
           (user) => user.role_id === 4
         );
         setOperators(filteredOperators as User[]);
-        console.log("Filtered operators:", filteredOperators);
       } catch (searchError) {
         console.error(
           "Ошибка при поиске пользователей/операторов:",
@@ -212,21 +212,32 @@ export function CreateTaskPage() {
       try {
         const response: GetObjectParametersResponse =
           await objectApi.getParametersAndObjectType(currentObjectId);
-        // Нормализация параметров
-        const normalizedParameters: InspectionParameter[] =
-          response.parameters.map((param, index) => {
-            const name = Object.keys(param)[0] || "Без названия";
-            const nonCompliances = param[name];
+        const normalizedParameters: InspectionParameter[] = response.parameters
+          .map((param) => {
+            const id = parseInt(Object.keys(param)[0], 10);
+            const nonCompliances = (Object.values(param)[0] || []) as
+              | NonComplianceCase[]
+              | null;
+            const name =
+              allParameters.find((p) => p.id === id)?.name ||
+              "Неизвестный параметр";
+
+            if (!nonCompliances) {
+              return null;
+            }
+
             return {
-              id: index + 1, // Замените на param.id, если API предоставляет ID
+              id,
               name,
-              type: "unknown", // Обновите, если API возвращает тип
-              nonCompliances: nonCompliances || null,
+              type: "unknown",
+              nonCompliances: nonCompliances.map((nc) => ({
+                ...nc,
+                parameter_id: id,
+              })),
             };
-          });
+          })
+          .filter(Boolean) as InspectionParameter[]; // <-- ИСПРАВЛЕНО
         setInspectionParameters(normalizedParameters);
-        console.log("Raw API response for parameters:", response.parameters);
-        console.log("Normalized inspection parameters:", normalizedParameters);
       } catch (error) {
         console.error(
           `Ошибка при загрузке параметров для объекта ${currentObjectId}:`,
@@ -235,28 +246,20 @@ export function CreateTaskPage() {
         setInspectionParameters([]);
       }
     },
-    []
+    [allParameters]
   );
 
   const fetchAllParameters = useCallback(async () => {
     try {
       const parameters = await objectApi.getAllParameters();
-      // Нормализация параметров
       const normalizedParameters: InspectionParameter[] = parameters.map(
-        (
-          param: { id?: number; name: string; type?: string },
-          index: number
-        ) => ({
-          id: param.id || index + 1,
+        (param: { id?: number; name: string; type?: string }) => ({
+          id: param.id || Math.random(),
           name: param.name || "Без названия",
           type: param.type || "unknown",
         })
       );
       setAllParameters(normalizedParameters);
-      console.log(
-        "Fetched and normalized all parameters:",
-        normalizedParameters
-      );
     } catch (error) {
       console.error("Ошибка при загрузке всех параметров:", error);
       setAllParameters([]);
@@ -264,14 +267,13 @@ export function CreateTaskPage() {
   }, []);
 
   const fetchNonCompliancesForParameter = useCallback(
-    async (parameterId: string) => {
+    async (parameterId: number) => {
       try {
         const nonCompliances =
           await nonComplianceApi.getAllCasesOfParameterNonCompliance(
-            parameterId
+            parameterId.toString()
           );
         setNonCompliancesForCurrentParameter(nonCompliances);
-        console.log("Fetched non-compliances for parameter:", nonCompliances);
       } catch (error) {
         console.error(
           `Ошибка при загрузке несоответствий для параметра ${parameterId}:`,
@@ -287,7 +289,6 @@ export function CreateTaskPage() {
     try {
       const nonCompliances = await nonComplianceApi.getAllNonCompliances();
       setAllNonCompliances(nonCompliances);
-      console.log("Fetched all non-compliances:", nonCompliances);
     } catch (error) {
       console.error("Ошибка при загрузке всех несоответствий:", error);
       setAllNonCompliances([]);
@@ -302,7 +303,6 @@ export function CreateTaskPage() {
     try {
       const history = await taskHistoryApi.getObjectTasks(currentObjectId);
       setHistoryItems(history);
-      console.log("Fetched task history:", history);
     } catch (error) {
       console.error(
         `Ошибка при загрузке истории задач для объекта ${currentObjectId}:`,
@@ -334,7 +334,7 @@ export function CreateTaskPage() {
 
   useEffect(() => {
     if (parameterEditModalOpen && currentParameterInModal) {
-      fetchNonCompliancesForParameter(currentParameterInModal.id.toString());
+      fetchNonCompliancesForParameter(currentParameterInModal.id);
     } else {
       setNonCompliancesForCurrentParameter([]);
     }
@@ -344,7 +344,6 @@ export function CreateTaskPage() {
     fetchNonCompliancesForParameter,
   ]);
 
-  // --- Debug Form State ---
   useEffect(() => {
     console.log("Form state:", { isValid, errors, values: getValues() });
   }, [isValid, errors, getValues]);
@@ -354,12 +353,8 @@ export function CreateTaskPage() {
   const { user } = useAuthStore();
 
   const handleNextStep1 = handleSubmit(async (data) => {
-    console.log("handleNextStep1 called with data:", data);
     try {
       if (!user || !user.id) {
-        console.error(
-          "Пользователь или ID пользователя не найден в хранилище аутентификации"
-        );
         toast.error(
           "Ошибка: Данные пользователя не найдены. Пожалуйста, войдите в систему заново."
         );
@@ -367,7 +362,6 @@ export function CreateTaskPage() {
       }
       const manager_id = user.id;
       if (isNaN(manager_id)) {
-        console.error("Invalid manager_id:", user.id);
         toast.error("Ошибка: Неверный ID менеджера.");
         return;
       }
@@ -394,17 +388,11 @@ export function CreateTaskPage() {
         periodic: data.periodic,
       };
 
-      // Валидация payload с использованием addNewTaskPayloadSchema
       const validatedPayload = addNewTaskPayloadSchema.parse(payload);
-      console.log("Validated payload:", validatedPayload);
 
       const response = await createTaskMutation.mutateAsync(validatedPayload);
-      console.log("API response:", response);
       setTaskId(response.new_task_id);
-      setActiveStep((prev) => {
-        console.log("Advancing to step:", prev + 1);
-        return prev + 1;
-      });
+      setActiveStep((prev) => prev + 1);
     } catch (error) {
       console.error("Ошибка при создании задания:", error);
       if (error instanceof z.ZodError) {
@@ -420,19 +408,11 @@ export function CreateTaskPage() {
   });
 
   const handleNext = async () => {
-    console.log(
-      "handleNext called, isValid:",
-      isValid,
-      "form values:",
-      getValues()
-    );
     if (activeStep === 0) {
       const valid = await trigger();
-      console.log("Form valid after trigger:", valid);
       if (valid) {
         await handleNextStep1();
       } else {
-        console.log("Form errors:", errors);
         toast.error("Пожалуйста, заполните все обязательные поля корректно.");
       }
     } else if (activeStep === 1) {
@@ -440,23 +420,14 @@ export function CreateTaskPage() {
         toast.error("Выберите хотя бы один параметр проверки.");
         return;
       }
-      setActiveStep((prev) => {
-        console.log("Advancing to step:", prev + 1);
-        return prev + 1;
-      });
+      setActiveStep((prev) => prev + 1);
     } else {
-      setActiveStep((prev) => {
-        console.log("Advancing to step:", prev + 1);
-        return prev + 1;
-      });
+      setActiveStep((prev) => prev + 1);
     }
   };
 
   const handleBack = () => {
-    setActiveStep((prev) => {
-      console.log("Returning to step:", prev - 1);
-      return prev - 1;
-    });
+    setActiveStep((prev) => prev - 1);
   };
 
   const handleSaveTask = async () => {
@@ -465,22 +436,23 @@ export function CreateTaskPage() {
         toast.error("ID задания не найден.");
         return;
       }
-      const paramsNonComps = selectedInspectionParameters.reduce(
-        (acc, param) => {
-          const nonComps = selectedNonCompliances
-            .filter((nc) => nc.parameter_id === param.id)
-            .map((nc) => nc.id);
-          if (nonComps.length > 0) {
-            acc[param.id] = nonComps;
-          }
-          return acc;
-        },
-        {} as { [key: string]: number[] }
-      );
+      const paramsNonComps: { [key: number]: number[] } =
+        selectedInspectionParameters.reduce(
+          (acc, param) => {
+            const nonComps = selectedNonCompliances
+              .filter((nc) => nc.parameter_id === param.id)
+              .map((nc) => nc.id);
+            if (nonComps.length > 0) {
+              acc[param.id] = nonComps;
+            }
+            return acc;
+          },
+          {} as { [key: number]: number[] }
+        );
 
       await nonComplianceApi.addParameterNonCompliance(taskId, paramsNonComps);
       toast.success("Задание успешно сохранено!");
-      navigate(`/tasks/${taskId}`);
+      navigate(`/tasks/view`);
       reset();
       setSelectedInspectionParameters([]);
       setParameterEditModalOpen(false);
@@ -504,21 +476,34 @@ export function CreateTaskPage() {
   const handleCloseParameterEditModal = () => {
     setParameterEditModalOpen(false);
     setCurrentParameterInModal(null);
-    setNonCompliancesForCurrentParameter([]);
-    setSelectedNonCompliances((prev) =>
-      prev.filter((nc) => nc.parameter_id !== currentParameterInModal?.id)
-    );
   };
 
   const handleSaveParameterChanges = async () => {
-    if (!currentParameterInModal || !taskId) return;
+    if (!currentParameterInModal || !taskId) {
+      toast.error("ID задания или параметра не найден.");
+      return;
+    }
     try {
       const nonCompIds = selectedNonCompliances
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
         .map((nc) => nc.id);
+
       await nonComplianceApi.addParameterNonCompliance(taskId, {
         [currentParameterInModal.id]: nonCompIds,
       });
+
+      setInspectionParameters((prev) =>
+        prev.map((param) =>
+          param.id === currentParameterInModal.id
+            ? {
+                ...param,
+                nonCompliances: selectedNonCompliances.filter(
+                  (nc) => nc.parameter_id === currentParameterInModal.id
+                ),
+              }
+            : param
+        )
+      );
       toast.success("Несоответствия параметра сохранены.");
       handleCloseParameterEditModal();
     } catch (error) {
@@ -529,29 +514,43 @@ export function CreateTaskPage() {
 
   const handleOpenAddParameterModal = () => {
     setAddParameterModalOpen(true);
+    setNewParameter(null);
+    setNonCompliancesForCurrentParameter([]);
   };
 
   const handleCloseAddParameterModal = () => {
     setAddParameterModalOpen(false);
     setNewParameter(null);
-    setSelectedNonCompliances((prev) =>
-      prev.filter((nc) => nc.parameter_id !== newParameter?.id)
-    );
   };
 
   const handleSaveNewParameter = async () => {
-    if (!newParameter || !taskId) return;
+    if (!newParameter || !taskId) {
+      toast.error("ID задания или параметра не найден.");
+      return;
+    }
     try {
       const nonCompIds = selectedNonCompliances
         .filter((nc) => nc.parameter_id === newParameter.id)
         .map((nc) => nc.id);
+
       await nonComplianceApi.addParameterNonCompliance(taskId, {
         [newParameter.id]: nonCompIds,
       });
-      setInspectionParameters([...inspectionParameters, newParameter]);
-      setSelectedInspectionParameters([
-        ...selectedInspectionParameters,
-        newParameter,
+
+      const newParamWithNonCompliances = {
+        ...newParameter,
+        nonCompliances: selectedNonCompliances.filter(
+          (nc) => nc.parameter_id === newParameter.id
+        ),
+      };
+
+      setInspectionParameters((prev) => [
+        ...prev,
+        newParamWithNonCompliances as InspectionParameter,
+      ]);
+      setSelectedInspectionParameters((prev) => [
+        ...prev,
+        newParamWithNonCompliances as InspectionParameter,
       ]);
       toast.success("Новый параметр добавлен.");
       handleCloseAddParameterModal();
@@ -561,8 +560,33 @@ export function CreateTaskPage() {
     }
   };
 
-  // --- Handlers for Filters ---
+  const handleDeleteParameter = (parameterId: number) => {
+    if (!taskId) {
+      toast.error("ID задания не найден.");
+      return;
+    }
+    try {
+      // API nonComplianceApi не имеет метода для удаления параметров,
+      // поэтому удаляем только из локального состояния.
+      // await nonComplianceApi.deleteParameterNonCompliance(taskId, {
+      //   parameter_ids: [parameterId],
+      // });
+      setInspectionParameters((prev) =>
+        prev.filter((param) => param.id !== parameterId)
+      );
+      setSelectedInspectionParameters((prev) =>
+        prev.filter((param) => param.id !== parameterId)
+      );
+      toast.success(
+        "Параметр успешно удален из списка, но не с сервера (функция API отсутствует)."
+      );
+    } catch (error) {
+      console.error("Ошибка при удалении параметра:", error);
+      toast.error("Ошибка при удалении параметра.");
+    }
+  };
 
+  // --- Handlers for Filters ---
   const handleOpenFilterModal = (filterKey: string) => {
     setFilterModalOpen(filterKey);
   };
@@ -577,12 +601,19 @@ export function CreateTaskPage() {
   ) => {
     setFilterValues((prev) => ({
       ...prev,
-      [filterKey]: prev[filterKey] === value ? undefined : value,
+      [filterKey]: value,
     }));
     handleCloseFilterModal();
   };
 
-  const handleResetFilters = () => {
+  const handleResetFilter = (filterKey: keyof typeof filterValues) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [filterKey]: undefined,
+    }));
+  };
+
+  const handleResetAllFilters = () => {
     setFilterValues({
       dateFilter: undefined,
       reportDateFilter: undefined,
@@ -641,16 +672,12 @@ export function CreateTaskPage() {
 
   // --- CustomTable Configuration ---
 
-  const parameterFilters: FilterDefinition<InspectionParameter>[] = useMemo(
-    () => [
-      {
-        key: "name",
-        label: "Параметр проверки",
-        icon: <CheckBoxIcon />,
-      },
-    ],
-    []
-  );
+  const getNonComplianceCount = (parameterId: number) => {
+    const count = selectedNonCompliances.filter(
+      (nc) => nc.parameter_id === parameterId
+    ).length;
+    return count > 0 ? count : null;
+  };
 
   const parameterColumnDefs: ColDef<InspectionParameter>[] = useMemo(
     () => [
@@ -664,7 +691,7 @@ export function CreateTaskPage() {
       {
         headerName: "№",
         valueGetter: (params) =>
-          params.node?.rowIndex ? params.node.rowIndex + 1 : 1,
+          params.node?.rowIndex != null ? params.node.rowIndex + 1 : "",
         width: 60,
       },
       {
@@ -673,6 +700,18 @@ export function CreateTaskPage() {
         flex: 1,
         minWidth: 200,
         valueFormatter: (params: ValueFormatterParams) => params.value || "N/A",
+        cellRenderer: (params: ICellRendererParams<InspectionParameter>) => {
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+              <Typography variant="body2">{params.data?.name}</Typography>
+              <Badge
+                badgeContent={getNonComplianceCount(params.data?.id ?? 0)}
+                color="success"
+                sx={{ ml: 2 }}
+              />
+            </Box>
+          );
+        },
       },
       {
         headerName: "Действия",
@@ -682,20 +721,34 @@ export function CreateTaskPage() {
           const isSelected = selectedInspectionParameters.some(
             (p) => p.id === params.data?.id
           );
-          if (isSelected) {
-            return (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() =>
-                  params.data && handleOpenParameterEditModal(params.data)
-                }
-              >
-                Редактировать
-              </Button>
-            );
+          if (!isSelected) {
+            return null;
           }
-          return null;
+          return (
+            <Box>
+              <Tooltip title="Редактировать">
+                <IconButton
+                  size="small"
+                  onClick={() =>
+                    params.data && handleOpenParameterEditModal(params.data)
+                  }
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Удалить">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() =>
+                    params.data && handleDeleteParameter(params.data.id)
+                  }
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          );
         },
       },
     ],
@@ -707,7 +760,7 @@ export function CreateTaskPage() {
       {
         headerName: "№",
         valueGetter: (params) =>
-          params.node?.rowIndex ? params.node.rowIndex + 1 : 1,
+          params.node?.rowIndex != null ? params.node.rowIndex + 1 : "",
         width: 60,
       },
       {
@@ -765,7 +818,9 @@ export function CreateTaskPage() {
         width: 80,
         cellRenderer: (params: ICellRendererParams<TaskHistoryItem>) => (
           <IconButton
-            onClick={() => handleOpenImageModal(params.data!.id.toString())}
+            onClick={() =>
+              params.data && handleOpenImageModal(params.data.id.toString())
+            }
           >
             <VisibilityIcon />
           </IconButton>
@@ -801,7 +856,6 @@ export function CreateTaskPage() {
       content: (
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <Box sx={{ mt: 2, mb: 2 }}>
-            {/* Debug Form Errors and State */}
             {Object.keys(errors).length > 0 && (
               <Typography color="error" sx={{ mb: 2 }}>
                 Ошибки формы: {JSON.stringify(errors, null, 2)}
@@ -831,7 +885,6 @@ export function CreateTaskPage() {
                     displayEmpty
                     onChange={(e) => {
                       field.onChange(e);
-                      console.log("objectId changed:", e.target.value);
                     }}
                   >
                     <MenuItem value="" disabled>
@@ -859,7 +912,6 @@ export function CreateTaskPage() {
                   value={field.value ? dayjs(field.value) : null}
                   onChange={(date) => {
                     field.onChange(date ? date.toDate() : null);
-                    console.log("checkDate changed:", date);
                   }}
                   sx={{ mb: 2, width: "100%" }}
                   slotProps={{
@@ -885,7 +937,6 @@ export function CreateTaskPage() {
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(time) => {
                       field.onChange(time ? time.toDate() : null);
-                      console.log("checkTime changed:", time);
                     }}
                     ampm={false}
                     sx={{ width: "100%" }}
@@ -917,10 +968,6 @@ export function CreateTaskPage() {
                         if (!e.target.checked) {
                           setValue("lastCheckDate", null);
                         }
-                        console.log(
-                          "isRepeatInspection changed:",
-                          e.target.checked
-                        );
                       }}
                     />
                   }
@@ -939,7 +986,6 @@ export function CreateTaskPage() {
                     value={field.value ? dayjs(field.value) : null}
                     onChange={(date) => {
                       field.onChange(date ? date.toDate() : null);
-                      console.log("lastCheckDate changed:", date);
                     }}
                     sx={{ mb: 2, width: "100%" }}
                     slotProps={{
@@ -968,10 +1014,9 @@ export function CreateTaskPage() {
                     {...field}
                     labelId="periodic-select-label"
                     label="Периодическая проверка"
-                    value={field.value.toString()}
+                    value={field.value?.toString() ?? "0"} // Обработка возможного undefined
                     onChange={(e) => {
                       field.onChange(Number(e.target.value));
-                      console.log("periodic changed:", e.target.value);
                     }}
                   >
                     <MenuItem value="0">Не выбрана</MenuItem>
@@ -1005,7 +1050,6 @@ export function CreateTaskPage() {
                     displayEmpty
                     onChange={(e) => {
                       field.onChange(e);
-                      console.log("operatorId changed:", e.target.value);
                     }}
                   >
                     <MenuItem value="" disabled>
@@ -1039,7 +1083,6 @@ export function CreateTaskPage() {
                   helperText={errors.comment?.message}
                   onChange={(e) => {
                     field.onChange(e);
-                    console.log("comment changed:", e.target.value);
                   }}
                 />
               )}
@@ -1058,8 +1101,12 @@ export function CreateTaskPage() {
             sx={{ display: "flex", justifyContent: "flex-end", mb: 2, gap: 1 }}
           >
             <Button
-              variant={filterValues.parameterFilter ? "outlined" : "contained"}
-              onClick={() => handleOpenFilterModal("parameterFilter")}
+              variant={filterValues.parameterFilter ? "contained" : "outlined"}
+              onClick={() =>
+                filterValues.parameterFilter
+                  ? handleResetFilter("parameterFilter")
+                  : handleOpenFilterModal("parameterFilter")
+              }
             >
               Параметр проверки
               {filterValues.parameterFilter && (
@@ -1068,7 +1115,7 @@ export function CreateTaskPage() {
                 </Typography>
               )}
             </Button>
-            <Button variant="outlined" onClick={handleResetFilters}>
+            <Button variant="outlined" onClick={handleResetAllFilters}>
               Сбросить фильтры
             </Button>
             <Button
@@ -1097,7 +1144,6 @@ export function CreateTaskPage() {
                 getRowId={getInspectionParameterRowId}
                 pagination={true}
                 pageSize={10}
-                filters={parameterFilters}
                 onSelectionChanged={onSelectionChanged}
               />
             </div>
@@ -1146,10 +1192,14 @@ export function CreateTaskPage() {
                       <TableCell padding="checkbox">
                         <Checkbox
                           onChange={(e) => {
-                            setSelectedNonCompliances(
+                            setSelectedNonCompliances((prev) =>
                               e.target.checked
                                 ? [
-                                    ...selectedNonCompliances,
+                                    ...prev.filter(
+                                      (nc) =>
+                                        nc.parameter_id !==
+                                        currentParameterInModal?.id
+                                    ),
                                     ...nonCompliancesForCurrentParameter.map(
                                       (nc) => ({
                                         ...nc,
@@ -1158,11 +1208,10 @@ export function CreateTaskPage() {
                                       })
                                     ),
                                   ]
-                                : selectedNonCompliances.filter(
+                                : prev.filter(
                                     (nc) =>
-                                      !nonCompliancesForCurrentParameter.some(
-                                        (c) => c.id === nc.id
-                                      )
+                                      nc.parameter_id !==
+                                      currentParameterInModal?.id
                                   )
                             );
                           }}
@@ -1170,7 +1219,10 @@ export function CreateTaskPage() {
                             nonCompliancesForCurrentParameter.length > 0 &&
                             nonCompliancesForCurrentParameter.every((nc) =>
                               selectedNonCompliances.some(
-                                (snc) => snc.id === nc.id
+                                (snc) =>
+                                  snc.id === nc.id &&
+                                  snc.parameter_id ===
+                                    currentParameterInModal?.id
                               )
                             )
                           }
@@ -1186,7 +1238,9 @@ export function CreateTaskPage() {
                         <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedNonCompliances.some(
-                              (snc) => snc.id === nc.id
+                              (snc) =>
+                                snc.id === nc.id &&
+                                snc.parameter_id === currentParameterInModal?.id
                             )}
                             onChange={(e) => {
                               setSelectedNonCompliances((prev) =>
@@ -1199,7 +1253,12 @@ export function CreateTaskPage() {
                                           currentParameterInModal?.id ?? 0,
                                       },
                                     ]
-                                  : prev.filter((snc) => snc.id !== nc.id)
+                                  : prev.filter(
+                                      (snc) =>
+                                        snc.id !== nc.id ||
+                                        snc.parameter_id !==
+                                          currentParameterInModal?.id
+                                    )
                               );
                             }}
                           />
@@ -1243,7 +1302,21 @@ export function CreateTaskPage() {
             <DialogActions>
               <Button onClick={handleCloseParameterEditModal}>Отмена</Button>
               <Button onClick={handleSaveParameterChanges} variant="contained">
-                Сохранить
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  Сохранить
+                  <Badge
+                    badgeContent={getNonComplianceCount(
+                      currentParameterInModal?.id ?? 0
+                    )}
+                    color="success"
+                  />
+                </Box>
               </Button>
             </DialogActions>
           </Dialog>
@@ -1255,7 +1328,7 @@ export function CreateTaskPage() {
             maxWidth="md"
           >
             <DialogTitle>
-              Добавить новый параметр проверки объекта
+              Параметр проверки объекта
               <IconButton
                 aria-label="close"
                 onClick={handleCloseAddParameterModal}
@@ -1352,7 +1425,19 @@ export function CreateTaskPage() {
             <DialogActions>
               <Button onClick={handleCloseAddParameterModal}>Отмена</Button>
               <Button onClick={handleSaveNewParameter} variant="contained">
-                Сохранить
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  Сохранить
+                  <Badge
+                    badgeContent={getNonComplianceCount(newParameter?.id ?? 0)}
+                    color="success"
+                  />
+                </Box>
               </Button>
             </DialogActions>
           </Dialog>
@@ -1568,7 +1653,7 @@ export function CreateTaskPage() {
               </Typography>
             )}
           </Button>
-          <Button variant="outlined" onClick={handleResetFilters}>
+          <Button variant="outlined" onClick={handleResetAllFilters}>
             Сбросить фильтры
           </Button>
         </Box>
