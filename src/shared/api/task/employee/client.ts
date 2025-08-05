@@ -1,5 +1,5 @@
 // src/shared/api/task/employee/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+
 import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import { User } from "@/features/auth/types"; // Adjusted import path for User type
@@ -12,7 +12,7 @@ export const employeeApi = {
   async getAllOperators(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+
       const res = await api.get("/users-show-operators", {
         params: authParams,
       });
@@ -28,7 +28,7 @@ export const employeeApi = {
   async getAllShiftManagers(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+
       const res = await api.get("/users-show-shift-managers", {
         params: authParams,
       });
@@ -44,7 +44,7 @@ export const employeeApi = {
   async getAllCompanyAdmins(): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+
       const res = await api.get("/users-show-company-admins", {
         params: authParams,
       });
@@ -60,7 +60,7 @@ export const employeeApi = {
   async searchUsers(query: string = ""): Promise<User[]> {
     try {
       const authParams = getAuthParams();
-      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
+
       const res = await api.get("/search", {
         params: { ...authParams, query },
       });

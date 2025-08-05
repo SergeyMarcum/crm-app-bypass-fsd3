@@ -54,13 +54,16 @@ export const nonComplianceApi = {
    */
   async addParameterNonCompliance(
     taskId: number,
-    paramsNonComps: { [key: string]: number[] }
+    paramsNonComps: { [key: number]: number[] }
   ): Promise<void> {
     try {
       const authParams = getAuthParams();
       await api.post(
         "/task/add-parameters-and-non-compliances",
-        { task_id: taskId, parameters: paramsNonComps },
+        {
+          id: taskId,
+          params_noncomps: paramsNonComps,
+        },
         { params: authParams }
       );
     } catch (error) {

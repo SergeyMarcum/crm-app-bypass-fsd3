@@ -19,7 +19,8 @@ export const createTaskStep1Schema = z
       .number()
       .min(0, "Недопустимое значение периодичности")
       .max(2, "Недопустимое значение периодичности")
-      .default(0), // Строго number с значением по умолчанию 0
+      .default(0)
+      .optional(), // <-- ИСПРАВЛЕНО: добавлено .optional()
     operatorId: z.string().min(1, "Пожалуйста, выберите оператора"),
     comment: z.string().optional(),
   })
