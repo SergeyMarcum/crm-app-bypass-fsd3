@@ -1,5 +1,5 @@
 // src/shared/api/object/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+
 import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import type {

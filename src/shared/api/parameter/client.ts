@@ -1,5 +1,5 @@
 // src/shared/api/parameter/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
+
 import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
 import { getAuthParams } from "@/shared/lib/auth";
 import type {
@@ -20,7 +20,8 @@ export const parameterApi = {
   ): Promise<{ id: number; parameter: string }[]> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get("/object-type-parameters", { // Используем 'api'
+      const res = await api.get("/object-type-parameters", {
+        // Используем 'api'
         params: {
           ...authParams,
           id: objectTypeId,
@@ -49,7 +50,8 @@ export const parameterApi = {
    */
   async getAllParameters(): Promise<{ id: number; name: string }[]> {
     try {
-      const res = await api.get("/parameters", { // Используем 'api'
+      const res = await api.get("/parameters", {
+        // Используем 'api'
         params: getAuthParams(),
       });
       return res.data as { id: number; name: string }[];
@@ -67,7 +69,8 @@ export const parameterApi = {
   async getAllIncongruities(): Promise<Incongruity[]> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get("/cases-of-non-compliance", { // Используем 'api'
+      const res = await api.get("/cases-of-non-compliance", {
+        // Используем 'api'
         params: authParams,
       });
       if (!Array.isArray(res.data)) {
@@ -119,7 +122,8 @@ export const parameterApi = {
   async editParameter(data: { id: number; name: string }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.put("/edit-parameter", data, { // Используем 'api'
+      await api.put("/edit-parameter", data, {
+        // Используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {
@@ -138,7 +142,8 @@ export const parameterApi = {
   async getParameterIncongruities(paramId: number): Promise<IncongruityCase[]> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get( // Используем 'api'
+      const res = await api.get(
+        // Используем 'api'
         "/all-cases-of-parameter-non-compliance",
         {
           params: {
@@ -179,7 +184,8 @@ export const parameterApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.post("/add-parameter-non-compliance", data, { // Используем 'api'
+      await api.post("/add-parameter-non-compliance", data, {
+        // Используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {
@@ -202,7 +208,8 @@ export const parameterApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.put( // Используем 'api'
+      await api.put(
+        // Используем 'api'
         `${import.meta.env.VITE_API_URL}/edit-parameter-non-compliance`,
         data,
         {
@@ -229,7 +236,8 @@ export const parameterApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.delete( // Используем 'api'
+      await api.delete(
+        // Используем 'api'
         `${import.meta.env.VITE_API_URL}/delete-parameter-non-compliance`,
         {
           params: authParams,
