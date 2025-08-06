@@ -1,4 +1,4 @@
-// src/widgets/object-type-table/model/store.ts
+// src/widgets/object-type/object-type-table/model/store.ts
 import { create } from "zustand";
 import type { ObjectParameter } from "../types";
 

@@ -10,12 +10,26 @@ import HolidayVillageIcon from "@mui/icons-material/HolidayVillage";
 
 import type { JSX } from "react";
 
+// Существующий интерфейс для состояния компонента
 interface ObjectData {
   id: number;
   name: string;
   address: string;
   object_type: string;
   characteristic: string;
+}
+
+// Новый интерфейс, точно отражающий структуру данных из Postman,
+// чтобы избежать ошибки компилятора. Мы будем использовать его для преобразования.
+interface DomainObjectApiResponse {
+  full_name: string | null;
+  name: string;
+  address: string;
+  object_type_text: string | null;
+  id: number;
+  characteristic: string | null;
+  object_type_id: number | null;
+  domain: string;
 }
 
 const filterDefinitions: FilterDefinition<ObjectData>[] = [
@@ -30,10 +44,12 @@ export function ObjectsPage(): JSX.Element {
 
   const fetchObjects = async () => {
     try {
+      // Убрано явное типизирование, чтобы избежать ошибки компилятора.
+      // TypeScript выведет тип автоматически, а мы будем полагаться
+      // на структуру, которую мы знаем из Postman.
       const data = await objectApi.getAllDomainObjects();
 
       if (!Array.isArray(data)) {
-        // Улучшенная обработка ошибок для API-ответов, не являющихся массивом
         if (
           typeof data === "object" &&
           data !== null &&
@@ -50,22 +66,26 @@ export function ObjectsPage(): JSX.Element {
             data
           );
         }
-        setObjects([]); // Очистка объектов при ошибке или неожиданном формате
+        setObjects([]);
         return;
       }
 
-      const transformed: ObjectData[] = data.map((item) => ({
-        id: item.id,
-        name: item.name,
-        address: item.address,
-        object_type: item.type_name || "—",
-        characteristic: item.characteristic || "—",
-      }));
+      // Явно приводим каждый элемент к нашему новому интерфейсу,
+      // чтобы получить доступ к полю object_type_text
+      const transformed: ObjectData[] = (data as DomainObjectApiResponse[]).map(
+        (item) => ({
+          id: item.id,
+          name: item.name,
+          address: item.address,
+          object_type: item.object_type_text || "—",
+          characteristic: item.characteristic || "—",
+        })
+      );
 
       setObjects(transformed);
     } catch (err) {
       console.error("Ошибка при загрузке объектов", err);
-      setObjects([]); // Убедитесь, что объекты очищаются также при исключениях
+      setObjects([]);
     }
   };
 
