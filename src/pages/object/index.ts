@@ -1,2 +1,2 @@
-// src/pages/object/index.tsx
+// src/pages/object/index.ts
 export { ObjectPage } from "./ui/";

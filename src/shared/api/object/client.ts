@@ -1,6 +1,6 @@
 // src/shared/api/object/client.ts
 
-import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
+import { api } from "@/shared/api/axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import type {
   DomainObject,
@@ -16,7 +16,6 @@ interface ApiResponseError {
 
 export const objectApi = {
   async getAll(): Promise<DomainObject[]> {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const res = await api.get("/all-objects", {
       params: getAuthParams(),
     });
@@ -31,7 +30,6 @@ export const objectApi = {
     object_type: number;
     domain: string;
   }): Promise<void> {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.post("/add-new-object", data, {
       params: getAuthParams(),
     });
@@ -46,7 +44,6 @@ export const objectApi = {
     object_type: number;
     domain: string;
   }): Promise<void> {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     await api.put("/object/edit", data, {
       params: getAuthParams(),
     });
@@ -54,13 +51,9 @@ export const objectApi = {
 
   async getAllDomainObjects(): Promise<DomainObject[]> {
     try {
-      // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
       const res = await api.get("/all-domain-objects", {
         params: getAuthParams(),
       });
-
-      // Защитник типа для проверки, является ли объект ошибкой API
-      // Принимаем `unknown` и безопасно проверяем свойства
       const isApiResponseError = (data: unknown): data is ApiResponseError => {
         return (
           typeof data === "object" &&
@@ -82,28 +75,26 @@ export const objectApi = {
 
       return res.data;
     } catch (error) {
-      // Перебрасываем ошибку, чтобы она была обработана в компоненте UI
       throw error;
     }
   },
 
   async getById(objectId: number): Promise<ObjectDetail> {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
     const res = await api.get("/object/get", {
       params: {
         ...getAuthParams(),
         object_id: objectId,
       },
     });
-    return res.data;
+    // Возвращаем только объект object_info, так как он соответствует типу ObjectDetail
+    return res.data.object_info;
   },
 
   async getObjectTasks(objectId: number): Promise<ObjectTask[]> {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axiosInstance'
-    const res = await api.get("/object/tasks", {
+    const res = await api.get("/object-tasks", {
       params: {
         ...getAuthParams(),
-        object_id: objectId,
+        id: objectId,
       },
     });
     return res.data;

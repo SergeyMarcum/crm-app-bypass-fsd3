@@ -36,14 +36,12 @@ export const ObjectPage = () => {
       const transformed: ObjectHistoryRecord[] = history.map(
         (task: ObjectTask) => ({
           id: task.id,
-          inspection_date: task.check_date,
-          is_reinspection: task.is_recheck,
-          operator_full_name: task.operator_name,
-          upload_date: task.upload_date,
-          parameter: task.parameters.map((p) => p.name).join(", "),
-          incongruity: task.parameters
-            .flatMap((p) => p.incongruities.map((i) => i.name))
-            .join(", "),
+          inspection_date: task.date_time, // Используем date_time
+          is_reinspection: task.checking_type_text !== "Первичная", // Логика для is_reinspection
+          operator_full_name: task.user_name, // Используем user_name
+          upload_date: task.date_time_report_loading || "—", // Используем date_time_report_loading
+          parameter: "—", // В ответе API нет данных о параметрах
+          incongruity: "—", // В ответе API нет данных о несоответствиях
         })
       );
 
@@ -96,7 +94,7 @@ export const ObjectPage = () => {
         <Typography color="text.primary">{objectInfo.name}</Typography>
       </Breadcrumbs>
 
-      <ObjectInfoCard objectId={objectId} />
+      <ObjectInfoCard objectId={objectId} objectInfo={objectInfo} />
 
       <Box mt={4}>
         <ObjectTaskTable
