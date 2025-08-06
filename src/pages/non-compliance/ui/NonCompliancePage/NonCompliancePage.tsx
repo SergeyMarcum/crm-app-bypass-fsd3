@@ -130,7 +130,7 @@ export const NonCompliancePage = () => {
           onClick={() => setAddModalOpen(true)}
           startIcon={<AddIcon />}
         >
-          + Добавить новое несоответствие
+          Добавить
         </Button>
       </Box>
 

@@ -63,6 +63,25 @@ export const parameterApi = {
   },
 
   /**
+   * Удаляет существующий параметр.
+   * @param id ID параметра для удаления.
+   */
+  async deleteParameter(id: number): Promise<void> {
+    try {
+      const authParams = getAuthParams();
+
+      await api.delete("/delete-parameter", {
+        params: authParams, // Параметры авторизации остаются в URL
+        data: { id: id }, // ID передается в теле запроса
+      });
+    } catch (error: unknown) {
+      const err = error as AxiosError;
+      console.error("Ошибка при удалении параметра:", err.message);
+      throw err;
+    }
+  },
+
+  /**
    * Получает все возможные случаи несоответствий.
    * @returns Массив объектов Incongruity.
    */

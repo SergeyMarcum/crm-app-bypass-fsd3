@@ -18,29 +18,33 @@ import { useEffect, useState } from "react";
 import { objectApi } from "@/shared/api/object";
 import type { ObjectDetail } from "@/entities/object/types";
 
-export function ObjectInfoCard({ objectId }: { objectId: number }) {
+type Props = {
+  objectId: number;
+  objectInfo: ObjectDetail;
+};
+
+export function ObjectInfoCard({ objectId, objectInfo }: Props) {
   const [editing, setEditing] = useState(false);
-  const [data, setData] = useState<ObjectDetail | null>(null);
+  const [data, setData] = useState<ObjectDetail | null>(objectInfo);
+
+  // Инициализация формы с правильными данными из objectInfo
   const [form, setForm] = useState({
-    name: "",
-    full_name: "",
-    address: "",
-    characteristic: "",
-    object_type: "",
+    name: objectInfo.name,
+    full_name: objectInfo.full_name ?? "",
+    address: objectInfo.address,
+    characteristic: objectInfo.characteristic ?? "",
   });
 
+  // Эффект для обновления формы при изменении objectInfo
   useEffect(() => {
-    objectApi.getById(objectId).then((res) => {
-      setData(res);
-      setForm({
-        name: res.name,
-        full_name: res.full_name ?? "",
-        address: res.address,
-        characteristic: res.characteristic ?? "",
-        object_type: res.object_type,
-      });
+    setData(objectInfo);
+    setForm({
+      name: objectInfo.name,
+      full_name: objectInfo.full_name ?? "",
+      address: objectInfo.address,
+      characteristic: objectInfo.characteristic ?? "",
     });
-  }, [objectId]);
+  }, [objectInfo]);
 
   const handleChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -97,7 +101,7 @@ export function ObjectInfoCard({ objectId }: { objectId: number }) {
               />
               <InfoField
                 label="Тип объекта"
-                value={form.object_type}
+                value={data.object_type_text}
                 editing={false}
               />
               <InfoField

@@ -88,13 +88,12 @@ export function ObjectTypePage() {
 
   return (
     <Box p={3}>
-      {" "}
       <Typography variant="h4" gutterBottom>
-        Тип объекта{" "}
-      </Typography>{" "}
+        Тип объекта
+      </Typography>
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Главная / Объекты / Типы Объектов / Тип объекта{" "}
-      </Typography>{" "}
+        Главная / Объекты / Типы Объектов / Тип объекта
+      </Typography>
       <Box
         display="flex"
         justifyContent="space-between"
@@ -102,37 +101,35 @@ export function ObjectTypePage() {
         gap={2}
         my={2}
       >
-        {" "}
         <Box display="flex" gap={2} alignItems="center">
-          {" "}
           <Select
             value={selectedTypeId}
             onChange={(e) => setSelectedTypeId(Number(e.target.value))}
             size="small"
             displayEmpty
           >
-            <MenuItem value="">Выберите тип</MenuItem>{" "}
+            <MenuItem value="">Выберите тип</MenuItem>
             {types.map((t) => (
               <MenuItem key={t.id} value={t.id}>
-                {t.name}{" "}
+                {t.name}
               </MenuItem>
-            ))}{" "}
-          </Select>{" "}
+            ))}
+          </Select>
           <Button
             variant="contained"
             onClick={() => setAddObjectTypeModalOpen(true)}
             color="secondary"
           >
-            + Добавить (Тип Объекта){" "}
-          </Button>{" "}
-        </Box>{" "}
-      </Box>{" "}
+            + Добавить (Тип Объекта)
+          </Button>
+        </Box>
+      </Box>
       <ObjectTypeTable
         parameters={parameters}
         onEdit={handleEdit}
         filters={filterDefinitions}
         ref={gridRef}
-      />{" "}
+      />
       <AddParameterModal
         open={addParameterModalOpen}
         onClose={() => {
@@ -140,7 +137,7 @@ export function ObjectTypePage() {
           fetchParameters();
         }}
         objectTypeId={Number(selectedTypeId)}
-      />{" "}
+      />
       <AddObjectTypeModal
         open={addObjectTypeModalOpen}
         onClose={() => setAddObjectTypeModalOpen(false)}
@@ -148,7 +145,7 @@ export function ObjectTypePage() {
           fetchTypes();
           setAddObjectTypeModalOpen(false);
         }}
-      />{" "}
+      />
       <EditParameterModal
         open={editOpen}
         onClose={() => {
@@ -157,7 +154,7 @@ export function ObjectTypePage() {
         }}
         parameterId={editParam?.id ?? 0}
         parameterName={editParam?.name ?? ""}
-      />{" "}
+      />
     </Box>
   );
 }
