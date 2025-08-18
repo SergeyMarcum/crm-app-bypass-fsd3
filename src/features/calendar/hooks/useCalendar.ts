@@ -1,9 +1,8 @@
 // src/features/calendar/hooks/useCalendar.ts
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-// Обновленный импорт: теперь функции API берутся из shared/api/calendar
+import { useState, useMemo } from "react";
 import { getChecks, getObjects, getOperators } from "@/shared/api/calendar";
-import { CalendarFilter, Check, Object, Operator } from "../types";
+import { CalendarFilter, Check, Object, Operator } from "../types/types";
 
 export const useCalendar = () => {
   const [filters, setFilters] = useState<CalendarFilter>({
@@ -12,25 +11,36 @@ export const useCalendar = () => {
     operatorId: null,
   });
 
-  // Запрос для получения проверок с учетом текущих фильтров
   const checksQuery = useQuery<Check[], Error>({
-    queryKey: ["checks", filters], // QueryKey включает фильтры для повторной выборки при их изменении
-    queryFn: () => getChecks(filters),
+    queryKey: ["checks"],
+    queryFn: getChecks,
   });
 
-  // Запрос для получения списка объектов
   const objectsQuery = useQuery<Object[], Error>({
     queryKey: ["objects"],
     queryFn: getObjects,
   });
 
-  // Запрос для получения списка операторов
   const operatorsQuery = useQuery<Operator[], Error>({
     queryKey: ["operators"],
     queryFn: getOperators,
   });
 
-  // Функция для сброса фильтров к значениям по умолчанию
+  const filteredChecks = useMemo(() => {
+    if (!checksQuery.data) return [];
+
+    return checksQuery.data.filter((check) => {
+      const statusMatch =
+        filters.status === "all" || check.status === filters.status;
+      const objectMatch =
+        filters.objectId === null || check.objectId === filters.objectId;
+      const operatorMatch =
+        filters.operatorId === null || check.operator.id === filters.operatorId;
+
+      return statusMatch && objectMatch && operatorMatch;
+    });
+  }, [checksQuery.data, filters]);
+
   const resetFilters = () => {
     setFilters({ status: "all", objectId: null, operatorId: null });
   };
@@ -38,11 +48,11 @@ export const useCalendar = () => {
   return {
     filters,
     setFilters,
-    checks: checksQuery.data || [], // Возвращаем данные или пустой массив
+    checks: filteredChecks,
     isLoading: checksQuery.isLoading,
     error: checksQuery.error?.message,
-    objects: objectsQuery.data || [], // Возвращаем данные или пустой массив
-    operators: operatorsQuery.data || [], // Возвращаем данные или пустой массив
+    objects: objectsQuery.data || [],
+    operators: operatorsQuery.data || [],
     resetFilters,
   };
 };

@@ -1,5 +1,5 @@
 // src/pages/task-create/ui/CreateTaskPage/CreateTaskPage.tsx
-import { useState, useEffect, useCallback, useMemo, FC } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -84,7 +84,6 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/features/auth/model/store";
 import { z } from "zod";
 
-// Определение пропсов для TypedCustomTable
 interface CustomTableWithAgGridProps<TData> {
   rowData: TData[];
   columnDefs: ColDef<TData>[];
@@ -92,7 +91,6 @@ interface CustomTableWithAgGridProps<TData> {
   pagination?: boolean;
 }
 
-// Переделанный компонент TypedCustomTable для правильной передачи пропсов
 const TypedCustomTable = <TData extends object>({
   rowData,
   columnDefs,
@@ -136,7 +134,7 @@ export function CreateTaskPage() {
     setValue,
     formState: { errors, isValid },
     reset,
-    getValues,
+    //getValues,
   } = useForm<CreateTaskStep1Form>({
     resolver: zodResolver(createTaskStep1Schema),
     mode: "onChange",
@@ -163,9 +161,6 @@ export function CreateTaskPage() {
 
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [operators, setOperators] = useState<User[]>([]);
-  const [inspectionParameters, setInspectionParameters] = useState<
-    InspectionParameter[]
-  >([]);
   const [allParameters, setAllParameters] = useState<InspectionParameter[]>([]);
   const [selectedInspectionParameters, setSelectedInspectionParameters] =
     useState<InspectionParameter[]>([]);
@@ -183,10 +178,11 @@ export function CreateTaskPage() {
   const [newParameter, setNewParameter] = useState<InspectionParameter | null>(
     null
   );
+  const [pendingNonCompliances, setPendingNonCompliances] = useState<
+    NonComplianceCase[]
+  >([]);
 
   const createTaskMutation = taskApi.useCreateTask();
-
-  // --- API Fetching Logic ---
 
   const fetchObjects = useCallback(async () => {
     try {
@@ -227,7 +223,7 @@ export function CreateTaskPage() {
   const fetchInspectionParameters = useCallback(
     async (currentObjectId: string) => {
       if (!currentObjectId) {
-        setInspectionParameters([]);
+        setSelectedInspectionParameters([]);
         return;
       }
       try {
@@ -262,13 +258,13 @@ export function CreateTaskPage() {
             };
           })
           .filter(Boolean) as InspectionParameter[];
-        setInspectionParameters(normalizedParameters);
+        setSelectedInspectionParameters(normalizedParameters);
       } catch (error) {
         console.error(
           `Ошибка при загрузке параметров для объекта ${currentObjectId}:`,
           error
         );
-        setInspectionParameters([]);
+        setSelectedInspectionParameters([]);
       }
     },
     [allParameters]
@@ -338,26 +334,47 @@ export function CreateTaskPage() {
       fetchInspectionParameters(objectId);
       fetchTaskHistory(objectId);
       setSelectedInspectionParameters([]);
+      setSelectedNonCompliances([]);
     }
   }, [objectId, fetchInspectionParameters, fetchTaskHistory]);
 
   useEffect(() => {
     if (parameterEditModalOpen && currentParameterInModal) {
       fetchNonCompliancesForParameter(currentParameterInModal.id);
+      setPendingNonCompliances(
+        selectedNonCompliances.filter(
+          (nc) => nc.parameter_id === currentParameterInModal.id
+        )
+      );
     } else {
       setNonCompliancesForCurrentParameter([]);
+      setPendingNonCompliances([]);
     }
   }, [
     parameterEditModalOpen,
     currentParameterInModal,
     fetchNonCompliancesForParameter,
+    selectedNonCompliances,
   ]);
 
   useEffect(() => {
-    console.log("Form state:", { isValid, errors, values: getValues() });
-  }, [isValid, errors, getValues]);
-
-  // --- Handlers for Stepper and Modals ---
+    if (addParameterModalOpen && newParameter) {
+      fetchNonCompliancesForParameter(newParameter.id);
+      setPendingNonCompliances(
+        selectedNonCompliances.filter(
+          (nc) => nc.parameter_id === newParameter.id
+        )
+      );
+    } else if (addParameterModalOpen && !newParameter) {
+      setNonCompliancesForCurrentParameter([]);
+      setPendingNonCompliances([]);
+    }
+  }, [
+    addParameterModalOpen,
+    newParameter,
+    fetchNonCompliancesForParameter,
+    selectedNonCompliances,
+  ]);
 
   const { user } = useAuthStore();
 
@@ -390,25 +407,20 @@ export function CreateTaskPage() {
         object_id: parseInt(data.objectId, 10),
         shift_id,
         checking_type_id: data.isRepeatInspection ? 1 : 0,
-        // ИСПРАВЛЕНО: Форматируем дату и время в формат, ожидаемый схемой
         date_time: combinedDateTime.format("YYYY-MM-DD HH:mm:ss"),
-        // ИСПРАВЛЕНО: Передаем пустую строку вместо undefined для комментария
         comment: data.comment || "",
         periodic: data.periodic ?? 0,
       };
 
-      // ИСПРАВЛЕНО: Добавляем date_previous_check только если оно нужно
       if (data.isRepeatInspection && data.lastCheckDate) {
         payload.date_previous_check = dayjs(data.lastCheckDate).format(
           "YYYY-MM-DD"
         );
       }
 
-      console.log("Payload to be sent (final fixed):", payload);
+      console.log("Payload to be sent (Step 1):", payload);
 
       const validatedPayload = addNewTaskPayloadSchema.parse(payload);
-      console.log("Payload successfully validated.");
-
       const response = await createTaskMutation.mutateAsync(validatedPayload);
 
       console.log("API call successful, response:", response);
@@ -432,7 +444,7 @@ export function CreateTaskPage() {
   };
 
   const handleNext = async () => {
-    console.log("handleNext called. Current form state:", { isValid, errors }); // <-- Добавлено логирование
+    console.log("handleNext called. Current form state:", { isValid, errors });
     if (activeStep === 0) {
       await handleSubmit(handleCreateTaskAndNext)();
     } else if (activeStep === 1) {
@@ -451,51 +463,35 @@ export function CreateTaskPage() {
   };
 
   const handleSaveTask = async () => {
-    try {
-      if (!taskId) {
-        toast.error("ID задания не найден.");
-        return;
-      }
-      const paramsNonComps: { [key: number]: number[] } =
-        selectedInspectionParameters.reduce(
-          (acc, param) => {
-            const nonComps = selectedNonCompliances
-              .filter((nc) => nc.parameter_id === param.id)
-              .map((nc) => nc.id);
-            if (nonComps.length > 0) {
-              acc[param.id] = nonComps;
-            }
-            return acc;
-          },
-          {} as { [key: number]: number[] }
-        );
-
-      await nonComplianceApi.addParameterNonCompliance(taskId, paramsNonComps);
-      toast.success("Задание успешно сохранено!");
-      navigate(`/tasks/view/${taskId}`);
-      reset();
-      setSelectedInspectionParameters([]);
-      setParameterEditModalOpen(false);
-      setCurrentParameterInModal(null);
-      setNonCompliancesForCurrentParameter([]);
-      setAddParameterModalOpen(false);
-      setTaskId(null);
-    } catch (error) {
-      console.error("Ошибка при сохранении задания:", error);
-      toast.error("Ошибка при сохранении задания.");
+    if (!taskId) {
+      toast.error(
+        "ID задания не найден. Пожалуйста, создайте задание сначала."
+      );
+      return;
     }
+    navigate(`/task/${taskId}`);
+    reset();
+    setSelectedInspectionParameters([]);
+    setSelectedNonCompliances([]);
+    setParameterEditModalOpen(false);
+    setCurrentParameterInModal(null);
+    setNonCompliancesForCurrentParameter([]);
+    setAddParameterModalOpen(false);
+    setTaskId(null);
   };
-
-  // --- Handlers for Parameter Modals ---
 
   const handleOpenParameterEditModal = (parameter: InspectionParameter) => {
     setCurrentParameterInModal(parameter);
     setParameterEditModalOpen(true);
+    setPendingNonCompliances(
+      selectedNonCompliances.filter((nc) => nc.parameter_id === parameter.id)
+    );
   };
 
   const handleCloseParameterEditModal = () => {
     setParameterEditModalOpen(false);
     setCurrentParameterInModal(null);
+    setPendingNonCompliances([]);
   };
 
   const handleSaveParameterChanges = async () => {
@@ -503,32 +499,49 @@ export function CreateTaskPage() {
       toast.error("ID задания или параметра не найден.");
       return;
     }
+
     try {
-      const nonCompIds = selectedNonCompliances
+      const nonCompIds = pendingNonCompliances
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
         .map((nc) => nc.id);
 
-      await nonComplianceApi.addParameterNonCompliance(taskId, {
+      const payload = {
         [currentParameterInModal.id]: nonCompIds,
-      });
+      };
 
-      setInspectionParameters((prev) =>
-        prev.map((param) =>
-          param.id === currentParameterInModal.id
-            ? {
-                ...param,
-                nonCompliances: selectedNonCompliances.filter(
-                  (nc) => nc.parameter_id === currentParameterInModal.id
-                ),
-              }
-            : param
-        )
+      console.log(
+        "API call to save changes for parameter:",
+        currentParameterInModal.id,
+        "payload:",
+        payload
       );
-      toast.success("Несоответствия параметра сохранены.");
+      await nonComplianceApi.addParameterNonCompliance(taskId, payload);
+
+      const newSelectedNonCompliances = selectedNonCompliances.filter(
+        (nc) => nc.parameter_id !== currentParameterInModal.id
+      );
+
+      setSelectedNonCompliances([
+        ...newSelectedNonCompliances,
+        ...pendingNonCompliances.map((nc) => ({
+          ...nc,
+          parameter_id: currentParameterInModal.id,
+        })),
+      ]);
+
+      const updatedParameters = selectedInspectionParameters.map((param) =>
+        param.id === currentParameterInModal.id
+          ? { ...param, nonCompliances: pendingNonCompliances }
+          : param
+      );
+
+      setSelectedInspectionParameters(updatedParameters);
+
+      toast.success("Несоответствия параметра обновлены.");
       handleCloseParameterEditModal();
     } catch (error) {
-      console.error("Ошибка при сохранении несоответствий:", error);
-      toast.error("Ошибка при сохранении несоответствий.");
+      console.error("Ошибка при сохранении изменений параметра:", error);
+      toast.error("Ошибка при сохранении изменений параметра.");
     }
   };
 
@@ -536,6 +549,7 @@ export function CreateTaskPage() {
     setAddParameterModalOpen(true);
     setNewParameter(null);
     setNonCompliancesForCurrentParameter([]);
+    setPendingNonCompliances([]);
   };
 
   const handleCloseAddParameterModal = () => {
@@ -545,33 +559,52 @@ export function CreateTaskPage() {
 
   const handleSaveNewParameter = async () => {
     if (!newParameter || !taskId) {
-      toast.error("ID задания или параметра не найден.");
+      toast.error("Параметр или ID задания не найден.");
       return;
     }
-    try {
-      const nonCompIds = selectedNonCompliances
-        .filter((nc) => nc.parameter_id === newParameter.id)
-        .map((nc) => nc.id);
 
-      await nonComplianceApi.addParameterNonCompliance(taskId, {
+    try {
+      const nonCompIds = pendingNonCompliances.map((nc) => nc.id);
+
+      const payload = {
         [newParameter.id]: nonCompIds,
-      });
+      };
+
+      console.log(
+        "API call to save new parameter:",
+        newParameter.id,
+        "payload:",
+        payload
+      );
+      await nonComplianceApi.addParameterNonCompliance(taskId, payload);
 
       const newParamWithNonCompliances = {
         ...newParameter,
-        nonCompliances: selectedNonCompliances.filter(
-          (nc) => nc.parameter_id === newParameter.id
-        ),
+        nonCompliances: pendingNonCompliances,
       };
 
-      setInspectionParameters((prev) => [
-        ...prev,
-        newParamWithNonCompliances as InspectionParameter,
+      setSelectedInspectionParameters((prev) => {
+        const existingParam = prev.find((p) => p.id === newParameter.id);
+        if (existingParam) {
+          return prev.map((p) =>
+            p.id === newParameter.id ? newParamWithNonCompliances : p
+          );
+        }
+        return [...prev, newParamWithNonCompliances as InspectionParameter];
+      });
+
+      const nonCompliancesToKeep = selectedNonCompliances.filter(
+        (nc) => nc.parameter_id !== newParameter.id
+      );
+
+      setSelectedNonCompliances([
+        ...nonCompliancesToKeep,
+        ...pendingNonCompliances.map((nc) => ({
+          ...nc,
+          parameter_id: newParameter.id,
+        })),
       ]);
-      setSelectedInspectionParameters((prev) => [
-        ...prev,
-        newParamWithNonCompliances as InspectionParameter,
-      ]);
+
       toast.success("Новый параметр добавлен.");
       handleCloseAddParameterModal();
     } catch (error) {
@@ -589,23 +622,36 @@ export function CreateTaskPage() {
       await nonComplianceApi.addParameterNonCompliance(taskId, {
         [parameterId]: [],
       });
-      setInspectionParameters((prev) =>
-        prev.filter((param) => param.id !== parameterId)
-      );
       setSelectedInspectionParameters((prev) =>
         prev.filter((param) => param.id !== parameterId)
       );
       setSelectedNonCompliances((prev) =>
         prev.filter((nc) => nc.parameter_id !== parameterId)
       );
-      toast.success("Параметр и связанные несоответствия успешно удалены.");
+      toast.success("Параметр и связанные несоответствия удалены.");
     } catch (error) {
       console.error("Ошибка при удалении параметра:", error);
       toast.error("Ошибка при удалении параметра.");
     }
   };
 
-  // --- Handlers for Filters ---
+  const handleTogglePendingNonCompliance = (nonComp: NonComplianceCase) => {
+    const isSelected = pendingNonCompliances.some((nc) => nc.id === nonComp.id);
+    if (isSelected) {
+      setPendingNonCompliances((prev) =>
+        prev.filter((nc) => nc.id !== nonComp.id)
+      );
+    } else {
+      setPendingNonCompliances((prev) => [
+        ...prev,
+        {
+          ...nonComp,
+          parameter_id: currentParameterInModal?.id || newParameter?.id || -1,
+        } as NonComplianceCase,
+      ]);
+    }
+  };
+
   const handleOpenFilterModal = (filterKey: string) => {
     setFilterModalOpen(filterKey);
   };
@@ -676,8 +722,6 @@ export function CreateTaskPage() {
     });
   }, [historyItems, filterValues]);
 
-  // --- Handlers for Image Modal ---
-
   const handleOpenImageModal = async (nonCompId: string) => {
     try {
       const image = await taskHistoryApi.getNonComplianceImage(nonCompId);
@@ -694,13 +738,11 @@ export function CreateTaskPage() {
     setCurrentImage(null);
   };
 
-  // --- CustomTable Configuration ---
-
   const getNonComplianceCount = (parameterId: number) => {
-    const nonCompliances = selectedNonCompliances.filter(
-      (nc) => nc.parameter_id === parameterId
+    const parameter = selectedInspectionParameters.find(
+      (p) => p.id === parameterId
     );
-    return nonCompliances.length > 0 ? nonCompliances.length : null;
+    return parameter?.nonCompliances?.length ?? null;
   };
 
   const parameterColumnDefs: ColDef<InspectionParameter>[] = useMemo(
@@ -1134,7 +1176,7 @@ export function CreateTaskPage() {
               </Button>
             </Box>
             <TypedCustomTable<InspectionParameter>
-              rowData={inspectionParameters}
+              rowData={selectedInspectionParameters}
               columnDefs={parameterColumnDefs}
               getRowId={getInspectionParameterRowId}
               pagination={true}
@@ -1204,6 +1246,17 @@ export function CreateTaskPage() {
                   field: "name",
                   flex: 1,
                 },
+                {
+                  headerName: "Несоответствия",
+                  field: "nonCompliances",
+                  valueFormatter: (
+                    params: ValueFormatterParams<InspectionParameter>
+                  ) =>
+                    params.data?.nonCompliances
+                      ?.map((nc) => nc.name)
+                      .join(", ") || "Нет",
+                  flex: 1,
+                },
               ]}
               getRowId={getInspectionParameterRowId}
               pagination={true}
@@ -1251,9 +1304,17 @@ export function CreateTaskPage() {
                   <div>
                     <Button
                       variant="contained"
-                      onClick={handleNext}
+                      onClick={
+                        activeStep === steps.length - 1
+                          ? handleSaveTask
+                          : handleNext
+                      }
                       sx={{ mt: 1, mr: 1 }}
-                      disabled={activeStep === 0 && !isValid}
+                      disabled={
+                        (activeStep === 0 && !isValid) ||
+                        (activeStep === 1 &&
+                          selectedInspectionParameters.length === 0)
+                      }
                     >
                       {activeStep === steps.length - 1 ? "Сохранить" : "Далее"}
                     </Button>
@@ -1320,29 +1381,16 @@ export function CreateTaskPage() {
                   <TableRow key={nonComp.id}>
                     <TableCell padding="checkbox">
                       <Checkbox
-                        checked={selectedNonCompliances.some(
+                        checked={pendingNonCompliances.some(
                           (nc) => nc.id === nonComp.id
                         )}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedNonCompliances((prev) => [
-                              ...prev,
-                              {
-                                ...nonComp,
-                                parameter_id: currentParameterInModal!.id,
-                              } as NonComplianceCase,
-                            ]);
-                          } else {
-                            setSelectedNonCompliances((prev) =>
-                              prev.filter((nc) => nc.id !== nonComp.id)
-                            );
-                          }
-                        }}
+                        onChange={() =>
+                          handleTogglePendingNonCompliance(nonComp)
+                        }
                       />
                     </TableCell>
                     <TableCell>{nonComp.name}</TableCell>
                     <TableCell>
-                      {/* Placeholder for future actions */}
                       <IconButton size="small">
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
@@ -1356,7 +1404,7 @@ export function CreateTaskPage() {
         <DialogActions>
           <Button onClick={handleCloseParameterEditModal}>Отмена</Button>
           <Button onClick={handleSaveParameterChanges} variant="contained">
-            Сохранить
+            Применить
           </Button>
         </DialogActions>
       </Dialog>
@@ -1383,10 +1431,16 @@ export function CreateTaskPage() {
             getOptionLabel={(option) => option.name}
             onChange={(e, value) => {
               setNewParameter(value);
+              setPendingNonCompliances(
+                selectedNonCompliances.filter(
+                  (nc) => nc.parameter_id === value?.id
+                )
+              );
               if (value) {
                 fetchNonCompliancesForParameter(value.id);
               } else {
                 setNonCompliancesForCurrentParameter([]);
+                setPendingNonCompliances([]);
               }
             }}
             renderInput={(params) => (
@@ -1414,29 +1468,16 @@ export function CreateTaskPage() {
                       <TableRow key={nonComp.id}>
                         <TableCell padding="checkbox">
                           <Checkbox
-                            checked={selectedNonCompliances.some(
+                            checked={pendingNonCompliances.some(
                               (nc) => nc.id === nonComp.id
                             )}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedNonCompliances((prev) => [
-                                  ...prev,
-                                  {
-                                    ...nonComp,
-                                    parameter_id: newParameter.id,
-                                  } as NonComplianceCase,
-                                ]);
-                              } else {
-                                setSelectedNonCompliances((prev) =>
-                                  prev.filter((nc) => nc.id !== nonComp.id)
-                                );
-                              }
-                            }}
+                            onChange={() =>
+                              handleTogglePendingNonCompliance(nonComp)
+                            }
                           />
                         </TableCell>
                         <TableCell>{nonComp.name}</TableCell>
                         <TableCell>
-                          {/* Placeholder for future actions */}
                           <IconButton size="small">
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
@@ -1456,7 +1497,7 @@ export function CreateTaskPage() {
             variant="contained"
             disabled={!newParameter}
           >
-            Сохранить
+            Применить
           </Button>
         </DialogActions>
       </Dialog>
