@@ -13,19 +13,40 @@ import {
   Tab,
   TextField,
 } from "@mui/material";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router-dom"; // Исправлено здесь
 import dayjs from "dayjs";
-
 import { CustomTable } from "@/widgets/table";
 import type {
   ICellRendererParams,
   ValueFormatterParams,
 } from "ag-grid-community";
-
 import Chat from "@/features/tasks/components/Chat";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+
+// --- New Interfaces for Parameters API ---
+interface BackendTaskParameter {
+  parameter_id: number;
+  text: string;
+  id: number;
+  task_id: number;
+}
+
+interface BackendNonCompliance {
+  id: number;
+  task_id: number;
+  parameter_id: number;
+  text: string;
+  photo_path: string | null;
+  // Добавляем другие поля, если они будут в реальном ответе
+}
+
+interface BackendParametersResponse {
+  parameters: BackendTaskParameter[];
+  non_compliances: BackendNonCompliance[];
+}
 
 // --- Interfaces for Backend Task Data ---
-interface BackendTaskDetail {
+interface BackendTaskData {
   id: number;
   date_time: string;
   user_email: string;
@@ -33,7 +54,7 @@ interface BackendTaskDetail {
   manager_phone: string | null;
   date_time_report_loading: string | null;
   manager_department: string;
-  date_time_previous_check: string | null;
+  date_previous_check: string | null;
   user_position: string;
   user_phone: string | null;
   object_id: number;
@@ -52,6 +73,15 @@ interface BackendTaskDetail {
   manager_position: string;
   domain: string;
   date_for_search: string;
+}
+
+// Интерфейс для полного ответа от API /task/get
+interface BackendTaskResponse {
+  task: BackendTaskData;
+  status: {
+    status_id: number;
+    status_text: string;
+  };
 }
 
 // --- Interfaces for UI Task Data (Derived from Backend) ---
@@ -75,8 +105,8 @@ interface TaskOperator {
 interface TaskParameter {
   id: number;
   name: string;
-  isCompliant: boolean;
-  hasRemarks: boolean;
+  isCompliant: boolean; // Соответствует или нет
+  nonCompliance: BackendNonCompliance | null; // Замечание, если есть
 }
 
 interface TaskDetail {
@@ -110,7 +140,6 @@ const useTask = (taskId?: string) => {
       setLoading(true);
       setError(null);
 
-      // --- Получение значений из localStorage с правильными ключами ---
       const domain = localStorage.getItem("auth_domain") || "";
       const username = localStorage.getItem("username") || "";
       const sessionCode = localStorage.getItem("session_token") || "";
@@ -122,83 +151,80 @@ const useTask = (taskId?: string) => {
         );
         return;
       }
-      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
       try {
-        const url = `${BASE_URL}/task/get?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${taskId}`;
-        const response = await fetch(url);
+        // Запрос 1: Получение данных о задании
+        const taskUrl = `${BASE_URL}/task/get?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${taskId}`;
+        const taskResponse = await fetch(taskUrl);
 
-        if (!response.ok) {
-          const errorBody = await response.text();
+        if (!taskResponse.ok) {
+          const errorBody = await taskResponse.text();
           throw new Error(
-            `Ошибка HTTP: ${response.status} - ${errorBody || response.statusText}`
+            `Ошибка HTTP при получении задания: ${taskResponse.status} - ${
+              errorBody || taskResponse.statusText
+            }`
           );
         }
 
-        const backendData: BackendTaskDetail = await response.json();
+        const backendTaskResponse: BackendTaskResponse =
+          await taskResponse.json();
+        const backendTaskData = backendTaskResponse.task;
 
-        // --- Mock Task Parameters (Replace with actual API call if available) ---
-        const mockParameters: TaskParameter[] = [
-          {
-            id: 1,
-            name: "Состояние дверей",
-            isCompliant: true,
-            hasRemarks: false,
-          },
-          {
-            id: 2,
-            name: "Состояние окон",
-            isCompliant: false,
-            hasRemarks: true,
-          },
-          {
-            id: 3,
-            name: "Работоспособность освещения",
-            isCompliant: true,
-            hasRemarks: false,
-          },
-          {
-            id: 4,
-            name: "Наличие пожарных извещателей",
-            isCompliant: true,
-            hasRemarks: false,
-          },
-          {
-            id: 5,
-            name: "Целостность напольного покрытия",
-            isCompliant: false,
-            hasRemarks: true,
-          },
-        ];
-        // --- End Mock Task Parameters ---
+        // Запрос 2: Получение параметров и несоответствий
+        const parametersUrl = `${BASE_URL}/task/parameters-and-non-compliances?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskId}`;
+        const parametersResponse = await fetch(parametersUrl);
+
+        if (!parametersResponse.ok) {
+          const errorBody = await parametersResponse.text();
+          throw new Error(
+            `Ошибка HTTP при получении параметров: ${parametersResponse.status} - ${
+              errorBody || parametersResponse.statusText
+            }`
+          );
+        }
+
+        const backendParametersResponse: BackendParametersResponse =
+          await parametersResponse.json();
+
+        // Маппинг данных
+        const mappedParameters: TaskParameter[] =
+          backendParametersResponse.parameters.map((param) => {
+            // Ищем несоответствие для текущего параметра
+            const nonCompliance =
+              backendParametersResponse.non_compliances.find(
+                (nc) => nc.parameter_id === param.parameter_id
+              );
+            return {
+              id: param.id,
+              name: param.text,
+              isCompliant: !nonCompliance, // Если несоответствие найдено, значит, НЕ соответствует
+              nonCompliance: nonCompliance || null, // Сохраняем объект несоответствия
+            };
+          });
 
         const mappedTask: TaskDetail = {
-          id: backendData.id,
-          startDate: backendData.date_time,
-          reportDate: backendData.date_time_report_loading,
-          isRecheck: !!backendData.date_time_previous_check,
-          lastCheckDate: backendData.date_time_previous_check,
-          status: backendData.date_time_report_loading
-            ? "Отчет загружен"
-            : backendData.checking_type_text === "Первичная"
-              ? "Ожидается загрузка отчета"
-              : backendData.checking_type_text,
+          id: backendTaskData.id,
+          startDate: backendTaskData.date_time,
+          reportDate: backendTaskData.date_time_report_loading,
+          isRecheck: backendTaskData.checking_type_text === "Повторная",
+          lastCheckDate: backendTaskData.date_previous_check,
+          status: backendTaskResponse.status.status_text,
           object: {
-            id: backendData.object_id,
-            name: backendData.object_name,
-            fullName: backendData.object_full_name,
-            address: backendData.object_address,
-            characteristics: backendData.object_characteristic,
+            id: backendTaskData.object_id,
+            name: backendTaskData.object_name,
+            fullName: backendTaskData.object_full_name,
+            address: backendTaskData.object_address,
+            characteristics: backendTaskData.object_characteristic,
           },
           operator: {
-            id: backendData.user_id,
-            name: backendData.user_name,
-            position: backendData.user_position,
-            department: backendData.user_department,
-            email: backendData.user_email,
-            phone: backendData.user_phone,
+            id: backendTaskData.user_id,
+            name: backendTaskData.user_name,
+            position: backendTaskData.user_position,
+            department: backendTaskData.user_department,
+            email: backendTaskData.user_email,
+            phone: backendTaskData.user_phone,
           },
-          parameters: mockParameters,
+          parameters: mappedParameters, // Используем реальные данные
         };
 
         setTask(mappedTask);
@@ -220,7 +246,9 @@ const useTask = (taskId?: string) => {
 
   return { task, loading, error };
 };
+
 // --- End Local useTask hook ---
+// ... (остальной код не менялся)
 
 // Вспомогательный компонент для табов
 interface TabPanelProps {
@@ -257,10 +285,9 @@ export const TaskPage: React.FC = () => {
   const { task, loading, error } = useTask(taskId);
 
   const [currentTab, setCurrentTab] = useState(0);
-  // Состояния для вкладки "Управление"
   const [xmlPassword, setXmlPassword] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref для скрытого input file
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -283,15 +310,9 @@ export const TaskPage: React.FC = () => {
       return;
     }
 
-    // API для скачивания XML-файла
     const downloadUrl = `${BASE_URL}/generate-xml-task?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskId}`;
 
-    // Открываем URL в новом окне/вкладке, чтобы инициировать скачивание
     window.open(downloadUrl, "_blank");
-
-    // ПРИМЕЧАНИЕ: Поле xmlPassword не используется в данном API вызове
-    // согласно предоставленной документации. Если бэкенд ожидает пароль
-    // для генерации защищенного XML, это должно быть указано в API.
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -303,7 +324,6 @@ export const TaskPage: React.FC = () => {
   };
 
   const handleUploadReportClick = () => {
-    // Триггер клика по скрытому input type="file"
     fileInputRef.current?.click();
   };
 
@@ -327,18 +347,12 @@ export const TaskPage: React.FC = () => {
     const uploadUrl = `${BASE_URL}/upload-report?domain=${domain}&username=${username}&session_code=${sessionCode}`;
 
     const formData = new FormData();
-    formData.append("file", selectedFile); // Предполагаем, что бэкенд ожидает файл под ключом 'file'
-    // Если бэкенд ожидает пароль для загрузки, добавьте его:
-    // if (xmlPassword) {
-    //   formData.append('password', xmlPassword);
-    // }
+    formData.append("file", selectedFile);
 
     try {
       const response = await fetch(uploadUrl, {
         method: "POST",
         body: formData,
-        // Content-Type заголовок для FormData устанавливать вручную не нужно,
-        // браузер сделает это автоматически с правильным boundary.
       });
 
       if (!response.ok) {
@@ -351,7 +365,7 @@ export const TaskPage: React.FC = () => {
       const result = await response.json();
       console.log("Отчет успешно загружен", result);
       alert("Отчет успешно загружен!");
-      setSelectedFile(null); // Очищаем выбранный файл после успешной загрузки
+      setSelectedFile(null);
     } catch (error: unknown) {
       let errorMessage = "Неизвестная ошибка при загрузке отчета.";
       if (error instanceof Error) {
@@ -405,6 +419,7 @@ export const TaskPage: React.FC = () => {
     );
   }
 
+  // Обновленные колонки для таблицы с учетом новых данных
   const parameterColumns = [
     {
       headerName: "№",
@@ -426,13 +441,27 @@ export const TaskPage: React.FC = () => {
     },
     {
       headerName: "Замечания (Есть/Нет)",
-      field: "hasRemarks",
+      field: "nonCompliance",
       width: 180,
-      cellRenderer: (params: ICellRendererParams<TaskParameter, boolean>) => (
+      cellRenderer: (
+        params: ICellRendererParams<TaskParameter, BackendNonCompliance | null>
+      ) => (
         <Box display="flex" alignItems="center" height="100%">
           {params.value ? (
-            <Button variant="text" color="primary" size="small">
-              Есть (Глазик)
+            <Button
+              variant="text"
+              color="primary"
+              size="small"
+              onClick={() => {
+                // TODO: Логика для открытия модального окна с фотографией
+                console.log(
+                  "Просмотр замечания:",
+                  params.value?.text,
+                  params.value?.photo_path
+                );
+              }}
+            >
+              <VisibilityIcon />
             </Button>
           ) : (
             "Нет"
@@ -496,8 +525,6 @@ export const TaskPage: React.FC = () => {
 
         <Grid container spacing={3} mb={4}>
           <Grid size={{ xs: 12, md: 6 }}>
-            {" "}
-            {/* Изменено обратно на size */}
             <Stack spacing={2}>
               <Typography variant="subtitle1">Объект</Typography>
               <Stack spacing={1}>
@@ -533,8 +560,6 @@ export const TaskPage: React.FC = () => {
             </Stack>
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            {" "}
-            {/* Изменено обратно на size */}
             <Stack spacing={2}>
               <Typography variant="subtitle1">Оператор</Typography>
               <Stack spacing={1}>
@@ -627,7 +652,6 @@ export const TaskPage: React.FC = () => {
               Скачать задание в XML
             </Button>
 
-            {/* Скрытый input для выбора файла */}
             <input
               type="file"
               accept=".xml"
