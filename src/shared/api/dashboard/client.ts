@@ -1,5 +1,5 @@
 // src/shared/api/dashboard/client.ts
-import axios from "../axios";
+import { api } from "@/shared/api/axios";
 import { z } from "zod";
 
 const dashboardSchema = z.object({
@@ -15,7 +15,7 @@ const dashboardSchema = z.object({
 
 export const dashboardApi = {
   getDashboardData: async () => {
-    const response = await axios.get("/dashboard");
+    const response = await api.get("/dashboard");
     return dashboardSchema.parse(response.data);
   },
 };

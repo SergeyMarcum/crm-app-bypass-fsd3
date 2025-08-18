@@ -13,7 +13,6 @@ export const authApi = {
    */
   login: async (credentials: Credentials): Promise<AuthResponse> => {
     const { username, password, domain } = credentials;
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
     const response = await api.post("/login", { username, password, domain });
     return response.data;
   },
@@ -23,7 +22,6 @@ export const authApi = {
    * @returns Promise<void>
    */
   logout: async (): Promise<void> => {
-    // ИСПРАВЛЕНИЕ: Используем 'api' вместо 'axios'
     await api.get("/logout");
   },
 
