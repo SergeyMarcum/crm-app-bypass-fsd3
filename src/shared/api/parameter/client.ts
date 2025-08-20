@@ -1,6 +1,6 @@
 // src/shared/api/parameter/client.ts
 
-import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
+import { api } from "@/shared/api/axios";
 import { getAuthParams } from "@/shared/lib/auth";
 import type {
   Incongruity,
@@ -21,7 +21,6 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       const res = await api.get("/object-type-parameters", {
-        // Используем 'api'
         params: {
           ...authParams,
           id: objectTypeId,
@@ -51,7 +50,6 @@ export const parameterApi = {
   async getAllParameters(): Promise<{ id: number; name: string }[]> {
     try {
       const res = await api.get("/parameters", {
-        // Используем 'api'
         params: getAuthParams(),
       });
       return res.data as { id: number; name: string }[];
@@ -71,8 +69,8 @@ export const parameterApi = {
       const authParams = getAuthParams();
 
       await api.delete("/delete-parameter", {
-        params: authParams, // Параметры авторизации остаются в URL
-        data: { id: id }, // ID передается в теле запроса
+        params: authParams,
+        data: { id: id },
       });
     } catch (error: unknown) {
       const err = error as AxiosError;
@@ -89,7 +87,6 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       const res = await api.get("/cases-of-non-compliance", {
-        // Используем 'api'
         params: authParams,
       });
       if (!Array.isArray(res.data)) {
@@ -119,7 +116,7 @@ export const parameterApi = {
   ): Promise<AddNewParameterSuccessResponse> {
     try {
       const authParams = getAuthParams();
-      const res = await api.post<AddNewParameterSuccessResponse>( // Используем 'api'
+      const res = await api.post<AddNewParameterSuccessResponse>(
         `${import.meta.env.VITE_API_URL}/add-new-parameter`,
         { name, non_comp_ids },
         {
@@ -142,7 +139,6 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       await api.put("/edit-parameter", data, {
-        // Используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {
@@ -154,23 +150,18 @@ export const parameterApi = {
 
   /**
    * Получает несоответствия для конкретного параметра.
-   * Этот метод объединяет логику `getParameterIncongruities` и `getAllCasesOfParameterNonCompliance`.
    * @param paramId ID параметра.
    * @returns Массив объектов IncongruityCase.
    */
   async getParameterIncongruities(paramId: number): Promise<IncongruityCase[]> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get(
-        // Используем 'api'
-        "/all-cases-of-parameter-non-compliance",
-        {
-          params: {
-            ...authParams,
-            param_id: paramId,
-          },
-        }
-      );
+      const res = await api.get("/all-cases-of-parameter-non-compliance", {
+        params: {
+          ...authParams,
+          param_id: paramId,
+        },
+      });
       if (!Array.isArray(res.data)) {
         console.error(
           "Неверный формат ответа для getParameterIncongruities: ожидался массив",
@@ -204,7 +195,6 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       await api.post("/add-parameter-non-compliance", data, {
-        // Используем 'api'
         params: authParams,
       });
     } catch (error: unknown) {
@@ -228,7 +218,6 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       await api.put(
-        // Используем 'api'
         `${import.meta.env.VITE_API_URL}/edit-parameter-non-compliance`,
         data,
         {
@@ -256,11 +245,10 @@ export const parameterApi = {
     try {
       const authParams = getAuthParams();
       await api.delete(
-        // Используем 'api'
         `${import.meta.env.VITE_API_URL}/delete-parameter-non-compliance`,
         {
           params: authParams,
-          data, // Для DELETE запросов с телом, 'data' передается через опции Axios
+          data,
         }
       );
     } catch (error: unknown) {

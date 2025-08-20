@@ -1,5 +1,15 @@
 // src/pages/objects/ui/ObjectsPage/ObjectsPage.tsx
-import { Box, Typography, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  IconButton,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { objectApi } from "@/shared/api/object";
@@ -7,6 +17,7 @@ import { ObjectModal } from "@/widgets/object/object-modal";
 import { useNavigate } from "react-router-dom";
 import DomainIcon from "@mui/icons-material/Domain";
 import HolidayVillageIcon from "@mui/icons-material/HolidayVillage";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 import type { JSX } from "react";
 
@@ -40,6 +51,9 @@ const filterDefinitions: FilterDefinition<ObjectData>[] = [
 export function ObjectsPage(): JSX.Element {
   const [objects, setObjects] = useState<ObjectData[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [objectToDelete, setObjectToDelete] = useState<ObjectData | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
 
   const fetchObjects = async () => {
@@ -93,6 +107,22 @@ export function ObjectsPage(): JSX.Element {
     fetchObjects();
   }, []);
 
+  const handleDelete = async () => {
+    if (!objectToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      await objectApi.deleteObject(objectToDelete.id);
+      setObjects((prev) => prev.filter((obj) => obj.id !== objectToDelete.id));
+    } catch (err) {
+      console.error("Ошибка при удалении объекта", err);
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
+      setObjectToDelete(null);
+    }
+  };
+
   const columns = [
     { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
     { headerName: "Название", field: "name", flex: 1 },
@@ -107,6 +137,22 @@ export function ObjectsPage(): JSX.Element {
         <Button onClick={() => navigate(`/objects/${params.data.id}`)}>
           →
         </Button>
+      ),
+    },
+    {
+      headerName: "Удалить",
+      width: 100,
+      cellRenderer: (params: { data: ObjectData }) => (
+        <IconButton
+          color="error"
+          size="small"
+          onClick={() => {
+            setObjectToDelete(params.data);
+            setDeleteDialogOpen(true);
+          }}
+        >
+          <DeleteIcon fontSize="small" />
+        </IconButton>
       ),
     },
   ];
@@ -141,6 +187,35 @@ export function ObjectsPage(): JSX.Element {
           fetchObjects();
         }}
       />
+
+      {/* Диалог подтверждения удаления */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Подтвердите удаление</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {objectToDelete ? `Удалить объект "${objectToDelete.name}"?` : ""}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleteLoading}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleDelete}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading}
+          >
+            {deleteLoading ? "Удаление..." : "Удалить"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

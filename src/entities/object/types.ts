@@ -41,6 +41,6 @@ export type ObjectHistoryRecord = {
   is_reinspection: boolean;
   operator_full_name: string;
   upload_date: string;
-  parameter: string; // сгенерированная строка: все параметры
-  incongruity: string; // сгенерированная строка: все несоответствия
+  parameter: string; // все параметры
+  incongruity: string; // все несоответствия
 };

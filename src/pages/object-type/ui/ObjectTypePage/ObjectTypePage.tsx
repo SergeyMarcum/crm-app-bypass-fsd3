@@ -1,15 +1,30 @@
 // src/pages/object-type/ui/ObjectTypePage/ObjectTypePage.tsx
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Box, Typography, Select, MenuItem, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Select,
+  MenuItem,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  IconButton,
+} from "@mui/material";
 //import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import RuleIcon from "@mui/icons-material/Rule";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { AgGridReact } from "ag-grid-react";
 
 import { objectTypeApi } from "@/shared/api/object-type";
+import { parameterApi } from "@/shared/api/parameter"; // Импортируем parameterApi
 import { ObjectTypeTable } from "@/widgets/object-type/object-type-table";
 import { AddParameterModal } from "@/widgets/parameters/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/parameters/edit-parameter-modal";
 import { AddObjectTypeModal } from "@/widgets/object-type/add-object-type-modal";
+import { EditObjectTypeModal } from "@/widgets/object-type/edit-object-type-modal";
 
 import type { ObjectParameter } from "@/widgets/object-type/object-type-table/types"; // Предполагается { id: number; parameter: string; }
 import type { FilterDefinition } from "@/widgets/table";
@@ -21,6 +36,9 @@ export function ObjectTypePage() {
   const [addParameterModalOpen, setAddParameterModalOpen] = useState(false);
   const [addObjectTypeModalOpen, setAddObjectTypeModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [parameterToDelete, setParameterToDelete] =
+    useState<ObjectParameter | null>(null);
   const [editParam, setEditParam] = useState<{
     id: number;
     name: string;
@@ -78,6 +96,29 @@ export function ObjectTypePage() {
     setEditOpen(true);
   };
 
+  const handleDelete = (paramId: number) => {
+    const param = parameters.find((p) => p.id === paramId);
+    if (param) {
+      setParameterToDelete(param);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!parameterToDelete || !selectedTypeId) return;
+    try {
+      await objectTypeApi.deleteObjectTypeParameter(
+        selectedTypeId,
+        parameterToDelete.id
+      );
+      fetchParameters();
+    } catch (error) {
+      console.error("Ошибка при удалении параметра", error);
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const filterDefinitions: FilterDefinition<ObjectParameter>[] = [
     {
       key: "parameter",
@@ -127,6 +168,7 @@ export function ObjectTypePage() {
       <ObjectTypeTable
         parameters={parameters}
         onEdit={handleEdit}
+        onDelete={handleDelete} // Передаем обработчик удаления в таблицу
         filters={filterDefinitions}
         ref={gridRef}
       />
@@ -155,6 +197,27 @@ export function ObjectTypePage() {
         parameterId={editParam?.id ?? 0}
         parameterName={editParam?.name ?? ""}
       />
+
+      {/* Диалог подтверждения удаления */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Подтвердите удаление</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {parameterToDelete
+              ? `Удалить параметр "${parameterToDelete.parameter}"?`
+              : ""}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+          <Button onClick={confirmDelete} color="error" autoFocus>
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

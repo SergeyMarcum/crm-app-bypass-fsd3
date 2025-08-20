@@ -13,9 +13,16 @@ import { useCalendar } from "@/features/calendar/hooks/useCalendar";
 import { Check } from "@/features/calendar/types";
 import { CheckEvent } from "./CheckEvent";
 
-export const Calendar: React.FC = () => {
+interface CalendarProps {
+  onEventClick?: (check: Check) => void;
+  checks: Check[]; // Добавлено: получение проверок из родителя
+  isLoading: boolean; // Добавлено: состояние загрузки
+  error?: string; // Добавлено: ошибка
+}
+
+export const Calendar: React.FC<CalendarProps> = (props) => {
+  const { onEventClick, checks, isLoading, error } = props;
   const calendarRef = useRef<FullCalendar | null>(null);
-  const { checks, isLoading, error } = useCalendar();
   const [view, setView] = useState<
     "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek"
   >("dayGridMonth");
@@ -69,7 +76,14 @@ export const Calendar: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box
+      sx={{
+        p: 2,
+        backgroundColor: "white",
+        borderRadius: "8px",
+        boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.12)",
+      }}
+    >
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
         <Box>
           <Button
@@ -137,6 +151,11 @@ export const Calendar: React.FC = () => {
             event={eventInfo}
           />
         )}
+        eventClick={(info) => {
+          if (onEventClick) {
+            onEventClick(info.event.extendedProps.check);
+          }
+        }}
       />
     </Box>
   );

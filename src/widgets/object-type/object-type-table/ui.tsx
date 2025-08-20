@@ -1,7 +1,8 @@
 // src/widgets/object-type/object-type-table/ui.tsx
 import { forwardRef } from "react";
-import { Box, IconButton } from "@mui/material"; // Добавлены импорты
-import EditIcon from "@mui/icons-material/Edit"; // Добавлен импорт
+import { Box, IconButton } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete"; // Добавлен импорт иконки удаления
 
 import { CustomTable } from "@/widgets/table";
 import type { ObjectParameter } from "./types";
@@ -16,8 +17,8 @@ type Props = {
 };
 
 export const ObjectTypeTable = forwardRef<AgGridReact, Props>(
-  ({ parameters, onEdit, filters = [] }, ref) => {
-    // Обновлен деструктуризация пропсов
+  ({ parameters, onEdit, onDelete, filters = [] }, ref) => {
+    // Добавлен onDelete в деструктуризацию
     const columns = [
       {
         headerName: "#",
@@ -33,13 +34,20 @@ export const ObjectTypeTable = forwardRef<AgGridReact, Props>(
         headerName: "Действия",
         field: "actions",
         cellRenderer: (params: { data: ObjectParameter }) => (
-          <Box>
+          <Box display="flex" gap={1}>
             <IconButton aria-label="edit" onClick={() => onEdit(params.data)}>
               <EditIcon />
             </IconButton>
+            <IconButton
+              aria-label="delete"
+              onClick={() => onDelete(params.data.id)}
+              color="error"
+            >
+              <DeleteIcon />
+            </IconButton>
           </Box>
         ),
-        width: 100,
+        width: 120,
       },
     ];
 

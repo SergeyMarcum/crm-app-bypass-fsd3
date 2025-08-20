@@ -100,7 +100,7 @@ export const CheckModal = ({ open, onClose, check }: CheckModalProps) => {
           <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
             <Button
               component={Link}
-              to={`/tasks/view/${check.id}`} // Предполагается, что id проверки совпадает с id задания
+              to={`/task/${check.id}`}
               variant="contained"
             >
               Перейти к заданию
