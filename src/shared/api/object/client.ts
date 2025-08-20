@@ -38,6 +38,7 @@ export const objectApi = {
   async update(data: {
     id: number;
     name: string;
+    full_name?: string; // Делаем поле необязательным
     address: string;
     characteristic: string;
     parameters: number[];
@@ -98,5 +99,13 @@ export const objectApi = {
       },
     });
     return res.data;
+  },
+
+  async deleteObject(id: number): Promise<void> {
+    const params = getAuthParams();
+    await api.delete("/delete-object", {
+      params: { ...params, id },
+      data: { id }, // Тело запроса в формате JSON
+    });
   },
 };

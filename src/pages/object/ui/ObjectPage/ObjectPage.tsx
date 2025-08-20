@@ -94,7 +94,11 @@ export const ObjectPage = () => {
         <Typography color="text.primary">{objectInfo.name}</Typography>
       </Breadcrumbs>
 
-      <ObjectInfoCard objectId={objectId} objectInfo={objectInfo} />
+      <ObjectInfoCard
+        objectId={objectId}
+        objectInfo={objectInfo}
+        onSave={fetchData}
+      />
 
       <Box mt={4}>
         <ObjectTaskTable
