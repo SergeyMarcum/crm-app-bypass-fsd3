@@ -1,4 +1,3 @@
-// src/widgets/object-info-card/ui.tsx
 import {
   Card,
   CardHeader,
@@ -10,6 +9,7 @@ import {
   Box,
   IconButton,
   TextField,
+  CircularProgress,
 } from "@mui/material";
 import DomainIcon from "@mui/icons-material/Domain";
 import EditIcon from "@mui/icons-material/Edit";
@@ -21,13 +21,16 @@ import type { ObjectDetail } from "@/entities/object/types";
 type Props = {
   objectId: number;
   objectInfo: ObjectDetail;
+  onSave?: () => void;
 };
 
-export function ObjectInfoCard({ objectId, objectInfo }: Props) {
+export function ObjectInfoCard({ objectId, objectInfo, onSave }: Props) {
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [data, setData] = useState<ObjectDetail | null>(objectInfo);
+  const [error, setError] = useState<string | null>(null);
 
-  // Инициализация формы с правильными данными из objectInfo
+  // Инициализация формы
   const [form, setForm] = useState({
     name: objectInfo.name,
     full_name: objectInfo.full_name ?? "",
@@ -53,17 +56,43 @@ export function ObjectInfoCard({ objectId, objectInfo }: Props) {
   const handleSave = async () => {
     if (!data) return;
 
-    await objectApi.update({
-      id: objectId,
-      domain: data.domain,
-      name: form.name,
-      address: form.address,
-      characteristic: form.characteristic,
-      object_type: data.object_type_id,
-      parameters: data.parameters.map((p) => p.id),
-    });
+    setSaving(true);
+    setError(null);
 
-    setEditing(false);
+    try {
+      // Отправляем обновленные данные на сервер
+      await objectApi.update({
+        id: objectId,
+        domain: data.domain,
+        name: form.name,
+        full_name: form.full_name,
+        address: form.address,
+        characteristic: form.characteristic,
+        object_type: data.object_type_id,
+        parameters: data.parameters?.map((p) => p.id) || [],
+      });
+
+      // Обновляем локальные данные
+      setData({
+        ...data,
+        name: form.name,
+        full_name: form.full_name,
+        address: form.address,
+        characteristic: form.characteristic,
+      });
+
+      setEditing(false);
+
+      // Вызываем колбэк для обновления данных на странице
+      if (onSave) {
+        onSave();
+      }
+    } catch (err) {
+      console.error("Ошибка сохранения объекта:", err);
+      setError("Не удалось сохранить изменения. Попробуйте снова.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -78,13 +107,27 @@ export function ObjectInfoCard({ objectId, objectInfo }: Props) {
         action={
           <IconButton
             onClick={() => (editing ? handleSave() : setEditing(true))}
+            disabled={saving}
           >
-            {editing ? <SaveIcon /> : <EditIcon />}
+            {editing ? (
+              saving ? (
+                <CircularProgress size={24} />
+              ) : (
+                <SaveIcon />
+              )
+            ) : (
+              <EditIcon />
+            )}
           </IconButton>
         }
       />
       <CardContent>
         <Stack spacing={2} divider={<Divider />}>
+          {error && (
+            <Typography color="error" variant="body2">
+              {error}
+            </Typography>
+          )}
           {data && (
             <>
               <InfoField

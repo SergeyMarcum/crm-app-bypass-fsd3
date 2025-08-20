@@ -1,22 +1,17 @@
 // src/shared/api/object-type/client.ts
-// ИСПРАВЛЕНИЕ: Изменен импорт с default на именованный экспорт 'api'
-import { api } from "@/shared/api/axios"; // Импортируем именованный экспорт 'api'
+import { api } from "@/shared/api/axios";
 import { AxiosError } from "axios";
 import { getAuthParams } from "@/shared/lib/auth";
-import { Parameter } from "./types"; // Импортируем общий тип Parameter
+import { Parameter } from "./types";
 
 interface AddNewObjectTypeSuccessResponse {
   message: string;
 }
 
 export const objectTypeApi = {
-  /**
-   * Получает все типы объектов.
-   * @returns Массив объектов { id: number; name: string }.
-   */
   async getAllObjectTypes(): Promise<{ id: number; name: string }[]> {
     try {
-      const res = await api.get("/all-object-types", { // <-- ИЗМЕНЕНО: используем 'api'
+      const res = await api.get("/all-object-types", {
         params: getAuthParams(),
       });
       return res.data;
@@ -27,17 +22,11 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Получает все параметры проверки объекта из базы данных.
-   * Соответствует API: GET /parameters.
-   * @returns Массив параметров { id: number; name: string }.
-   */
   async getAllParameters(): Promise<Parameter[]> {
     try {
-      const res = await api.get("/parameters", { // <-- ИЗМЕНЕНО: используем 'api'
+      const res = await api.get("/parameters", {
         params: getAuthParams(),
       });
-      // Структура ответа: [{"id":1,"name":"..."}]
       return res.data;
     } catch (error: unknown) {
       const err = error as AxiosError;
@@ -46,17 +35,10 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Получает параметры для конкретного типа объекта по его ID.
-   * Соответствует API: GET /object-type-parameters?id=<id тип объекта>
-   * Теперь API возвращает объекты с полем 'name'.
-   * @param objectTypeId ID типа объекта.
-   * @returns Массив параметров { id: number; name: string }.
-   */
   async getObjectTypeParameters(objectTypeId: number): Promise<Parameter[]> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get("/object-type-parameters", { // <-- ИЗМЕНЕНО: используем 'api'
+      const res = await api.get("/object-type-parameters", {
         params: {
           ...authParams,
           id: objectTypeId,
@@ -76,10 +58,6 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Сохраняет параметры для типа объекта.
-   * @param data Объект с ID типа объекта, именем и массивом ID параметров.
-   */
   async saveObjectTypeParam(data: {
     id: number;
     name: string;
@@ -87,7 +65,7 @@ export const objectTypeApi = {
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.put("/edit-object-type", data, { // <-- ИЗМЕНЕНО: используем 'api'
+      await api.put("/edit-object-type", data, {
         params: authParams,
       });
     } catch (error: unknown) {
@@ -100,19 +78,13 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Добавляет новый тип объекта.
-   * @param name Название нового типа объекта.
-   * @param parameter_ids Массив ID параметров, связанных с новым типом объекта.
-   * @returns Объект успешного ответа.
-   */
   async addNewObjectType(
     name: string,
     parameter_ids: number[] = []
   ): Promise<AddNewObjectTypeSuccessResponse> {
     try {
       const authParams = getAuthParams();
-      const res = await api.post<AddNewObjectTypeSuccessResponse>( // <-- ИЗМЕНЕНО: используем 'api'
+      const res = await api.post<AddNewObjectTypeSuccessResponse>(
         `${import.meta.env.VITE_API_URL}/add-object-type`,
         { name, parameter_ids },
         {
@@ -131,17 +103,12 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Получает тип объекта по ID.
-   * @param id ID типа объекта.
-   * @returns Объект типа { id: number; name: string } или null, если не найден.
-   */
   async getObjectTypeById(
     id: number
   ): Promise<{ id: number; name: string } | null> {
     try {
       const authParams = getAuthParams();
-      const res = await api.get(`/object-type-by-id`, { // <-- ИЗМЕНЕНО: используем 'api'
+      const res = await api.get(`/object-type-by-id`, {
         params: {
           ...authParams,
           id: id,
@@ -159,17 +126,13 @@ export const objectTypeApi = {
     }
   },
 
-  /**
-   * Добавляет существующий параметр к указанному типу объекта.
-   * @param data Объект с ID типа объекта и ID параметра.
-   */
   async addParameterToObjectType(data: {
     object_type_id: number;
     parameter_id: number;
   }): Promise<void> {
     try {
       const authParams = getAuthParams();
-      await api.post("/add-parameter-to-object-type", data, { // <-- ИЗМЕНЕНО: используем 'api'
+      await api.post("/add-parameter-to-object-type", data, {
         params: authParams,
       });
     } catch (error: unknown) {
@@ -180,5 +143,19 @@ export const objectTypeApi = {
       );
       throw err;
     }
+  },
+
+  async deleteObjectTypeParameter(
+    objectTypeId: number,
+    parameterId: number
+  ): Promise<void> {
+    const params = getAuthParams();
+    await api.delete("/parameter/delete-object-type-parameter", {
+      params: { ...params },
+      data: {
+        object_type_id: objectTypeId,
+        parameter_id: parameterId,
+      },
+    });
   },
 };

@@ -1,6 +1,6 @@
 // src/pages/calendar/ui/CalendarPage/CalendarPage.tsx
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Container,
@@ -17,20 +17,44 @@ import {
   CalendarFilter,
   Object,
   Operator,
+  Check,
 } from "@/features/calendar";
 import { Calendar } from "@/features/calendar/ui/Calendar";
+import { CheckModal } from "../CheckModal/CheckModal";
 
 export const CalendarPage: React.FC = () => {
-  const { filters, setFilters, objects, operators, resetFilters } =
-    useCalendar();
+  const {
+    filters,
+    setFilters,
+    objects,
+    operators,
+    resetFilters,
+    checks, // Получаем проверки из хука
+    isLoading, // Состояние загрузки
+    error, // Ошибки
+  } = useCalendar();
 
-  // ИСПРАВЛЕНО: Обновляем тип event, чтобы он мог принимать string | number
+  const [selectedCheck, setSelectedCheck] = useState<Check | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
   const handleFilterChange = (event: SelectChangeEvent<string | number>) => {
     const { name, value } = event.target;
     setFilters((prevFilters: CalendarFilter) => ({
       ...prevFilters,
       [name]: value === "all" || value === "" ? value : Number(value),
     }));
+  };
+
+  // Обработчик клика на событие календаря
+  const handleEventClick = (check: Check) => {
+    setSelectedCheck(check);
+    setModalOpen(true);
+  };
+
+  // Закрытие модального окна
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setSelectedCheck(null);
   };
 
   return (
@@ -59,10 +83,14 @@ export const CalendarPage: React.FC = () => {
             label="Статус"
           >
             <MenuItem value="all">Все</MenuItem>
-            <MenuItem value="planned">Запланировано</MenuItem>
-            <MenuItem value="pending">Ожидается</MenuItem>
-            <MenuItem value="overdue">Просрочено</MenuItem>
-            <MenuItem value="completed">Проверено</MenuItem>
+            <MenuItem value="planned">Ожидается проверка объекта</MenuItem>
+            <MenuItem value="downloaded">Задание скачано</MenuItem>
+            <MenuItem value="pending">Ожидается загрузка отчёта</MenuItem>
+            <MenuItem value="overdue">Задание не выполнено</MenuItem>
+            <MenuItem value="completed">Выполнено</MenuItem>
+            <MenuItem value="disadvantages">
+              Выполнено, имеются недостатки
+            </MenuItem>
           </Select>
         </FormControl>
 
@@ -111,8 +139,20 @@ export const CalendarPage: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Компонент календаря */}
-      <Calendar />
+      {/* Компонент календаря с обработчиком кликов */}
+      <Calendar
+        onEventClick={handleEventClick}
+        checks={checks} // Передаём проверки в Calendar
+        isLoading={isLoading} // Передаём состояние загрузки
+        error={error} // Передаём ошибки
+      />
+
+      {/* Модальное окно с деталями проверки */}
+      <CheckModal
+        open={modalOpen}
+        onClose={handleModalClose}
+        check={selectedCheck}
+      />
     </Container>
   );
 };
