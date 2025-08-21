@@ -76,7 +76,11 @@ const getDomainTasks = async (): Promise<Task[]> => {
 const deleteTaskApi = async (id: number): Promise<void> => {
   const params = getAuthParams();
   await api.delete("/delete-task", {
-    params: { ...params, id },
+    params,
+    data: { id },
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
 };
 
@@ -163,23 +167,37 @@ export const TaskViewPage = (): JSX.Element => {
   };
 
   const handleCancelDelete = () => {
+    if (deleteLoading) return;
     setTaskToDelete(null);
     setDeleteDialogOpen(false);
   };
 
   const handlePerformDelete = async () => {
-    if (!taskToDelete) return;
+    if (!taskToDelete || deleteLoading) return;
+
     setDeleteLoading(true);
+    const taskId = taskToDelete.id;
+
     try {
-      await deleteTaskApi(taskToDelete.id);
-      setAllTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
-      setFilteredTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
-      setSnackbarMessage(`Задание #${taskToDelete.id} удалено`);
+      // Оптимистичное обновление
+      setAllTasks((prev) => prev.filter((t) => t.id !== taskId));
+      setFilteredTasks((prev) => prev.filter((t) => t.id !== taskId));
+
+      await deleteTaskApi(taskId);
+
+      setSnackbarMessage(`Задание #${taskId} успешно удалено`);
       setSnackbarSeverity("success");
     } catch (err) {
-      setSnackbarMessage(
-        err instanceof Error ? err.message : "Ошибка удаления"
-      );
+      // Откат оптимистичного обновления
+      setAllTasks((prev) => [...prev, taskToDelete]);
+      setFilteredTasks((prev) => [...prev, taskToDelete]);
+
+      const errorMessage =
+        err instanceof Error
+          ? `Ошибка удаления: ${err.message}`
+          : "Неизвестная ошибка при удалении задания";
+
+      setSnackbarMessage(errorMessage);
       setSnackbarSeverity("error");
     } finally {
       setDeleteDialogOpen(false);
@@ -406,6 +424,9 @@ export const TaskViewPage = (): JSX.Element => {
               color="error"
               variant="contained"
               disabled={deleteLoading}
+              startIcon={
+                deleteLoading ? <CircularProgress size={20} /> : undefined
+              }
             >
               {deleteLoading ? "Удаление..." : "Удалить"}
             </Button>
