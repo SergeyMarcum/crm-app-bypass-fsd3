@@ -35,6 +35,7 @@ export function ObjectTypePage() {
   const [selectedTypeId, setSelectedTypeId] = useState<number | "">("");
   const [addParameterModalOpen, setAddParameterModalOpen] = useState(false);
   const [addObjectTypeModalOpen, setAddObjectTypeModalOpen] = useState(false);
+  const [editObjectTypeModalOpen, setEditObjectTypeModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [parameterToDelete, setParameterToDelete] =
@@ -42,6 +43,11 @@ export function ObjectTypePage() {
   const [editParam, setEditParam] = useState<{
     id: number;
     name: string;
+  } | null>(null);
+  const [selectedObjectType, setSelectedObjectType] = useState<{
+    id: number;
+    name: string;
+    parameter_ids: number[];
   } | null>(null);
   const gridRef = useRef<AgGridReact<ObjectParameter>>(null);
 
@@ -78,10 +84,20 @@ export function ObjectTypePage() {
         parameter: p.name,
       }));
       setParameters(transformedParameters);
+
+      // Сохраняем параметры выбранного типа для передачи в модальное окно
+      const currentType = types.find((t) => t.id === selectedTypeId);
+      if (currentType) {
+        setSelectedObjectType({
+          id: currentType.id,
+          name: currentType.name,
+          parameter_ids: res.map((p) => p.id),
+        });
+      }
     } catch (err) {
       console.error("Ошибка при загрузке параметров", err);
     }
-  }, [selectedTypeId]);
+  }, [selectedTypeId, types]);
 
   useEffect(() => {
     fetchTypes();
@@ -163,6 +179,14 @@ export function ObjectTypePage() {
           >
             + Добавить (Тип Объекта)
           </Button>
+          <Button
+            variant="contained"
+            onClick={() => setEditObjectTypeModalOpen(true)}
+            disabled={!selectedTypeId}
+            color="primary"
+          >
+            Изменить
+          </Button>
         </Box>
       </Box>
       <ObjectTypeTable
@@ -188,6 +212,17 @@ export function ObjectTypePage() {
           setAddObjectTypeModalOpen(false);
         }}
       />
+      {selectedObjectType && (
+        <EditObjectTypeModal
+          open={editObjectTypeModalOpen}
+          onClose={() => setEditObjectTypeModalOpen(false)}
+          onSave={() => {
+            fetchTypes();
+            setEditObjectTypeModalOpen(false);
+          }}
+          objectType={selectedObjectType}
+        />
+      )}
       <EditParameterModal
         open={editOpen}
         onClose={() => {

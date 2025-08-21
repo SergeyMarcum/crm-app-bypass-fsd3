@@ -27,94 +27,33 @@ import dayjs, { Dayjs } from "dayjs";
 
 import { CustomTable } from "@/widgets/table"; // Assuming CustomTable handles pagination internally
 import type { JSX } from "react";
+import { getControlTasks } from "@/shared/api/task/control";
 
-// --- Mock API and Types (Replace with actual API integration) ---
-// Define a placeholder Task interface based on the required columns
+// Real API integration
 interface Task {
-  id: number; // Порядковый номер (for internal use and navigation)
-  checkDate: string; // Дата проверки (e.g., 'YYYY-MM-DD')
-  checkType: string; // Вид проверки
-  objectName: string; // Объект
-  masterName: string; // Мастер
-  operatorName: string; // Оператор
-  status: string; // Статус
-  comment: string | null; // Комментарий
-  hasRemarks: boolean; // Для "Замечания" (Есть/Нет)
-  // Additional fields for filtering if needed
-  objectId?: string; // For filtering by Object
-  operatorId?: string; // For filtering by Operator
-  createdAt?: string; // For filtering by Date (creation date)
+  id: number;
+  checkDate: string;
+  checkType: string;
+  objectName: string | null;
+  masterName: string | null;
+  operatorName: string | null;
+  status: string;
+  comment: string | null;
 }
 
-// Mock API utility for demonstration
-const taskApi = {
-  getControlTasks: async (): Promise<{ tasks: Task[] }> => {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Mock data
-    const mockTasks: Task[] = [
-      {
-        id: 1,
-        checkDate: "2025-07-10",
-        checkType: "Ежедневная",
-        objectName: "ТЦ 'Центральный'",
-        masterName: "Иванов И.И.",
-        operatorName: "Петров П.П.",
-        status: "Завершено",
-        comment: "Все отлично",
-        hasRemarks: false,
-        objectId: "obj-001",
-        operatorId: "op-001",
-        createdAt: "2025-07-09",
-      },
-      {
-        id: 2,
-        checkDate: "2025-07-11",
-        checkType: "Еженедельная",
-        objectName: "Склад №5",
-        masterName: "Сидорова А.В.",
-        operatorName: "Иванов В.С.",
-        status: "В процессе",
-        comment: null,
-        hasRemarks: true,
-        objectId: "obj-002",
-        operatorId: "op-002",
-        createdAt: "2025-07-10",
-      },
-      {
-        id: 3,
-        checkDate: "2025-07-12",
-        checkType: "Ежемесячная",
-        objectName: "Офис 'Альфа'",
-        masterName: "Иванов И.И.",
-        operatorName: "Петров П.П.",
-        status: "Ожидание",
-        comment: "Нужен доступ",
-        hasRemarks: false,
-        objectId: "obj-003",
-        operatorId: "op-001",
-        createdAt: "2025-07-11",
-      },
-      {
-        id: 4,
-        checkDate: "2025-07-12",
-        checkType: "Ежедневная",
-        objectName: "ТЦ 'Центральный'",
-        masterName: "Иванов И.И.",
-        operatorName: "Смирнова Е.К.",
-        status: "Отменено",
-        comment: "Объект закрыт",
-        hasRemarks: true,
-        objectId: "obj-001",
-        operatorId: "op-003",
-        createdAt: "2025-07-11",
-      },
-      // Add more mock data as needed
-    ];
-    return { tasks: mockTasks };
-  },
-};
-// --- End Mock API and Types ---
+// Function to map API response to Task interface
+const mapApiToTask = (apiTask: any): Task => ({
+  id: apiTask.id,
+  checkDate: apiTask.date_time,
+  checkType: apiTask.checking_type_text,
+  objectName: apiTask.object_name,
+  masterName: apiTask.manager_name,
+  operatorName: apiTask.user_name,
+  status: apiTask.status_text,
+  comment: apiTask.comment,
+});
+
+// --- End of API and Types ---
 
 // Modal style for Material-UI
 const modalStyle = {
@@ -148,11 +87,13 @@ export const TaskControlPage = (): JSX.Element => {
   useEffect(() => {
     const loadTasks = async () => {
       try {
-        const response = await taskApi.getControlTasks();
-        setAllTasks(response.tasks);
-        setFilteredTasks(response.tasks); // Initially, all tasks are displayed
+        const apiTasks = await getControlTasks();
+        const tasks: Task[] = apiTasks.map(mapApiToTask);
+        setAllTasks(tasks);
+        setFilteredTasks(tasks);
       } catch (error) {
         console.error("Ошибка при загрузке заданий:", error);
+        // TODO: Добавить уведомление об ошибке
       }
     };
     loadTasks();
@@ -163,13 +104,18 @@ export const TaskControlPage = (): JSX.Element => {
     let currentFiltered = [...allTasks];
 
     if (objectFilter) {
-      currentFiltered = currentFiltered.filter((task) =>
-        task.objectName.toLowerCase().includes(objectFilter.toLowerCase())
+      currentFiltered = currentFiltered.filter(
+        (task) =>
+          task.objectName?.toLowerCase().includes(objectFilter.toLowerCase()) ??
+          false
       );
     }
     if (operatorFilter) {
-      currentFiltered = currentFiltered.filter((task) =>
-        task.operatorName.toLowerCase().includes(operatorFilter.toLowerCase())
+      currentFiltered = currentFiltered.filter(
+        (task) =>
+          task.operatorName
+            ?.toLowerCase()
+            .includes(operatorFilter.toLowerCase()) ?? false
       );
     }
     if (dateFilter) {
@@ -212,15 +158,33 @@ export const TaskControlPage = (): JSX.Element => {
       headerName: "Дата проверки",
       field: "checkDate",
       valueFormatter: (params: ValueFormatterParams<Task, string>) => {
-        // Format date if needed, e.g., to DD.MM.YYYY
         return params.value ? dayjs(params.value).format("DD.MM.YYYY") : "";
       },
       width: 120,
     },
     { headerName: "Вид проверки", field: "checkType", width: 150 },
-    { headerName: "Объект", field: "objectName", flex: 1, minWidth: 150 },
-    { headerName: "Мастер", field: "masterName", width: 150 },
-    { headerName: "Оператор", field: "operatorName", width: 150 },
+    {
+      headerName: "Объект",
+      field: "objectName",
+      flex: 1,
+      minWidth: 150,
+      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
+        params.value || "—",
+    },
+    {
+      headerName: "Мастер",
+      field: "masterName",
+      width: 150,
+      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
+        params.value || "—",
+    },
+    {
+      headerName: "Оператор",
+      field: "operatorName",
+      width: 150,
+      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
+        params.value || "—",
+    },
     { headerName: "Статус", field: "status", width: 120 },
     {
       headerName: "Комментарий",
@@ -230,29 +194,6 @@ export const TaskControlPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<Task>) => params.value || "—",
     },
     {
-      headerName: "Замечания",
-      field: "hasRemarks",
-      width: 120,
-      cellRenderer: (params: ICellRendererParams<Task>) => {
-        if (params.data?.hasRemarks) {
-          // Placeholder link to 'Замечания' page. In a real app, use react-router-dom Link.
-          return (
-            <a
-              href={`/remarks/${params.data.id}`} // Example path
-              style={{
-                color: "blue",
-                textDecoration: "underline",
-                cursor: "pointer",
-              }}
-            >
-              Есть
-            </a>
-          );
-        }
-        return "Нет";
-      },
-    },
-    {
       headerName: "", // Action column for navigation
       width: 70,
       cellRenderer: (params: ICellRendererParams<Task>) => (
@@ -260,9 +201,7 @@ export const TaskControlPage = (): JSX.Element => {
           color="primary"
           size="small"
           onClick={() => {
-            // Placeholder for navigation. In a real app, use history.push or navigate.
             console.log(`Maps to task ${params.data?.id}`);
-            // Example: navigate(`/tasks/${params.data?.id}`);
           }}
         >
           <ArrowForwardIcon fontSize="small" />

@@ -7,10 +7,15 @@ import {
   Button,
   TextField,
   Autocomplete,
-  Chip,
   Box,
   CircularProgress,
+  IconButton,
+  Stack,
+  Typography,
+  Chip,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { objectTypeApi } from "@/shared/api/object-type";
 import { parameterApi } from "@/shared/api/parameter";
 
@@ -28,19 +33,29 @@ export const EditObjectTypeModal = ({
   objectType,
 }: EditObjectTypeModalProps) => {
   const [name, setName] = useState(objectType.name);
-  const [parameters, setParameters] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedParameters, setSelectedParameters] = useState<number[]>(
-    objectType.parameter_ids
-  );
+  const [allParameters, setAllParameters] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedParameters, setSelectedParameters] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [newParameterToAdd, setNewParameterToAdd] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchParameters = async () => {
       try {
         const res = await parameterApi.getAllParameters();
-        setParameters(res);
+        setAllParameters(res);
+
+        // Преобразуем IDs параметров в объекты
+        const selected = res.filter((param) =>
+          objectType.parameter_ids.includes(param.id)
+        );
+        setSelectedParameters(selected);
       } catch (err) {
         console.error("Ошибка при загрузке параметров", err);
       } finally {
@@ -48,14 +63,15 @@ export const EditObjectTypeModal = ({
       }
     };
     fetchParameters();
-  }, []);
+  }, [objectType]);
 
   const handleSave = async () => {
     try {
+      const parameterIds = selectedParameters.map((p) => p.id);
       await objectTypeApi.saveObjectTypeParam({
         id: objectType.id,
         name,
-        parameter_ids: selectedParameters,
+        parameter_ids: parameterIds,
       });
       onSave();
       onClose();
@@ -64,52 +80,137 @@ export const EditObjectTypeModal = ({
     }
   };
 
+  const handleAddParameter = () => {
+    if (newParameterToAdd) {
+      setSelectedParameters((prev) => [...prev, newParameterToAdd]);
+      setNewParameterToAdd(null);
+    }
+  };
+
+  const handleRemoveParameter = (id: number) => {
+    setSelectedParameters((prev) => prev.filter((param) => param.id !== id));
+  };
+
+  const availableParameters = allParameters.filter(
+    (param) => !selectedParameters.some((selected) => selected.id === param.id)
+  );
+
+  const col1Width = "8.33%";
+  const col2Width = "75%";
+  const col3Width = "16.67%";
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Редактирование типа объекта</DialogTitle>
-      <DialogContent>
-        <Box mt={2}>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        Редактирование типа объекта
+        <IconButton
+          onClick={onClose}
+          sx={{ position: "absolute", top: 8, right: 8 }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2}>
           <TextField
             label="Название типа"
             value={name}
             onChange={(e) => setName(e.target.value)}
             fullWidth
-            margin="normal"
+            variant="outlined"
           />
-        </Box>
 
-        {loading ? (
-          <Box display="flex" justifyContent="center" my={2}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Autocomplete
-            multiple
-            options={parameters}
-            getOptionLabel={(option) => option.name}
-            value={parameters.filter((p) => selectedParameters.includes(p.id))}
-            onChange={(_, newValue) => {
-              setSelectedParameters(newValue.map((v) => v.id));
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Параметры"
-                placeholder="Выберите параметры"
-                margin="normal"
-              />
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  label={option.name}
-                  {...getTagProps({ index })}
-                  key={option.id}
-                />
+          <Typography variant="subtitle1">Список параметров</Typography>
+          <Box sx={{ width: "100%" }}>
+            <Box
+              sx={{
+                display: "flex",
+                width: "100%",
+                fontWeight: "bold",
+                mb: 1,
+                alignItems: "center",
+              }}
+            >
+              <Box sx={{ flexBasis: col1Width, p: 1 }}>№</Box>
+              <Box sx={{ flexBasis: col2Width, p: 1 }}>
+                Наименование параметра
+              </Box>
+              <Box
+                sx={{
+                  flexBasis: col3Width,
+                  p: 1,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              ></Box>
+            </Box>
+            {selectedParameters.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                Нет добавленных параметров.
+              </Typography>
+            ) : (
+              selectedParameters.map((param, idx) => (
+                <Box
+                  key={param.id}
+                  sx={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    mb: 0.5,
+                  }}
+                >
+                  <Box sx={{ flexBasis: col1Width, p: 1 }}>
+                    <Typography>{idx + 1}.</Typography>
+                  </Box>
+                  <Box sx={{ flexBasis: col2Width, p: 1 }}>
+                    <Typography>{param.name}</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      flexBasis: col3Width,
+                      p: 1,
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <IconButton
+                      onClick={() => handleRemoveParameter(param.id)}
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
               ))
-            }
-          />
-        )}
+            )}
+          </Box>
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Autocomplete
+              options={availableParameters}
+              getOptionLabel={(option) => option.name || ""}
+              value={newParameterToAdd}
+              onChange={(_, newValue) => setNewParameterToAdd(newValue)}
+              sx={{ flexGrow: 1 }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Добавить параметр"
+                  variant="outlined"
+                />
+              )}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
+            <Button
+              onClick={handleAddParameter}
+              variant="contained"
+              disabled={!newParameterToAdd}
+            >
+              Добавить
+            </Button>
+          </Stack>
+        </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>
