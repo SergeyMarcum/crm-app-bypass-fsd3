@@ -87,8 +87,11 @@ export const TaskControlPage = (): JSX.Element => {
   useEffect(() => {
     const loadTasks = async () => {
       try {
+        console.log("Загрузка заданий...");
         const apiTasks = await getControlTasks();
+        console.log("Получены задания:", apiTasks);
         const tasks: Task[] = apiTasks.map(mapApiToTask);
+        console.log("Задания преобразованы:", tasks);
         setAllTasks(tasks);
         setFilteredTasks(tasks);
       } catch (error) {
