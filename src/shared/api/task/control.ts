@@ -17,7 +17,9 @@ export interface ApiTask {
 export const getControlTasks = async (): Promise<ApiTask[]> => {
   try {
     const authStore = useAuthStore.getState();
-    const { domain, username, session_code } = authStore;
+    const domain = authStore.user?.domain;
+    const username = authStore.user?.system_login;
+    const session_code = authStore.token;
 
     if (!domain || !username || !session_code) {
       throw new Error("Аутентификационные данные отсутствуют");
