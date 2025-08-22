@@ -50,10 +50,9 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 
 import { employeeApi } from "@/shared/api/task/employee";
 import { objectApi } from "@/shared/api/task/object";
-import {
-  nonComplianceApi,
-  NonComplianceCase,
-} from "@/shared/api/task/non-compliance";
+import { api } from "@/shared/api/axios";
+import { nonComplianceApi } from "@/shared/api/task/non-compliance/client";
+import type { NonComplianceCase } from "@/shared/api/task/non-compliance/types";
 import { taskHistoryApi } from "@/shared/api/task/history";
 import type { User } from "@/shared/api/task/employee";
 import type {
@@ -444,7 +443,10 @@ export function CreateTaskPage() {
   };
 
   const handleNext = async () => {
-    console.log("handleNext called. Current form state:", { isValid, errors });
+    console.log("handleNext called. Текущее состояние формы::", {
+      isValid,
+      errors,
+    });
     if (activeStep === 0) {
       await handleSubmit(handleCreateTaskAndNext)();
     } else if (activeStep === 1) {
@@ -505,17 +507,43 @@ export function CreateTaskPage() {
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
         .map((nc) => nc.id);
 
-      const payload = {
-        [currentParameterInModal.id]: nonCompIds,
+      const storage = (await import("@/shared/lib/storage")).storage;
+      const domain = storage.get("auth_domain");
+      const username = storage.get("username");
+      const session_token = storage.get("session_token");
+
+      if (!domain || !username || !session_token) {
+        toast.error("Недостаточно данных для аутентификации");
+        return;
+      }
+
+      const nonComplianceIds = pendingNonCompliances
+        .filter((nc) => nc.parameter_id === currentParameterInModal.id)
+        .map((nc) => nc.id);
+
+      const paramsNonComps = {
+        [currentParameterInModal.id]: nonComplianceIds,
       };
 
-      console.log(
-        "API call to save changes for parameter:",
-        currentParameterInModal.id,
-        "payload:",
-        payload
+      console.log("Отправка в /task/update-parameters-and-non-compliances:", {
+        id: taskId,
+        params_noncomps: paramsNonComps,
+      });
+
+      await api.put(
+        "/task/update-parameters-and-non-compliances",
+        {
+          id: taskId,
+          params_noncomps: paramsNonComps,
+        },
+        {
+          params: {
+            domain,
+            username,
+            session_code: session_token,
+          },
+        }
       );
-      await nonComplianceApi.addParameterNonCompliance(taskId, payload);
 
       const newSelectedNonCompliances = selectedNonCompliances.filter(
         (nc) => nc.parameter_id !== currentParameterInModal.id
@@ -564,19 +592,41 @@ export function CreateTaskPage() {
     }
 
     try {
-      const nonCompIds = pendingNonCompliances.map((nc) => nc.id);
+      const storage = (await import("@/shared/lib/storage")).storage;
+      const domain = storage.get("auth_domain");
+      const username = storage.get("username");
+      const session_token = storage.get("session_token");
 
-      const payload = {
-        [newParameter.id]: nonCompIds,
+      if (!domain || !username || !session_token) {
+        toast.error("Недостаточно данных для аутентификации");
+        return;
+      }
+
+      const nonComplianceIds = pendingNonCompliances.map((nc) => nc.id);
+
+      const paramsNonComps = {
+        [newParameter.id]: nonComplianceIds,
       };
 
-      console.log(
-        "API call to save new parameter:",
-        newParameter.id,
-        "payload:",
-        payload
+      console.log("Отправка в /task/update-parameters-and-non-compliances:", {
+        id: taskId,
+        params_noncomps: paramsNonComps,
+      });
+
+      await api.put(
+        "/task/update-parameters-and-non-compliances",
+        {
+          id: taskId,
+          params_noncomps: paramsNonComps,
+        },
+        {
+          params: {
+            domain,
+            username,
+            session_code: session_token,
+          },
+        }
       );
-      await nonComplianceApi.addParameterNonCompliance(taskId, payload);
 
       const newParamWithNonCompliances = {
         ...newParameter,
@@ -637,6 +687,10 @@ export function CreateTaskPage() {
 
   const handleTogglePendingNonCompliance = (nonComp: NonComplianceCase) => {
     const isSelected = pendingNonCompliances.some((nc) => nc.id === nonComp.id);
+    console.log(
+      `Toggling non-compliance: id=${nonComp.id}, selected=${!isSelected}`
+    );
+
     if (isSelected) {
       setPendingNonCompliances((prev) =>
         prev.filter((nc) => nc.id !== nonComp.id)
@@ -1373,7 +1427,6 @@ export function CreateTaskPage() {
                 <TableRow>
                   <TableCell padding="checkbox"></TableCell>
                   <TableCell>Название несоответствия</TableCell>
-                  <TableCell>Действия</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -1390,11 +1443,6 @@ export function CreateTaskPage() {
                       />
                     </TableCell>
                     <TableCell>{nonComp.name}</TableCell>
-                    <TableCell>
-                      <IconButton size="small">
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -1460,7 +1508,6 @@ export function CreateTaskPage() {
                     <TableRow>
                       <TableCell padding="checkbox"></TableCell>
                       <TableCell>Название несоответствия</TableCell>
-                      <TableCell>Действия</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1477,11 +1524,6 @@ export function CreateTaskPage() {
                           />
                         </TableCell>
                         <TableCell>{nonComp.name}</TableCell>
-                        <TableCell>
-                          <IconButton size="small">
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

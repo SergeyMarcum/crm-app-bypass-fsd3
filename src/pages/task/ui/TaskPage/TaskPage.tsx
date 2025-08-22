@@ -293,7 +293,7 @@ export const TaskPage: React.FC = () => {
     setCurrentTab(newValue);
   };
 
-  const handleDownloadXmlTask = () => {
+  const handleDownloadXmlTask = async () => {
     if (!task || !taskId) {
       alert("Невозможно скачать задание: данные отсутствуют.");
       return;
@@ -310,9 +310,42 @@ export const TaskPage: React.FC = () => {
       return;
     }
 
-    const downloadUrl = `${BASE_URL}/generate-xml-task?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskId}`;
+    // Преобразуем taskId в число
+    const taskIdNum = parseInt(taskId);
+    if (isNaN(taskIdNum)) {
+      alert("Неверный идентификатор задания");
+      return;
+    }
 
-    window.open(downloadUrl, "_blank");
+    const downloadUrl = `${BASE_URL}/generate-xml-task?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskIdNum}`;
+    console.log("id task", taskIdNum);
+    try {
+      const response = await fetch(downloadUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/xml",
+        },
+        //body: JSON.stringify({ id: taskIdNum }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка сервера ${response.status}: ${errorText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `task_${taskId}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Ошибка скачивания XML:", error);
+      alert(`Ошибка скачивания XML: ${error.message || "неизвестная ошибка"}`);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -635,14 +668,7 @@ export const TaskPage: React.FC = () => {
             Управление
           </Typography>
           <Stack spacing={3} sx={{ maxWidth: "600px" }}>
-            <TextField
-              label="Пароль для XML-файла"
-              type="password"
-              value={xmlPassword}
-              onChange={(e) => setXmlPassword(e.target.value)}
-              fullWidth
-              helperText="Введите пароль для защиты XML-файла (опционально)"
-            />
+            {/* Поле пароля удалено как неиспользуемое */}
             <Button
               variant="contained"
               color="primary"
