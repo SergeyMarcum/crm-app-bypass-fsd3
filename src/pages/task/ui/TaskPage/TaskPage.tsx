@@ -19,6 +19,7 @@ import { CustomTable } from "@/widgets/table";
 import type {
   ICellRendererParams,
   ValueFormatterParams,
+  ValueGetterParams,
 } from "ag-grid-community";
 import Chat from "@/features/tasks/components/Chat";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -501,7 +502,7 @@ export const TaskPage: React.FC = () => {
     );
   }
 
-  // Обновленные колонки для таблицы с учетом новых данных
+  // Обновленные колонки для таблицы согласно требованиям
   const parameterColumns = [
     {
       headerName: "№",
@@ -515,41 +516,60 @@ export const TaskPage: React.FC = () => {
       minWidth: 250,
     },
     {
-      headerName: "Статус",
-      field: "isCompliant",
-      width: 150,
-      valueFormatter: (params: ValueFormatterParams<TaskParameter, boolean>) =>
-        params.value ? "Соответствует" : "Не соответствует",
+      headerName: "Наименования несоответствия",
+      valueGetter: (params: ValueGetterParams<TaskParameter>) =>
+        params.data?.nonCompliance?.text || "",
+      width: 200,
     },
     {
-      headerName: "Замечания (Есть/Нет)",
-      field: "nonCompliance",
-      width: 180,
-      cellRenderer: (
-        params: ICellRendererParams<TaskParameter, BackendNonCompliance | null>
-      ) => (
-        <Box display="flex" alignItems="center" height="100%">
-          {params.value ? (
-            <Button
-              variant="text"
-              color="primary"
-              size="small"
-              onClick={() => {
-                // TODO: Логика для открытия модального окна с фотографией
-                console.log(
-                  "Просмотр замечания:",
-                  params.value?.text,
-                  params.value?.photo_path
-                );
-              }}
-            >
-              <VisibilityIcon />
-            </Button>
-          ) : (
-            "Нет"
-          )}
-        </Box>
-      ),
+      headerName: "Замечания",
+      valueGetter: (params: ValueGetterParams<TaskParameter>) =>
+        params.data?.nonCompliance ? "Есть" : "Нет",
+      width: 150,
+    },
+    {
+      headerName: "Тип обнаружения",
+      valueGetter: () => "", // Заглушка - данные отсутствуют
+      width: 150,
+    },
+    {
+      headerName: "Уровень важности",
+      valueGetter: () => "", // Заглушка - данные отсутствуют
+      width: 150,
+    },
+    {
+      headerName: "Комментарий",
+      valueGetter: () => "", // Заглушка - данные отсутствуют
+      width: 150,
+    },
+    {
+      headerName: "Фотография",
+      cellRenderer: (params: ICellRendererParams<TaskParameter>) => {
+        const hasPhoto = !!params.data?.nonCompliance?.photo_path;
+        return (
+          <Box display="flex" alignItems="center" height="100%">
+            {hasPhoto ? (
+              <Button
+                variant="text"
+                color="primary"
+                size="small"
+                onClick={() => {
+                  // TODO: Логика для открытия модального окна с фотографией
+                  console.log(
+                    "Просмотр фотографии замечания:",
+                    params.data?.nonCompliance?.photo_path
+                  );
+                }}
+              >
+                <VisibilityIcon />
+              </Button>
+            ) : (
+              "Нет"
+            )}
+          </Box>
+        );
+      },
+      width: 200,
     },
   ];
 
