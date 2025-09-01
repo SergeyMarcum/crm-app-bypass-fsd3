@@ -325,7 +325,6 @@ export const TaskPage: React.FC = () => {
         headers: {
           Accept: "application/xml",
         },
-        //body: JSON.stringify({ id: taskIdNum }),
       });
 
       if (!response.ok) {
@@ -333,7 +332,14 @@ export const TaskPage: React.FC = () => {
         throw new Error(`Ошибка сервера ${response.status}: ${errorText}`);
       }
 
-      const blob = await response.blob();
+      // Получаем XML как текст
+      const xmlString = await response.text();
+
+      // Форматируем XML с переносами строк и отступами
+      const formattedXml = formatXml(xmlString);
+
+      // Создаем blob из отформатированного XML
+      const blob = new Blob([formattedXml], { type: "application/xml" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -408,6 +414,49 @@ export const TaskPage: React.FC = () => {
       }
       console.error("Ошибка загрузки отчета", error);
       alert(`Ошибка загрузки отчета: ${errorMessage}`);
+    }
+  };
+
+  // Функция для форматирования XML с отступами
+  const formatXml = (xml: string): string => {
+    try {
+      // Регулярное выражение для разбивки тегов
+      const regex = /(>)(<)(\/*)/g;
+      // Добавляем переносы строк между тегами
+      let formatted = xml.replace(regex, "$1\n$2$3");
+
+      let pad = 0;
+      // Разбиваем на строки и обрабатываем каждую
+      formatted = formatted
+        .split("\n")
+        .map((line) => {
+          let indent = 0;
+
+          // Уменьшаем отступ для закрывающих тегов
+          if (line.match(/^<\/\w/)) {
+            pad -= 1;
+          }
+          // Увеличиваем отступ после открывающих тегов
+          else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
+            indent = 1;
+          }
+          // Самозакрывающиеся теги не меняют отступ
+          else {
+            indent = 0;
+          }
+
+          // Применяем отступ
+          const padding = "  ".repeat(Math.max(0, pad));
+          pad += indent;
+
+          return padding + line;
+        })
+        .join("\n");
+
+      return formatted;
+    } catch (e) {
+      console.error("Ошибка форматирования XML:", e);
+      return xml; // Возвращаем исходный XML при ошибке
     }
   };
 
