@@ -792,7 +792,7 @@ export const TaskPage: React.FC = () => {
 
         <CustomTabPanel value={currentTab} index={3}>
           <Typography variant="h6" mb={2}>
-            Чат
+            Чат (Сообщения)
           </Typography>
           <Chat />
         </CustomTabPanel>
