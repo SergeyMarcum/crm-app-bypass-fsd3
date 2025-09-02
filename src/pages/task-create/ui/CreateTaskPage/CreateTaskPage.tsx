@@ -505,7 +505,7 @@ export function CreateTaskPage() {
     try {
       const nonCompIds = pendingNonCompliances
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
-        .map((nc) => nc.id);
+        .map((nc) => nc.incongruity_id);
 
       const storage = (await import("@/shared/lib/storage")).storage;
       const domain = storage.get("auth_domain");
@@ -519,7 +519,7 @@ export function CreateTaskPage() {
 
       const nonComplianceIds = pendingNonCompliances
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
-        .map((nc) => nc.id);
+        .map((nc) => nc.incongruity_id);
 
       const paramsNonComps = {
         [currentParameterInModal.id]: nonComplianceIds,
@@ -567,6 +567,11 @@ export function CreateTaskPage() {
 
       toast.success("Несоответствия параметра обновлены.");
       handleCloseParameterEditModal();
+      console.log("Обновлены несоответствия параметра:", {
+        taskId,
+        parameterId: currentParameterInModal.id,
+        nonComplianceIds,
+      });
     } catch (error) {
       console.error("Ошибка при сохранении изменений параметра:", error);
       toast.error("Ошибка при сохранении изменений параметра.");
@@ -602,7 +607,9 @@ export function CreateTaskPage() {
         return;
       }
 
-      const nonComplianceIds = pendingNonCompliances.map((nc) => nc.id);
+      const nonComplianceIds = pendingNonCompliances.map(
+        (nc) => nc.incongruity_id
+      );
 
       const paramsNonComps = {
         [newParameter.id]: nonComplianceIds,
@@ -657,6 +664,11 @@ export function CreateTaskPage() {
 
       toast.success("Новый параметр добавлен.");
       handleCloseAddParameterModal();
+      console.log("Добавлен новый параметр:", {
+        taskId,
+        parameterId: newParameter.id,
+        nonComplianceIds,
+      });
     } catch (error) {
       console.error("Ошибка при добавлении параметра:", error);
       toast.error("Ошибка при добавлении параметра.");
@@ -701,6 +713,7 @@ export function CreateTaskPage() {
         {
           ...nonComp,
           parameter_id: currentParameterInModal?.id || newParameter?.id || -1,
+          incongruity_id: nonComp.incongruity_id || nonComp.id, // добавляем обязательное incongruity_id
         } as NonComplianceCase,
       ]);
     }

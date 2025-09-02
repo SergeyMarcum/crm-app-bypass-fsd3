@@ -11,19 +11,14 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  TextField,
 } from "@mui/material";
-import { useParams } from "react-router-dom"; // Исправлено здесь
+import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { CustomTable } from "@/widgets/table";
-import type {
-  ICellRendererParams,
-  ValueFormatterParams,
-} from "ag-grid-community";
+import type { ICellRendererParams, ValueGetterParams } from "ag-grid-community";
 import Chat from "@/features/tasks/components/Chat";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
-// --- New Interfaces for Parameters API ---
 interface BackendTaskParameter {
   parameter_id: number;
   text: string;
@@ -33,11 +28,11 @@ interface BackendTaskParameter {
 
 interface BackendNonCompliance {
   id: number;
+  non_compliance_id: number;
   task_id: number;
-  parameter_id: number;
+  parameter_task_id: number;
   text: string;
   photo_path: string | null;
-  // Добавляем другие поля, если они будут в реальном ответе
 }
 
 interface BackendParametersResponse {
@@ -45,7 +40,6 @@ interface BackendParametersResponse {
   non_compliances: BackendNonCompliance[];
 }
 
-// --- Interfaces for Backend Task Data ---
 interface BackendTaskData {
   id: number;
   date_time: string;
@@ -75,7 +69,6 @@ interface BackendTaskData {
   date_for_search: string;
 }
 
-// Интерфейс для полного ответа от API /task/get
 interface BackendTaskResponse {
   task: BackendTaskData;
   status: {
@@ -84,7 +77,6 @@ interface BackendTaskResponse {
   };
 }
 
-// --- Interfaces for UI Task Data (Derived from Backend) ---
 interface TaskObject {
   id: number;
   name: string;
@@ -105,8 +97,8 @@ interface TaskOperator {
 interface TaskParameter {
   id: number;
   name: string;
-  isCompliant: boolean; // Соответствует или нет
-  nonCompliance: BackendNonCompliance | null; // Замечание, если есть
+  isCompliant: boolean;
+  nonCompliances: BackendNonCompliance[];
 }
 
 interface TaskDetail {
@@ -121,8 +113,7 @@ interface TaskDetail {
   parameters: TaskParameter[];
 }
 
-// --- Local useTask hook ---
-const BASE_URL = "http://192.168.1.240:82";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://192.168.1.240:82";
 
 const useTask = (taskId?: string) => {
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -153,7 +144,6 @@ const useTask = (taskId?: string) => {
       }
 
       try {
-        // Запрос 1: Получение данных о задании
         const taskUrl = `${BASE_URL}/task/get?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${taskId}`;
         const taskResponse = await fetch(taskUrl);
 
@@ -170,7 +160,6 @@ const useTask = (taskId?: string) => {
           await taskResponse.json();
         const backendTaskData = backendTaskResponse.task;
 
-        // Запрос 2: Получение параметров и несоответствий
         const parametersUrl = `${BASE_URL}/task/parameters-and-non-compliances?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskId}`;
         const parametersResponse = await fetch(parametersUrl);
 
@@ -186,19 +175,17 @@ const useTask = (taskId?: string) => {
         const backendParametersResponse: BackendParametersResponse =
           await parametersResponse.json();
 
-        // Маппинг данных
         const mappedParameters: TaskParameter[] =
           backendParametersResponse.parameters.map((param) => {
-            // Ищем несоответствие для текущего параметра
-            const nonCompliance =
-              backendParametersResponse.non_compliances.find(
-                (nc) => nc.parameter_id === param.parameter_id
+            const nonCompliances =
+              backendParametersResponse.non_compliances.filter(
+                (nc) => nc.parameter_task_id === param.id
               );
             return {
               id: param.id,
               name: param.text,
-              isCompliant: !nonCompliance, // Если несоответствие найдено, значит, НЕ соответствует
-              nonCompliance: nonCompliance || null, // Сохраняем объект несоответствия
+              isCompliant: nonCompliances.length === 0,
+              nonCompliances: nonCompliances,
             };
           });
 
@@ -224,7 +211,7 @@ const useTask = (taskId?: string) => {
             email: backendTaskData.user_email,
             phone: backendTaskData.user_phone,
           },
-          parameters: mappedParameters, // Используем реальные данные
+          parameters: mappedParameters,
         };
 
         setTask(mappedTask);
@@ -247,10 +234,6 @@ const useTask = (taskId?: string) => {
   return { task, loading, error };
 };
 
-// --- End Local useTask hook ---
-// ... (остальной код не менялся)
-
-// Вспомогательный компонент для табов
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -285,7 +268,6 @@ export const TaskPage: React.FC = () => {
   const { task, loading, error } = useTask(taskId);
 
   const [currentTab, setCurrentTab] = useState(0);
-  const [xmlPassword, setXmlPassword] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -310,7 +292,6 @@ export const TaskPage: React.FC = () => {
       return;
     }
 
-    // Преобразуем taskId в число
     const taskIdNum = parseInt(taskId);
     if (isNaN(taskIdNum)) {
       alert("Неверный идентификатор задания");
@@ -318,7 +299,6 @@ export const TaskPage: React.FC = () => {
     }
 
     const downloadUrl = `${BASE_URL}/generate-xml-task?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskIdNum}`;
-    console.log("id task", taskIdNum);
     try {
       const response = await fetch(downloadUrl, {
         method: "GET",
@@ -332,13 +312,8 @@ export const TaskPage: React.FC = () => {
         throw new Error(`Ошибка сервера ${response.status}: ${errorText}`);
       }
 
-      // Получаем XML как текст
       const xmlString = await response.text();
-
-      // Форматируем XML с переносами строк и отступами
       const formattedXml = formatXml(xmlString);
-
-      // Создаем blob из отформатированного XML
       const blob = new Blob([formattedXml], { type: "application/xml" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -417,35 +392,25 @@ export const TaskPage: React.FC = () => {
     }
   };
 
-  // Функция для форматирования XML с отступами
   const formatXml = (xml: string): string => {
     try {
-      // Регулярное выражение для разбивки тегов
       const regex = /(>)(<)(\/*)/g;
-      // Добавляем переносы строк между тегами
       let formatted = xml.replace(regex, "$1\n$2$3");
 
       let pad = 0;
-      // Разбиваем на строки и обрабатываем каждую
       formatted = formatted
         .split("\n")
         .map((line) => {
           let indent = 0;
 
-          // Уменьшаем отступ для закрывающих тегов
           if (line.match(/^<\/\w/)) {
             pad -= 1;
-          }
-          // Увеличиваем отступ после открывающих тегов
-          else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
+          } else if (line.match(/^<\w[^>]*[^\/]>.*$/)) {
             indent = 1;
-          }
-          // Самозакрывающиеся теги не меняют отступ
-          else {
+          } else {
             indent = 0;
           }
 
-          // Применяем отступ
           const padding = "  ".repeat(Math.max(0, pad));
           pad += indent;
 
@@ -456,7 +421,7 @@ export const TaskPage: React.FC = () => {
       return formatted;
     } catch (e) {
       console.error("Ошибка форматирования XML:", e);
-      return xml; // Возвращаем исходный XML при ошибке
+      return xml;
     }
   };
 
@@ -501,7 +466,10 @@ export const TaskPage: React.FC = () => {
     );
   }
 
-  // Обновленные колонки для таблицы с учетом новых данных
+  type ParameterTableRow = TaskParameter & {
+    nonCompliance: BackendNonCompliance | null;
+  };
+
   const parameterColumns = [
     {
       headerName: "№",
@@ -509,47 +477,65 @@ export const TaskPage: React.FC = () => {
       width: 70,
     },
     {
-      headerName: "Наименование параметра проверки",
+      headerName: "Параметры проверки объекта",
       field: "name",
       flex: 1,
       minWidth: 250,
     },
     {
-      headerName: "Статус",
-      field: "isCompliant",
-      width: 150,
-      valueFormatter: (params: ValueFormatterParams<TaskParameter, boolean>) =>
-        params.value ? "Соответствует" : "Не соответствует",
+      headerName: "Несоответствия",
+      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
+        params.data?.nonCompliance?.text || "Нет несоответствий",
+      width: 200,
     },
     {
-      headerName: "Замечания (Есть/Нет)",
-      field: "nonCompliance",
-      width: 180,
-      cellRenderer: (
-        params: ICellRendererParams<TaskParameter, BackendNonCompliance | null>
-      ) => (
-        <Box display="flex" alignItems="center" height="100%">
-          {params.value ? (
-            <Button
-              variant="text"
-              color="primary"
-              size="small"
-              onClick={() => {
-                // TODO: Логика для открытия модального окна с фотографией
-                console.log(
-                  "Просмотр замечания:",
-                  params.value?.text,
-                  params.value?.photo_path
-                );
-              }}
-            >
-              <VisibilityIcon />
-            </Button>
-          ) : (
-            "Нет"
-          )}
-        </Box>
-      ),
+      headerName: "Замечания",
+      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
+        params.data?.nonCompliance ? "Есть" : "Нет",
+      width: 150,
+    },
+    {
+      headerName: "Тип обнаружения",
+      valueGetter: () => "",
+      width: 150,
+    },
+    {
+      headerName: "Уровень важности",
+      valueGetter: () => "",
+      width: 150,
+    },
+    {
+      headerName: "Комментарий",
+      valueGetter: () => "",
+      width: 150,
+    },
+    {
+      headerName: "Фото",
+      cellRenderer: (params: ICellRendererParams<ParameterTableRow>) => {
+        const hasPhoto = !!params.data?.nonCompliance?.photo_path;
+        return (
+          <Box display="flex" alignItems="center" height="100%">
+            {hasPhoto ? (
+              <Button
+                variant="text"
+                color="primary"
+                size="small"
+                onClick={() => {
+                  console.log(
+                    "Просмотр фотографии замечания:",
+                    params.data?.nonCompliance?.photo_path
+                  );
+                }}
+              >
+                <VisibilityIcon />
+              </Button>
+            ) : (
+              "Нет"
+            )}
+          </Box>
+        );
+      },
+      width: 100,
     },
   ];
 
@@ -704,10 +690,22 @@ export const TaskPage: React.FC = () => {
             Список параметров
           </Typography>
           <Box>
-            <CustomTable<TaskParameter>
-              rowData={task.parameters}
+            <CustomTable<ParameterTableRow>
+              rowData={task.parameters.flatMap((param): ParameterTableRow[] => {
+                if (param.nonCompliances.length > 0) {
+                  return param.nonCompliances.map((nc) => ({
+                    ...param,
+                    nonCompliance: nc,
+                  }));
+                } else {
+                  return [{ ...param, nonCompliance: null }];
+                }
+              })}
               columnDefs={parameterColumns}
-              getRowId={(param) => param.id.toString()}
+              getRowId={(row: ParameterTableRow) =>
+                row.id.toString() +
+                (row.nonCompliance ? `_${row.nonCompliance.id}` : "")
+              }
             />
           </Box>
         </CustomTabPanel>
@@ -717,7 +715,6 @@ export const TaskPage: React.FC = () => {
             Управление
           </Typography>
           <Stack spacing={3} sx={{ maxWidth: "600px" }}>
-            {/* Поле пароля удалено как неиспользуемое */}
             <Button
               variant="contained"
               color="primary"
@@ -772,7 +769,7 @@ export const TaskPage: React.FC = () => {
 
         <CustomTabPanel value={currentTab} index={3}>
           <Typography variant="h6" mb={2}>
-            Чат
+            Чат (Сообщения)
           </Typography>
           <Chat />
         </CustomTabPanel>
