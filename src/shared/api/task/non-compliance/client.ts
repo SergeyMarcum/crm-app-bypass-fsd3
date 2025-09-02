@@ -21,7 +21,10 @@ export const nonComplianceApi = {
           param_id: parameterId,
         },
       });
-      return res.data;
+      return res.data.map((item: NonComplianceCase) => ({
+        ...item,
+        id: item.id, // сохраняем оригинальный id
+      }));
     } catch (error) {
       return handleAxiosError(
         `получении несоответствий для параметра ${parameterId}`,
