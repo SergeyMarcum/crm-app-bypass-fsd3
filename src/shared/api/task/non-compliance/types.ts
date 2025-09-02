@@ -3,5 +3,5 @@ export type NonComplianceCase = {
   id: number;
   name: string;
   parameter_id?: number;
-  incongruity_id?: number;
+  incongruity_id: number; // изменено на обязательное поле
 };
