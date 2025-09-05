@@ -425,6 +425,38 @@ export function CreateTaskPage() {
       console.log("API call successful, response:", response);
 
       setTaskId(response.new_task_id);
+
+      // Отправка начального сообщения в чат
+      const domain = localStorage.getItem("auth_domain") || "";
+      const username = localStorage.getItem("username") || "";
+      const sessionCode = localStorage.getItem("session_code") || "";
+      const userId = localStorage.getItem("user_id") || "";
+      const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+      const selectedObject = objects.find(
+        (obj) => obj.id.toString() === data.objectId
+      );
+
+      if (domain && username && sessionCode && userId && selectedObject) {
+        const chatUrl = `${BASE_URL}/chat/add-message?domain=${domain}&username=${username}&session_code=${sessionCode}`;
+        const messageText = `Новое задание по проверке объекта ${selectedObject.name}.\n Дата и время проверки: ${combinedDateTime.format("DD.MM.YYYY HH:mm")}`;
+
+        const formData = new FormData();
+        formData.append("task_id", String(response.new_task_id));
+        formData.append("user_id", userId);
+        formData.append("second_user_id", data.operatorId);
+        formData.append("message", messageText);
+
+        try {
+          await fetch(chatUrl, {
+            method: "POST",
+            body: formData,
+          });
+          console.log("Начальное сообщение отправлено");
+        } catch (error) {
+          console.error("Ошибка отправки начального сообщения:", error);
+        }
+      }
+
       setActiveStep((prev) => prev + 1);
       toast.success("Задание успешно создано. Переход на следующий шаг...");
     } catch (error) {
