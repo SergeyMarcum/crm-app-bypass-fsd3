@@ -1,5 +1,11 @@
 // src/pages/task/ui/TaskPage/TaskPage.tsx
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   Box,
   Stack,
@@ -16,16 +22,30 @@ import {
   DialogContent,
   DialogActions,
   Input,
+  IconButton,
+  Badge,
+  TextField,
 } from "@mui/material";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { CustomTable } from "@/widgets/table";
-import type { ICellRendererParams, ValueGetterParams } from "ag-grid-community";
+import type {
+  ICellRendererParams,
+  ValueGetterParams,
+  ValueFormatterParams,
+  ColDef,
+} from "ag-grid-community";
 import Chat from "@/features/tasks/components/Chat";
 import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { toast } from "sonner";
+import type { TaskHistoryItem } from "@/shared/api/task/history/types";
+import { taskHistoryApi } from "@/shared/api/task/history";
 
 interface BackendTaskParameter {
   parameter_id: number;
@@ -67,7 +87,8 @@ interface BackendTaskData {
   object_name: string;
   user_department: string;
   object_full_name: string | null;
-  manager_id: number;
+  manager_id?: number; // Добавлено, сделано необязательным
+  manager_name?: string; // Добавлено, сделано необязательным
   shift_id: number;
   object_address: string;
   user_id: number;
@@ -75,8 +96,6 @@ interface BackendTaskData {
   checking_type_id: number;
   checking_type_text: string;
   object_characteristic: string | null;
-  manager_name: string;
-  manager_position: string;
   domain: string;
   date_for_search: string;
   report_id?: number;
@@ -124,6 +143,7 @@ interface TaskDetail {
   status: string;
   object: TaskObject;
   operator: TaskOperator;
+  manager?: { id: number; name: string }; // Сделано необязательным
   parameters: TaskParameter[];
   report_id?: number;
 }
@@ -150,7 +170,7 @@ interface ReportIdResponse {
   report_id: number;
 }
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://192.168.1.240:82";
+const BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 const useTask = (taskId?: string) => {
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -180,6 +200,7 @@ const useTask = (taskId?: string) => {
     }
 
     try {
+      // Получение данных задания
       const taskUrl = `${BASE_URL}/task/get?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${taskId}`;
       const taskResponse = await fetch(taskUrl);
 
@@ -196,6 +217,7 @@ const useTask = (taskId?: string) => {
         await taskResponse.json();
       const backendTaskData = backendTaskResponse.task;
 
+      // Получение параметров и несоответствий
       const parametersUrl = `${BASE_URL}/task/parameters-and-non-compliances?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${taskId}`;
       const parametersResponse = await fetch(parametersUrl);
 
@@ -248,11 +270,124 @@ const useTask = (taskId?: string) => {
           email: backendTaskData.user_email,
           phone: backendTaskData.user_phone,
         },
+        ...(backendTaskData.manager_id && backendTaskData.manager_name
+          ? {
+              manager: {
+                id: backendTaskData.manager_id,
+                name: backendTaskData.manager_name,
+              },
+            }
+          : {}),
         parameters: mappedParameters,
         report_id: backendTaskData.report_id,
       };
 
+      // Проверка наличия отчета
+      let reportId = backendTaskData.report_id;
+      if (!reportId) {
+        const reportIdUrl = `${BASE_URL}/report/get-by-task-id?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${taskId}`;
+        const reportIdResponse = await fetch(reportIdUrl, {
+          method: "GET",
+        });
+
+        if (reportIdResponse.ok) {
+          const reportIdData: ReportIdResponse = await reportIdResponse.json();
+          if (reportIdData.status === "OK" && reportIdData.report_id) {
+            reportId = reportIdData.report_id;
+            mappedTask.report_id = reportId;
+            mappedTask.reportDate = new Date().toISOString();
+          }
+        }
+      }
+
       setTask(mappedTask);
+
+      // Автоматическая синхронизация, если report_id существует
+      if (reportId) {
+        const syncUrl = `${BASE_URL}/report/non-comp-exemplar/get-all-by-report-id?domain=${domain}&username=${username}&session_code=${sessionCode}&report_id=${reportId}`;
+        try {
+          const syncResponse = await fetch(syncUrl, {
+            method: "GET",
+          });
+
+          if (!syncResponse.ok) {
+            const errorText = await syncResponse.text();
+            throw new Error(
+              `Ошибка автоматической синхронизации несоответствий: ${syncResponse.status} - ${errorText}`
+            );
+          }
+
+          const syncData: SyncNonCompliance[] = await syncResponse.json();
+          console.log("Auto syncData:", JSON.stringify(syncData, null, 2));
+
+          setTask((prevTask) => {
+            if (!prevTask) return prevTask;
+
+            const updatedParameters = prevTask.parameters.map((param) => {
+              const syncEntries = syncData.filter((snc) => {
+                const isIdMatch = snc.parameter_id === param.parameter_id;
+                const normalizedParamText = snc.parameter_text
+                  ?.trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, " ");
+                const normalizedParamName = param.name
+                  ?.trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, " ");
+                const isTextMatch = normalizedParamText === normalizedParamName;
+                return isIdMatch && isTextMatch;
+              });
+
+              const updatedNonCompliances = param.nonCompliances.map((nc) => {
+                const syncNc = syncEntries.find((snc) => {
+                  const normalizedSyncName = snc.name
+                    ?.trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+                  const normalizedNcText = nc.text
+                    ?.trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+                  const isNameMatch = normalizedSyncName === normalizedNcText;
+                  return isNameMatch;
+                });
+
+                if (syncNc) {
+                  return {
+                    ...nc,
+                    id: syncNc.id,
+                    non_compliance_id: syncNc.id,
+                    finding_type_text: syncNc.finding_type_text,
+                    importance_level_text: syncNc.importance_level_text,
+                    comment: syncNc.comment,
+                    photo_path: syncNc.photo_url
+                      ? `${BASE_URL}/${syncNc.photo_url}`
+                      : null,
+                  };
+                }
+                return nc;
+              });
+
+              return {
+                ...param,
+                nonCompliances: updatedNonCompliances,
+                isCompliant: updatedNonCompliances.length === 0,
+              };
+            });
+
+            return { ...prevTask, parameters: updatedParameters };
+          });
+        } catch (syncError: unknown) {
+          let errorMessage =
+            "Неизвестная ошибка при автоматической синхронизации несоответствий.";
+          if (syncError instanceof Error) {
+            errorMessage = syncError.message;
+          } else if (typeof syncError === "string") {
+            errorMessage = syncError;
+          }
+          console.error("Ошибка автоматической синхронизации", syncError);
+        }
+      }
     } catch (err: unknown) {
       let errorMessage = "Неизвестная ошибка";
       if (err instanceof Error) {
@@ -307,6 +442,19 @@ export const TaskPage: React.FC = () => {
   const { task: initialTask, loading, error, refetch } = useTask(taskId);
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
+
+  // Синхронизируем session_token с session_code и устанавливаем user_id
+  useEffect(() => {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+      localStorage.setItem("session_code", sessionToken);
+    }
+
+    // Устанавливаем user_id из данных задачи, если отсутствует в localStorage
+    if (initialTask && !localStorage.getItem("user_id")) {
+      localStorage.setItem("user_id", String(initialTask.operator.id));
+    }
+  }, [initialTask]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [openPhotoDialog, setOpenPhotoDialog] = useState(false);
@@ -315,6 +463,8 @@ export const TaskPage: React.FC = () => {
   const [newPhoto, setNewPhoto] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   useEffect(() => {
     setTask(initialTask);
@@ -473,6 +623,97 @@ export const TaskPage: React.FC = () => {
               }
             : prevTask
         );
+
+        // Автоматическая синхронизация после загрузки отчета
+        const syncUrl = `${BASE_URL}/report/non-comp-exemplar/get-all-by-report-id?domain=${domain}&username=${username}&session_code=${sessionCode}&report_id=${reportIdData.report_id}`;
+        try {
+          const syncResponse = await fetch(syncUrl, {
+            method: "GET",
+          });
+
+          if (!syncResponse.ok) {
+            const errorText = await syncResponse.text();
+            throw new Error(
+              `Ошибка автоматической синхронизации несоответствий после загрузки отчета: ${syncResponse.status} - ${errorText}`
+            );
+          }
+
+          const syncData: SyncNonCompliance[] = await syncResponse.json();
+          console.log(
+            "Auto syncData after report upload:",
+            JSON.stringify(syncData, null, 2)
+          );
+
+          setTask((prevTask) => {
+            if (!prevTask) return prevTask;
+
+            const updatedParameters = prevTask.parameters.map((param) => {
+              const syncEntries = syncData.filter((snc) => {
+                const isIdMatch = snc.parameter_id === param.parameter_id;
+                const normalizedParamText = snc.parameter_text
+                  ?.trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, " ");
+                const normalizedParamName = param.name
+                  ?.trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, " ");
+                const isTextMatch = normalizedParamText === normalizedParamName;
+                return isIdMatch && isTextMatch;
+              });
+
+              const updatedNonCompliances = param.nonCompliances.map((nc) => {
+                const syncNc = syncEntries.find((snc) => {
+                  const normalizedSyncName = snc.name
+                    ?.trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+                  const normalizedNcText = nc.text
+                    ?.trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, " ");
+                  const isNameMatch = normalizedSyncName === normalizedNcText;
+                  return isNameMatch;
+                });
+
+                if (syncNc) {
+                  return {
+                    ...nc,
+                    id: syncNc.id,
+                    non_compliance_id: syncNc.id,
+                    finding_type_text: syncNc.finding_type_text,
+                    importance_level_text: syncNc.importance_level_text,
+                    comment: syncNc.comment,
+                    photo_path: syncNc.photo_url
+                      ? `${BASE_URL}/${syncNc.photo_url}`
+                      : null,
+                  };
+                }
+                return nc;
+              });
+
+              return {
+                ...param,
+                nonCompliances: updatedNonCompliances,
+                isCompliant: updatedNonCompliances.length === 0,
+              };
+            });
+
+            return { ...prevTask, parameters: updatedParameters };
+          });
+        } catch (syncError: unknown) {
+          let errorMessage =
+            "Неизвестная ошибка при автоматической синхронизации несоответствий после загрузки отчета.";
+          if (syncError instanceof Error) {
+            errorMessage = syncError.message;
+          } else if (typeof syncError === "string") {
+            errorMessage = syncError;
+          }
+          console.error(
+            "Ошибка автоматической синхронизации после загрузки отчета",
+            syncError
+          );
+        }
       } else {
         console.warn(
           "report_id not found in /report/get-by-task-id response. Refetching task data."
@@ -611,11 +852,22 @@ export const TaskPage: React.FC = () => {
 
     console.log("handlePhotoSave - uploadUrl:", uploadUrl);
     console.log("handlePhotoSave - method:", method);
-    console.log("handlePhotoSave - file:", newPhoto.name);
+    console.log(
+      "handlePhotoSave - file:",
+      newPhoto.name,
+      newPhoto.type,
+      newPhoto.size
+    );
+    console.log("handlePhotoSave - auth params:", {
+      domain,
+      username,
+      sessionCode,
+    });
     console.log(
       "handlePhotoSave - selectedNonCompliance:",
       JSON.stringify(selectedNonCompliance, null, 2)
     );
+    console.log("task.parameters:", JSON.stringify(task?.parameters, null, 2));
 
     const formData = new FormData();
     formData.append("file", newPhoto);
@@ -626,16 +878,25 @@ export const TaskPage: React.FC = () => {
         body: formData,
       });
 
+      const responseText = await response.text();
+      console.log("handlePhotoSave - raw response:", responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
+        console.error("handlePhotoSave - error response:", responseText);
         throw new Error(
-          `Ошибка ${method === "POST" ? "загрузки" : "обновления"} фотографии: ${response.status} - ${errorText}`
+          `Ошибка ${method === "POST" ? "загрузки" : "обновления"} фотографии: ${response.status} - ${responseText || response.statusText}`
         );
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("handlePhotoSave - JSON parse error:", parseError);
+        throw new Error("Некорректный формат ответа сервера");
+      }
       console.log(
-        "handlePhotoSave - response:",
+        "handlePhotoSave - parsed response:",
         JSON.stringify(result, null, 2)
       );
 
@@ -643,7 +904,6 @@ export const TaskPage: React.FC = () => {
         throw new Error("Некорректный ответ сервера: отсутствует image_path");
       }
 
-      // Добавляем BASE_URL к image_path для формирования полного URL
       const newPhotoPath = `${BASE_URL}/${result.image_path}`;
       const newUploadedAt = new Date().toISOString();
 
@@ -757,6 +1017,211 @@ export const TaskPage: React.FC = () => {
     }
   };
 
+  // История проверок
+  const [historyItems, setHistoryItems] = useState<TaskHistoryItem[]>([]);
+  const [filterModalOpen, setFilterModalOpen] = useState<string | null>(null);
+  const [filterValues, setFilterValues] = useState<
+    Record<
+      "dateFilter" | "reportDateFilter" | "parameterFilter" | "operatorFilter",
+      string | undefined
+    >
+  >({
+    dateFilter: undefined,
+    reportDateFilter: undefined,
+    parameterFilter: undefined,
+    operatorFilter: undefined,
+  });
+
+  const fetchTaskHistory = useCallback(async (objectId: number) => {
+    if (!objectId) {
+      setHistoryItems([]);
+      return;
+    }
+    try {
+      const history = await taskHistoryApi.getObjectTasks(objectId.toString());
+      setHistoryItems(history);
+    } catch (error) {
+      console.error("Ошибка загрузки истории проверок объекта:", error);
+      setHistoryItems([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (task?.object.id) {
+      fetchTaskHistory(task.object.id);
+    }
+  }, [task?.object.id, fetchTaskHistory]);
+
+  const handleOpenFilterModal = (filterKey: string) => {
+    setFilterModalOpen(filterKey);
+  };
+
+  const handleCloseFilterModal = () => {
+    setFilterModalOpen(null);
+  };
+
+  const handleApplyFilter = (
+    filterKey: keyof typeof filterValues,
+    value: string
+  ) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [filterKey]: value,
+    }));
+    handleCloseFilterModal();
+  };
+
+  const handleResetFilter = (filterKey: keyof typeof filterValues) => {
+    setFilterValues((prev) => ({
+      ...prev,
+      [filterKey]: undefined,
+    }));
+  };
+
+  const handleResetAllFilters = () => {
+    setFilterValues({
+      dateFilter: undefined,
+      reportDateFilter: undefined,
+      parameterFilter: undefined,
+      operatorFilter: undefined,
+    });
+  };
+
+  const filteredHistoryItems = useMemo(() => {
+    return historyItems.filter((item) => {
+      if (filterValues.dateFilter) {
+        const date = dayjs(item.date_time).format("DD.MM.YYYY");
+        if (date !== filterValues.dateFilter) return false;
+      }
+      if (filterValues.reportDateFilter) {
+        const reportDate = item.date_time_report_loading
+          ? dayjs(item.date_time_report_loading).format("DD.MM.YYYY")
+          : null;
+        if (reportDate !== filterValues.reportDateFilter) return false;
+      }
+      if (filterValues.operatorFilter) {
+        if (
+          !item.user_name
+            ?.toLowerCase()
+            .includes(filterValues.operatorFilter.toLowerCase())
+        )
+          return false;
+      }
+      if (filterValues.parameterFilter) {
+        const params = Object.keys(item.parameters || {});
+        if (
+          !params.some((p) =>
+            p
+              .toLowerCase()
+              .includes(filterValues.parameterFilter!.toLowerCase())
+          )
+        )
+          return false;
+      }
+      return true;
+    });
+  }, [historyItems, filterValues]);
+
+  const historyColumnDefs: ColDef<TaskHistoryItem>[] = useMemo(
+    () => [
+      {
+        headerName: "№",
+        valueGetter: (params: ValueGetterParams<TaskHistoryItem>) =>
+          params.node?.rowIndex != null ? params.node.rowIndex + 1 : "",
+        width: 60,
+      },
+      {
+        headerName: "Дата проверки",
+        field: "date_time",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
+        width: 120,
+      },
+      {
+        headerName: "Повторная проверка",
+        field: "is_repeat_inspection",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value ? "Да" : "Нет",
+        width: 120,
+      },
+      {
+        headerName: "ФИО оператора",
+        field: "user_name",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value ?? "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Дата загрузки отчета",
+        field: "date_time_report_loading",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
+        width: 120,
+      },
+      {
+        headerName: "Список параметров",
+        field: "parameters",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value
+            ? Object.keys(params.value)
+                .filter((key) => params.value[key] !== null)
+                .join(", ")
+            : "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Список несоответствий",
+        field: "parameters",
+        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
+          params.value
+            ? Object.values(params.value)
+                .filter((val): val is string[] => val !== null)
+                .flat()
+                .join(", ")
+            : "N/A",
+        flex: 1,
+      },
+      {
+        headerName: "Фото",
+        field: undefined,
+        width: 80,
+        cellRenderer: (params: ICellRendererParams<TaskHistoryItem>) => (
+          <IconButton
+            onClick={() =>
+              params.data && handleOpenImageModal(params.data.id.toString())
+            }
+          >
+            <VisibilityIcon />
+          </IconButton>
+        ),
+      },
+    ],
+    []
+  );
+
+  const getHistoryRowId = useCallback(
+    (data: TaskHistoryItem | undefined | null) =>
+      data?.id?.toString() ||
+      `temp-id-${Math.random().toString(36).substr(2, 9)}`,
+    []
+  );
+
+  const handleOpenImageModal = async (nonCompId: string) => {
+    try {
+      const image = await taskHistoryApi.getNonComplianceImage(nonCompId);
+      setCurrentImage(image);
+      setImageModalOpen(true);
+    } catch (error) {
+      console.error("Ошибка при загрузке изображения:", error);
+      toast.error("Ошибка при загрузке изображения.");
+    }
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setCurrentImage(null);
+  };
+
   const handleSyncNonCompliances = async () => {
     if (!task?.report_id) {
       alert(
@@ -867,7 +1332,11 @@ export const TaskPage: React.FC = () => {
           "Updated parameters:",
           JSON.stringify(updatedParameters, null, 2)
         );
-        return { ...prevTask, parameters: updatedParameters };
+        return {
+          ...prevTask,
+          parameters: updatedParameters,
+          reportDate: prevTask.reportDate || new Date().toISOString(),
+        };
       });
 
       alert("Несоответствия успешно синхронизированы!");
@@ -1289,17 +1758,223 @@ export const TaskPage: React.FC = () => {
           <Typography variant="h6" mb={2}>
             История проверки
           </Typography>
-          <Typography variant="body1">
-            Здесь будет находиться содержимое блока "История проверки".
-          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => handleOpenFilterModal("dateFilter")}
+              color={filterValues.dateFilter ? "primary" : "inherit"}
+            >
+              {filterValues.dateFilter || "Дата проверки"}
+              {filterValues.dateFilter && (
+                <Badge
+                  badgeContent=""
+                  color="primary"
+                  variant="dot"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => handleOpenFilterModal("reportDateFilter")}
+              color={filterValues.reportDateFilter ? "primary" : "inherit"}
+            >
+              {filterValues.reportDateFilter || "Дата отчета"}
+              {filterValues.reportDateFilter && (
+                <Badge
+                  badgeContent=""
+                  color="primary"
+                  variant="dot"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => handleOpenFilterModal("parameterFilter")}
+              color={filterValues.parameterFilter ? "primary" : "inherit"}
+            >
+              {filterValues.parameterFilter || "Параметр проверки"}
+              {filterValues.parameterFilter && (
+                <Badge
+                  badgeContent=""
+                  color="primary"
+                  variant="dot"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => handleOpenFilterModal("operatorFilter")}
+              color={filterValues.operatorFilter ? "primary" : "inherit"}
+            >
+              {filterValues.operatorFilter || "Оператор"}
+              {filterValues.operatorFilter && (
+                <Badge
+                  badgeContent=""
+                  color="primary"
+                  variant="dot"
+                  sx={{ ml: 1 }}
+                />
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleResetAllFilters}
+            >
+              Сбросить фильтры
+            </Button>
+          </Box>
+          <CustomTable<TaskHistoryItem>
+            rowData={filteredHistoryItems}
+            columnDefs={historyColumnDefs}
+            getRowId={getHistoryRowId}
+            pagination={true}
+          />
         </CustomTabPanel>
 
         <CustomTabPanel value={currentTab} index={3}>
           <Typography variant="h6" mb={2}>
             Чат (Сообщения)
           </Typography>
-          <Chat />
+          {task.manager ? (
+            <Chat
+              taskId={taskId || ""}
+              currentUserId={Number(localStorage.getItem("user_id")) || 0}
+              operatorId={task.operator.id}
+              managerId={task.manager.id}
+              operatorName={task.operator.name}
+              managerName={task.manager.name}
+              baseUrl={BASE_URL}
+            />
+          ) : (
+            <Typography>
+              Информация о мастере недоступна. Чат невозможен.
+            </Typography>
+          )}
         </CustomTabPanel>
+
+        {/* Модальные окна фильтров */}
+        <Dialog
+          open={filterModalOpen === "dateFilter"}
+          onClose={handleCloseFilterModal}
+        >
+          <DialogTitle>Фильтр по дате</DialogTitle>
+          <DialogContent>
+            <DatePicker
+              label="Дата проверки (DD.MM.YYYY)"
+              value={
+                filterValues.dateFilter
+                  ? dayjs(filterValues.dateFilter, "DD.MM.YYYY")
+                  : null
+              }
+              onChange={(date) =>
+                handleApplyFilter(
+                  "dateFilter",
+                  date ? date.format("DD.MM.YYYY") : ""
+                )
+              }
+              slotProps={{
+                textField: { fullWidth: true },
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleResetFilter("dateFilter")}>
+              Сброс
+            </Button>
+            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={filterModalOpen === "reportDateFilter"}
+          onClose={handleCloseFilterModal}
+        >
+          <DialogTitle>Фильтр по дате отчета</DialogTitle>
+          <DialogContent>
+            <DatePicker
+              label="Дата загрузки отчета (DD.MM.YYYY)"
+              value={
+                filterValues.reportDateFilter
+                  ? dayjs(filterValues.reportDateFilter, "DD.MM.YYYY")
+                  : null
+              }
+              onChange={(date) =>
+                handleApplyFilter(
+                  "reportDateFilter",
+                  date ? date.format("DD.MM.YYYY") : ""
+                )
+              }
+              slotProps={{
+                textField: { fullWidth: true },
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleResetFilter("reportDateFilter")}>
+              Сброс
+            </Button>
+            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={filterModalOpen === "parameterFilter"}
+          onClose={handleCloseFilterModal}
+        >
+          <DialogTitle>Фильтр по параметру</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Наименование параметра"
+              value={filterValues.parameterFilter || ""}
+              onChange={(e) =>
+                handleApplyFilter("parameterFilter", e.target.value)
+              }
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleResetFilter("parameterFilter")}>
+              Сброс
+            </Button>
+            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={filterModalOpen === "operatorFilter"}
+          onClose={handleCloseFilterModal}
+        >
+          <DialogTitle>Фильтр по оператору</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Имя оператора"
+              value={filterValues.operatorFilter || ""}
+              onChange={(e) =>
+                handleApplyFilter("operatorFilter", e.target.value)
+              }
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => handleResetFilter("operatorFilter")}>
+              Сброс
+            </Button>
+            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog
           open={openPhotoDialog}

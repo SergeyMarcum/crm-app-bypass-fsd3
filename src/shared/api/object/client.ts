@@ -24,6 +24,7 @@ export const objectApi = {
 
   async create(data: {
     name: string;
+    full_name: string;
     address: string;
     characteristic: string;
     parameters: number[];
@@ -38,7 +39,7 @@ export const objectApi = {
   async update(data: {
     id: number;
     name: string;
-    full_name?: string; // Делаем поле необязательным
+    full_name: string; // Сделали обязательным
     address: string;
     characteristic: string;
     parameters: number[];

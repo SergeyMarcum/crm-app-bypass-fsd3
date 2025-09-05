@@ -22,6 +22,7 @@ import { storage } from "@/shared/lib/storage"; // Импорт storage
 
 export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
   const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [address, setAddress] = useState("");
   const [characteristic, setCharacteristic] = useState("");
 
@@ -39,6 +40,7 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
     if (!open) return;
     // Сброс состояний при открытии модального окна
     setName("");
+    setFullName("");
     setAddress("");
     setCharacteristic("");
     setSelectedType(null);
@@ -51,11 +53,10 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
     // Загрузка всех параметров для выпадающего списка "Добавить параметр"
     objectTypeApi
       .getAllParameters()
-      .then((res: { id: number; number: string }[]) => {
-        // Преобразуем поле 'number' в 'name', чтобы соответствовать типу Parameter
+      .then((res: Array<{ id: number; name?: string; number?: string }>) => {
         const transformedParams: Parameter[] = res.map((p) => ({
           id: p.id,
-          name: p.number,
+          name: p.name || p.number || "",
         }));
         setAllAvailableParams(transformedParams);
       });
@@ -66,14 +67,16 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
       setTypeParams([]); // Очистить, если тип не выбран
       return;
     }
-    objectTypeApi.getObjectTypeParameters(selectedType.id).then((res) => {
-      const transformed = res.map((r) => ({
-        id: r.id,
-        name: r.parameter,
-      }));
-      setTypeParams(transformed);
-      setCustomParams([]); // очистить при выборе типа
-    });
+    objectTypeApi
+      .getObjectTypeParameters(selectedType.id)
+      .then((res: Array<{ id: number; parameter?: string; name?: string }>) => {
+        const transformed: Parameter[] = res.map((r) => ({
+          id: r.id,
+          name: r.parameter || r.name || "",
+        }));
+        setTypeParams(transformed);
+        setCustomParams([]); // очистить при выборе типа
+      });
   }, [selectedType]);
 
   const handleSave = async () => {
@@ -83,6 +86,7 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
     await objectApi
       .create({
         name,
+        full_name: fullName,
         address,
         characteristic,
         object_type: selectedType?.id ?? 0,
@@ -125,6 +129,12 @@ export const ObjectModal = ({ open, onClose }: ObjectModalProps) => {
             fullWidth
             value={name}
             onChange={(e) => setName(e.target.value)}
+          />
+          <TextField
+            label="Полное наименование объекта"
+            fullWidth
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
           />
           <TextField
             label="Адрес"
