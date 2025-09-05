@@ -1,5 +1,6 @@
 // src/pages/tasks/ui/TaskControlPage/TaskControlPage.tsx
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Typography,
   Box,
@@ -7,29 +8,27 @@ import {
   Modal,
   TextField,
   IconButton,
-  Paper, // For modal styling
+  Paper,
 } from "@mui/material";
 import { AgGridReact } from "ag-grid-react";
 import type {
   ICellRendererParams,
   ValueFormatterParams,
 } from "ag-grid-community";
-import EmailIcon from "@mui/icons-material/Email"; // Using placeholder icons for filters
+import EmailIcon from "@mui/icons-material/Email";
 import PersonIcon from "@mui/icons-material/Person";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward"; // For navigation button
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
-// Date picker imports (assuming @mui/x-date-pickers and dayjs are installed)
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs, { Dayjs } from "dayjs";
 
-import { CustomTable } from "@/widgets/table"; // Assuming CustomTable handles pagination internally
+import { CustomTable } from "@/widgets/table";
 import type { JSX } from "react";
 import { getControlTasks } from "@/shared/api/task/control";
 
-// Real API integration
 interface Task {
   id: number;
   checkDate: string;
@@ -41,7 +40,6 @@ interface Task {
   comment: string | null;
 }
 
-// Function to map API response to Task interface
 const mapApiToTask = (apiTask: any): Task => ({
   id: apiTask.id,
   checkDate: apiTask.date_time,
@@ -53,9 +51,6 @@ const mapApiToTask = (apiTask: any): Task => ({
   comment: apiTask.comment,
 });
 
-// --- End of API and Types ---
-
-// Modal style for Material-UI
 const modalStyle = {
   position: "absolute" as "absolute",
   top: "50%",
@@ -72,17 +67,16 @@ export const TaskControlPage = (): JSX.Element => {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
 
-  // Filter states
   const [objectFilter, setObjectFilter] = useState<string>("");
   const [operatorFilter, setOperatorFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<Dayjs | null>(null);
 
-  // Modal visibility states
   const [showObjectModal, setShowObjectModal] = useState(false);
   const [showOperatorModal, setShowOperatorModal] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
 
   const gridRef = useRef<AgGridReact<Task>>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -96,13 +90,11 @@ export const TaskControlPage = (): JSX.Element => {
         setFilteredTasks(tasks);
       } catch (error) {
         console.error("Ошибка при загрузке заданий:", error);
-        // TODO: Добавить уведомление об ошибке
       }
     };
     loadTasks();
   }, []);
 
-  // Effect to apply filters whenever filter states or allTasks change
   useEffect(() => {
     let currentFiltered = [...allTasks];
 
@@ -130,17 +122,13 @@ export const TaskControlPage = (): JSX.Element => {
     setFilteredTasks(currentFiltered);
   }, [allTasks, objectFilter, operatorFilter, dateFilter]);
 
-  // Handlers for filter modals
   const handleObjectFilterApply = () => {
-    // Filter logic is handled by useEffect, just close modal
     setShowObjectModal(false);
   };
   const handleOperatorFilterApply = () => {
-    // Filter logic is handled by useEffect, just close modal
     setShowOperatorModal(false);
   };
   const handleDateFilterApply = () => {
-    // Filter logic is handled by useEffect, just close modal
     setShowDateModal(false);
   };
 
@@ -148,7 +136,6 @@ export const TaskControlPage = (): JSX.Element => {
     setObjectFilter("");
     setOperatorFilter("");
     setDateFilter(null);
-    // setFilteredTasks(allTasks); // useEffect will handle this based on filter state change
   };
 
   const columns = [
@@ -197,19 +184,19 @@ export const TaskControlPage = (): JSX.Element => {
       cellRenderer: (params: ICellRendererParams<Task>) => params.value || "—",
     },
     {
-      headerName: "", // Action column for navigation
+      headerName: "",
       width: 70,
-      cellRenderer: (params: ICellRendererParams<Task>) => (
-        <IconButton
-          color="primary"
-          size="small"
-          onClick={() => {
-            console.log(`Maps to task ${params.data?.id}`);
-          }}
-        >
-          <ArrowForwardIcon fontSize="small" />
-        </IconButton>
-      ),
+      cellRenderer: (params: ICellRendererParams<Task>) =>
+        params.data ? (
+          <IconButton
+            color="primary"
+            size="small"
+            onClick={() => params.data && navigate(`/task/${params.data.id}`)}
+            title="Открыть"
+          >
+            <ArrowForwardIcon fontSize="small" />
+          </IconButton>
+        ) : null,
     },
   ];
 
@@ -223,49 +210,35 @@ export const TaskControlPage = (): JSX.Element => {
           Список заданий по проверке объектов филиала
         </Typography>
 
-        {/* Filter Block */}
         <Box display="flex" gap={2} my={2}>
           <Button
-            variant="outlined"
-            onClick={() => {
-              if (objectFilter) {
-                setObjectFilter(""); // Reset filter
-              } else {
-                setShowObjectModal(true);
-              }
-            }}
-            startIcon={<EmailIcon />} // Using EmailIcon as placeholder for generic filter icon
-            disabled={!!objectFilter} // Disable if filter is active
+            variant={objectFilter ? "contained" : "outlined"}
+            onClick={() =>
+              objectFilter ? setObjectFilter("") : setShowObjectModal(true)
+            }
+            startIcon={<EmailIcon />}
           >
-            Объекты
+            {objectFilter || "Объекты"}
           </Button>
           <Button
-            variant="outlined"
-            onClick={() => {
-              if (operatorFilter) {
-                setOperatorFilter(""); // Reset filter
-              } else {
-                setShowOperatorModal(true);
-              }
-            }}
+            variant={operatorFilter ? "contained" : "outlined"}
+            onClick={() =>
+              operatorFilter
+                ? setOperatorFilter("")
+                : setShowOperatorModal(true)
+            }
             startIcon={<PersonIcon />}
-            disabled={!!operatorFilter}
           >
-            Оператор
+            {operatorFilter || "Оператор"}
           </Button>
           <Button
-            variant="outlined"
-            onClick={() => {
-              if (dateFilter) {
-                setDateFilter(null); // Reset filter
-              } else {
-                setShowDateModal(true);
-              }
-            }}
+            variant={dateFilter ? "contained" : "outlined"}
+            onClick={() =>
+              dateFilter ? setDateFilter(null) : setShowDateModal(true)
+            }
             startIcon={<CalendarTodayIcon />}
-            disabled={!!dateFilter}
           >
-            Дата
+            {dateFilter ? dateFilter.format("DD.MM.YYYY") : "Дата"}
           </Button>
           <Button
             variant="outlined"
@@ -276,7 +249,6 @@ export const TaskControlPage = (): JSX.Element => {
           </Button>
         </Box>
 
-        {/* Object Filter Modal */}
         <Modal open={showObjectModal} onClose={() => setShowObjectModal(false)}>
           <Paper sx={modalStyle}>
             <Typography variant="h6" component="h2">
@@ -302,7 +274,6 @@ export const TaskControlPage = (): JSX.Element => {
           </Paper>
         </Modal>
 
-        {/* Operator Filter Modal */}
         <Modal
           open={showOperatorModal}
           onClose={() => setShowOperatorModal(false)}
@@ -331,7 +302,6 @@ export const TaskControlPage = (): JSX.Element => {
           </Paper>
         </Modal>
 
-        {/* Date Filter Modal */}
         <Modal open={showDateModal} onClose={() => setShowDateModal(false)}>
           <Paper sx={modalStyle}>
             <Typography variant="h6" component="h2">
@@ -356,16 +326,11 @@ export const TaskControlPage = (): JSX.Element => {
           </Paper>
         </Modal>
 
-        {/* Table Block */}
         <CustomTable<Task>
           ref={gridRef}
           rowData={filteredTasks}
           columnDefs={columns}
           getRowId={(row) => row.id.toString()}
-          // Pagination and row count assumed to be handled by CustomTable or AgGridReact defaults
-          // rowGroupPanelShow="always" // Example of AgGrid feature, remove if not needed
-          // pagination={true} // If CustomTable doesn't handle, enable here
-          // paginationPageSize={10} // And here
         />
       </Box>
     </LocalizationProvider>
