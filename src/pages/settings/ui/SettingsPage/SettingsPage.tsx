@@ -4,11 +4,6 @@ import {
   Box,
   Stack,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   FormControl,
   FormControlLabel,
   Radio,
@@ -23,11 +18,10 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  TablePagination,
 } from "@mui/material";
 import { useAuthStore } from "@features/auth/model/store";
 import { User } from "@entities/user/types";
-import { getEmployeesByDepartment } from "@shared/api/employee";
+import { userApi } from "@/shared/api/user/client";
 import { statusMap } from "@entities/user/model/normalize";
 import { useThemeStore } from "@/app/stores/theme/store";
 import {
@@ -36,7 +30,9 @@ import {
   Brightness7 as LightModeIcon,
   SettingsBrightness as SystemIcon,
   Group as GroupIcon,
+  PersonOutline as PersonOutlineIcon,
 } from "@mui/icons-material";
+import { CustomTable } from "@/widgets/table";
 
 // Стили для карточек
 const cardSx = {
@@ -51,14 +47,20 @@ interface ProfileTabProps {
   formData: Partial<User>;
   isCurrentUser: boolean;
   isAdmin: boolean;
+  onUpdateUser: (userData: Partial<User>) => void;
+  onDeleteUser: () => void;
 }
 
 interface EmployeeTabProps {
   employees: User[];
 }
 
-const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
-  const { updateUser, logout } = useAuthStore();
+const ProfileTab: React.FC<ProfileTabProps> = ({
+  formData,
+  isAdmin,
+  onUpdateUser,
+  onDeleteUser,
+}) => {
   const [fullName, setFullName] = useState(formData.full_name || "");
   const [phone, setPhone] = useState(formData.phone || "");
   const [selectedStatusLabel, setSelectedStatusLabel] = useState(
@@ -67,7 +69,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
       : "Неизвестно"
   );
   const [techSupportEmail, setTechSupportEmail] = useState(
-    formData.tech_support_email || ""
+    (formData as any).tech_support_email || ""
   );
 
   useEffect(() => {
@@ -78,7 +80,7 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
         ? statusMap[formData.status_id] || "Неизвестно"
         : "Неизвестно"
     );
-    setTechSupportEmail(formData.tech_support_email || "");
+    setTechSupportEmail((formData as any).tech_support_email || "");
   }, [formData]);
 
   const getStatusIdFromLabel = (label: string): number | null => {
@@ -88,21 +90,45 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ formData, isAdmin }) => {
     return entry ? parseInt(entry[0]) : null;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedData: Partial<User> = {
       full_name: fullName,
       phone: phone,
       status_id: getStatusIdFromLabel(selectedStatusLabel),
     };
     if (isAdmin) {
-      updatedData.tech_support_email = techSupportEmail;
+      (updatedData as any).tech_support_email = techSupportEmail;
     }
-    updateUser(updatedData);
+
+    // Отправляем изменения на сервер
+    if (formData.id) {
+      try {
+        const editPayload = {
+          user_id: formData.id,
+          full_name: fullName,
+          position: formData.position || "",
+          company: formData.company || "",
+          department: formData.department || "",
+          phone: phone,
+          role_id: formData.role_id || 0,
+          status_id: getStatusIdFromLabel(selectedStatusLabel) || 0,
+        };
+
+        const result = await userApi.editUser(editPayload);
+        if (result.success) {
+          // Обновляем локальные данные пользователя
+          onUpdateUser(updatedData);
+        } else {
+          console.error("Ошибка при обновлении пользователя:", result.error);
+        }
+      } catch (error) {
+        console.error("Ошибка при обновлении пользователя:", error);
+      }
+    }
   };
 
   const handleDelete = () => {
-    updateUser({ status_id: 2 });
-    logout();
+    onDeleteUser();
   };
 
   return (
@@ -351,24 +377,53 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
     return aOrder - bOrder;
   });
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // Подготавливаем данные для таблицы
+  const tableData = sortedEmployees.map((employee, index) => ({
+    id: employee.id || index,
+    avatar: employee.photo || "/assets/avatar.png",
+    fullName: employee.full_name || "",
+    email: employee.email || "",
+    position: employee.position || "Не указано",
+    phone: employee.phone || "Не указано",
+    status:
+      employee.status_id !== undefined && employee.status_id !== null
+        ? statusMap[employee.status_id] || "Неизвестно"
+        : "Не указано",
+  }));
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const displayedEmployees = sortedEmployees.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  // Определяем колонки таблицы
+  const columnDefs = [
+    { headerName: "№", field: "id", width: 70 },
+    {
+      headerName: "Аватар",
+      field: "avatar",
+      width: 100,
+      cellRenderer: (params: { value: string }) => (
+        <Avatar src={params.value} sx={{ width: 40, height: 40 }} />
+      ),
+    },
+    {
+      headerName: "ФИО / Email",
+      field: "fullName",
+      width: 250,
+      cellRenderer: (params: any) => (
+        <Stack direction="column">
+          <Typography variant="body1" color="var(--mui-palette-text-primary)">
+            {params.data.fullName}
+          </Typography>
+          <Typography
+            variant="caption"
+            color="var(--mui-palette-text-secondary)"
+          >
+            {params.data.email}
+          </Typography>
+        </Stack>
+      ),
+    },
+    { headerName: "Должность", field: "position", width: 200 },
+    { headerName: "Телефон", field: "phone", width: 150 },
+    { headerName: "Статус", field: "status", width: 150 },
+  ];
 
   return (
     <Card sx={cardSx}>
@@ -387,74 +442,20 @@ const DepartmentTab: React.FC<EmployeeTabProps> = ({ employees }) => {
         }}
       />
       <CardContent>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>№</TableCell>
-              <TableCell>ФИО / Email</TableCell>
-              <TableCell>Должность</TableCell>
-              <TableCell>Телефон</TableCell>
-              <TableCell>Статус</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {displayedEmployees.map((employee, index) => (
-              <TableRow key={employee.id}>
-                <TableCell>{page * rowsPerPage + index + 1}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar
-                      src={employee.photo || "/assets/avatar.png"}
-                      sx={{ width: 40, height: 40 }}
-                    />
-                    <Box>
-                      <Typography
-                        variant="body1"
-                        color="var(--mui-palette-text-primary)"
-                      >
-                        {employee.full_name}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="var(--mui-palette-text-secondary)"
-                      >
-                        {employee.email}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </TableCell>
-                <TableCell>{employee.position || "Не указано"}</TableCell>
-                <TableCell>{employee.phone || "Не указано"}</TableCell>
-                <TableCell>
-                  {employee.status_id !== undefined &&
-                  employee.status_id !== null
-                    ? statusMap[employee.status_id] || "Неизвестно"
-                    : "Не указано"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <CustomTable
+          rowData={tableData}
+          columnDefs={columnDefs}
+          getRowId={(row) => String(row.id)}
+          pagination={true}
+          pageSize={10}
+        />
       </CardContent>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={sortedEmployees.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        labelRowsPerPage="Строк на странице:"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} из ${count !== -1 ? count : `более ${to}`}`
-        }
-      />
     </Card>
   );
 };
 
 export const SettingsPage: React.FC = () => {
-  const { user, isTestMode } = useAuthStore();
+  const { user, isTestMode, updateUser, logout } = useAuthStore();
   const [tab, setTab] = useState(1);
   const [departmentEmployees, setDepartmentEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -470,7 +471,7 @@ export const SettingsPage: React.FC = () => {
     status_id: user?.status_id || null,
     photo: user?.photo || null,
     department: user?.department || null,
-    tech_support_email: user?.tech_support_email || null,
+    tech_support_email: (user as any)?.tech_support_email || null,
     role_id: user?.role_id,
     company: user?.company || null,
     domain: user?.domain || null,
@@ -483,14 +484,18 @@ export const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      if (!currentUserFormData.department || tab !== 3) return;
+      if (!user?.domain || tab !== 2) return;
       setLoading(true);
       try {
-        const employees = await getEmployeesByDepartment(
-          currentUserFormData.department,
-          isTestMode
+        // Получаем всех сотрудников филиала
+        const response = await userApi.getCompanyUsers();
+
+        // Фильтруем по отделу текущего пользователя
+        const employeesInDepartment = response.users.filter(
+          (emp) => emp.department === user.department
         );
-        setDepartmentEmployees(employees);
+
+        setDepartmentEmployees(employeesInDepartment);
         setError(null);
       } catch (err) {
         setError(
@@ -501,7 +506,7 @@ export const SettingsPage: React.FC = () => {
       }
     };
     fetchEmployees();
-  }, [currentUserFormData.department, isTestMode, tab]);
+  }, [user?.department, user?.domain, tab]);
 
   return (
     <Box
@@ -530,10 +535,16 @@ export const SettingsPage: React.FC = () => {
           </Typography>
           {user ? (
             <Stack direction="row" spacing={2} alignItems="center">
-              <Avatar
-                src={currentUserFormData.photo || "/assets/avatar.png"}
-                sx={{ width: 40, height: 40 }}
-              />
+              {currentUserFormData.photo || "/assets/avatar.png" ? (
+                <Avatar
+                  src={currentUserFormData.photo || "/assets/avatar.png"}
+                  sx={{ width: 40, height: 40 }}
+                />
+              ) : (
+                <Avatar sx={{ width: 40, height: 40 }}>
+                  <PersonOutlineIcon />
+                </Avatar>
+              )}
               <Box>
                 <Typography
                   variant="subtitle1"
@@ -576,7 +587,7 @@ export const SettingsPage: React.FC = () => {
             Мой профиль
           </Button>
           <Button
-            startIcon={<Brightness4Icon />}
+            startIcon={<GroupIcon />}
             sx={{
               justifyContent: "flex-start",
               color:
@@ -592,26 +603,26 @@ export const SettingsPage: React.FC = () => {
             }}
             onClick={() => setTab(2)}
           >
-            Настройки
+            Мой отдел
           </Button>
           <Button
-            startIcon={<GroupIcon />}
+            startIcon={<Brightness4Icon />}
             sx={{
               justifyContent: "flex-start",
-              color:
-                tab === 3
-                  ? "var(--mui-palette-primary-main)"
-                  : "var(--mui-palette-text-primary)",
-              bgcolor:
-                tab === 3 ? "var(--mui-palette-primary-50)" : "transparent",
+              color: "var(--mui-palette-text-disabled)",
+              bgcolor: "transparent",
               p: 1.5,
               borderRadius: 1,
               textTransform: "none",
-              fontWeight: tab === 3 ? 600 : 400,
+              fontWeight: 400,
+              cursor: "not-allowed",
+              "&:hover": {
+                bgcolor: "transparent",
+              },
             }}
-            onClick={() => setTab(3)}
+            disabled
           >
-            Мой отдел
+            Настройки
           </Button>
         </Stack>
       </Stack>
@@ -631,10 +642,14 @@ export const SettingsPage: React.FC = () => {
             formData={currentUserFormData}
             isCurrentUser
             isAdmin={isAdmin}
+            onUpdateUser={updateUser}
+            onDeleteUser={() => {
+              updateUser({ status_id: 2 });
+              logout();
+            }}
           />
         )}
-        {tab === 2 && <ThemeTab />}
-        {tab === 3 && (
+        {tab === 2 && (
           <>
             {loading && (
               <Typography color="var(--mui-palette-text-primary)">
@@ -656,6 +671,7 @@ export const SettingsPage: React.FC = () => {
             )}
           </>
         )}
+        {tab === 3 && <ThemeTab />}
       </Box>
     </Box>
   );

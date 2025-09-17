@@ -35,12 +35,10 @@ export interface NormalizedUser {
 
 export interface EditUserPayload {
   user_id: number;
-  name: string;
   full_name: string;
   position: string;
   company: string;
   department: string;
-  email: string;
   phone: string;
   role_id: number;
   status_id: number;
