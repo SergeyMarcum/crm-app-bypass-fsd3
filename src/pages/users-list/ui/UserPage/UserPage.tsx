@@ -104,12 +104,10 @@ export const UsersPage = (): JSX.Element => {
 
     const payload: EditUserPayload = {
       user_id: userId,
-      name: editedUser.name ?? original.name ?? "",
       full_name: editedUser.full_name ?? original.full_name ?? "",
       position: editedUser.position ?? original.position ?? "",
       company: editedUser.company ?? original.company ?? "",
       department: editedUser.department ?? original.department ?? "",
-      email: editedUser.email ?? original.email ?? "",
       phone: editedUser.phone ?? original.phone ?? "",
       role_id: Number(editedUser.role_id ?? original.role_id),
       status_id: Number(editedUser.status_id ?? original.status_id ?? 1),

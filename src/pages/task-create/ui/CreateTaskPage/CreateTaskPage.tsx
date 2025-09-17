@@ -393,7 +393,7 @@ export function CreateTaskPage() {
       }
 
       const checkHour = dayjs(data.checkTime).hour();
-      const shift_id = checkHour >= 8 && checkHour < 22 ? 0 : 1;
+      const shift_id = checkHour >= 8 && checkHour < 22 ? 1 : 2;
 
       const combinedDateTime = dayjs(data.checkDate)
         .hour(dayjs(data.checkTime).hour())
