@@ -29,7 +29,7 @@ export const getEmployeesByDepartment = async (
       login: null,
       system_login: null,
       address: null,
-      photo: null,
+      photo: "/assets/avatar1.png",
       tech_support_email: null,
     },
     {
@@ -47,7 +47,7 @@ export const getEmployeesByDepartment = async (
       login: null,
       system_login: null,
       address: null,
-      photo: null,
+      photo: "/assets/avatar2.png",
       tech_support_email: null,
     },
     // Add more mock employees as needed

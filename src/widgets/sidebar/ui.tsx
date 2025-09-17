@@ -20,7 +20,7 @@ import {
   ListAlt as ListAltIcon,
   Message as MessageIcon,
   Help as HelpIcon,
-  Settings as SettingsIcon,
+  PermContactCalendar as PermContactCalendarIcon,
   Logout as LogoutIcon,
   ExpandLess,
   ExpandMore,
@@ -195,7 +195,7 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
           <Collapse in={objectsOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               <NestedNavItem to="/objects" text="Список объектов" />
-              <NestedNavItem to="/objects/types" text="Типы объектов" />
+
               <NestedNavItem
                 to="/objects/parameters"
                 text="Список параметров"
@@ -204,6 +204,7 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
                 to="/objects/non-compliance"
                 text="Список несоответствий"
               />
+              <NestedNavItem to="/objects/types" text="Типы объектов" />
             </List>
           </Collapse>
 
@@ -216,7 +217,11 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
       <Box>
         <List>
           <NavItem to="/instructions" icon={<HelpIcon />} text="Инструкции" />
-          <NavItem to="/settings" icon={<SettingsIcon />} text="Настройки" />
+          <NavItem
+            to="/settings"
+            icon={<PermContactCalendarIcon />}
+            text="Профиль"
+          />
           <NavItem to="/help" icon={<HelpIcon />} text="Нужна помощь?" />
           <ListItemButton
             onClick={handleLogout}
