@@ -54,11 +54,14 @@ const authStateCreator: StateCreator<
   login: async ({ username, password, domain, rememberMe }) => {
     set({ isLoading: true, error: null });
     try {
-      const { token, user }: AuthResponse = await authApi.login({
+      const response: AuthResponse = await authApi.login({
         username,
         password,
         domain,
       });
+      const token = response.token;
+      const user = response.user;
+
       // Нормализуем user_id в id для соответствия типу User
       const normalizedUser: User = {
         id: user.user_id,
@@ -82,13 +85,12 @@ const authStateCreator: StateCreator<
         token,
         isAuthenticated: true,
         isLoading: false,
+        error: null,
       });
       storage.set("session_token", token);
       storage.set("username", username);
       storage.set("auth_user", JSON.stringify(normalizedUser));
-      if (rememberMe) {
-        storage.set("auth_domain", domain);
-      }
+      storage.set("auth_domain", domain);
     } catch (error) {
       set({ isLoading: false, error: "Ошибка авторизации" });
       throw error;
@@ -138,15 +140,19 @@ const authStateCreator: StateCreator<
     try {
       const storedToken = storage.get("session_token");
       const storedUser = storage.get("auth_user");
-      if (storedToken && storedUser) {
+      const isValidToken =
+        storedToken && storedToken !== "null" && storedToken !== "undefined";
+
+      if (isValidToken && storedUser) {
         const userData = JSON.parse(storedUser);
         // Нормализуем user_id в id
         const normalizedUser: User = {
           ...userData,
-          id: userData.user_id ?? userData.id ?? null,
+          id: userData.id ?? userData.user_id ?? null,
           status_id: userData.status_id ?? null,
           domain: userData.domain ?? null,
           name: userData.name ?? userData.full_name ?? null,
+          role_id: userData.role_id ?? 1,
         };
         set({
           user: normalizedUser,

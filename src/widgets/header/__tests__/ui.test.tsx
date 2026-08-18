@@ -6,11 +6,16 @@ import { useUser } from "@shared/hooks/use-user";
 import { useNotifications } from "@/app/stores/notifications/hooks/use-notifications";
 
 jest.mock("@shared/hooks/use-user");
-jest.mock("@shared/processes/notifications/hooks/use-notifications");
+jest.mock("@/app/stores/notifications/hooks/use-notifications");
 
-test("renders Header with user menu", () => {
+test("renders Header with user menu, search field and notifications", () => {
   (useUser as jest.Mock).mockReturnValue({
-    user: { name: "John Doe", email: "john@example.com", avatar: "" },
+    user: {
+      fullName: "Иванов Иван Иванович",
+      name: "Иван",
+      email: "ivanov@example.com",
+      photo: null,
+    },
     logout: jest.fn(),
   });
   (useNotifications as jest.Mock).mockReturnValue({ notifications: [{}] });
@@ -21,12 +26,26 @@ test("renders Header with user menu", () => {
     </BrowserRouter>
   );
 
-  expect(screen.getByText("CRM App")).toBeInTheDocument(); // Если используете текстовую заглушку Logo
-  // Или expect(screen.getByAltText("CRM App Logo")).toBeInTheDocument(); если используете изображение
-  expect(screen.getByText("JD")).toBeInTheDocument(); // Инициалы аватара
-  fireEvent.click(screen.getByText("JD"));
-  expect(screen.getByText("John Doe")).toBeInTheDocument();
-  expect(screen.getByText("john@example.com")).toBeInTheDocument();
+  // Logo image check
+  expect(screen.getByAltText("CRM App Logo")).toBeInTheDocument();
+
+  // App Title check
+  expect(screen.getByText("Обходчик")).toBeInTheDocument();
+
+  // Search input checks
+  expect(screen.getByPlaceholderText("Поиск...")).toBeInTheDocument();
+
+  // Avatar text/initials checks (the "И" inside avatar and "Иванов И.И." text next to it)
+  expect(screen.getByText("Иванов И.И.")).toBeInTheDocument();
+  expect(screen.getByText("И")).toBeInTheDocument();
+
+  // Click on user profile menu button
+  fireEvent.click(screen.getByText("Иванов И.И."));
+
+  // Check dropdown content
+  expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
+  expect(screen.getByText("ivanov@example.com")).toBeInTheDocument();
   expect(screen.getByText("Профиль")).toBeInTheDocument();
   expect(screen.getByText("Выход")).toBeInTheDocument();
 });
+

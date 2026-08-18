@@ -11,15 +11,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  IconButton,
 } from "@mui/material";
 //import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import RuleIcon from "@mui/icons-material/Rule";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { AgGridReact } from "ag-grid-react";
 
 import { objectTypeApi } from "@/shared/api/object-type";
-import { parameterApi } from "@/shared/api/parameter"; // Импортируем parameterApi
 import { ObjectTypeTable } from "@/widgets/object-type/object-type-table";
 import { AddParameterModal } from "@/widgets/parameters/add-parameter-modal";
 import { EditParameterModal } from "@/widgets/parameters/edit-parameter-modal";
@@ -152,11 +149,17 @@ export function ObjectTypePage() {
         Главная / Объекты / Типы Объектов / Тип объекта
       </Typography>
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        gap={2}
-        my={2}
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          mb: 3,
+          p: 2,
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+        }}
       >
         <Box display="flex" gap={2} alignItems="center">
           <Select
@@ -164,6 +167,7 @@ export function ObjectTypePage() {
             onChange={(e) => setSelectedTypeId(Number(e.target.value))}
             size="small"
             displayEmpty
+            sx={{ borderRadius: "8px", minWidth: 200 }}
           >
             <MenuItem value="">Выберите тип</MenuItem>
             {types.map((t) => (
@@ -176,6 +180,7 @@ export function ObjectTypePage() {
             variant="contained"
             onClick={() => setAddObjectTypeModalOpen(true)}
             color="secondary"
+            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
           >
             + Добавить (Тип Объекта)
           </Button>
@@ -184,6 +189,7 @@ export function ObjectTypePage() {
             onClick={() => setEditObjectTypeModalOpen(true)}
             disabled={!selectedTypeId}
             color="primary"
+            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
           >
             Изменить
           </Button>
@@ -193,7 +199,8 @@ export function ObjectTypePage() {
         parameters={parameters}
         onEdit={handleEdit}
         onDelete={handleDelete} // Передаем обработчик удаления в таблицу
-        filters={filterDefinitions}
+        objectTypeId={Number(selectedTypeId)}
+        onRefresh={fetchParameters}
         ref={gridRef}
       />
       <AddParameterModal

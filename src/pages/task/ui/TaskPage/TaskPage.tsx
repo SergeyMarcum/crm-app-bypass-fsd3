@@ -21,23 +21,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Input,
   IconButton,
-  Badge,
-  TextField,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useParams } from "react-router-dom";
 import dayjs from "dayjs";
-import { CustomTable } from "@/widgets/table";
-import type {
-  ICellRendererParams,
-  ValueGetterParams,
-  ValueFormatterParams,
-  ColDef,
-} from "ag-grid-community";
-import Chat from "@/features/tasks/components/Chat";
 import RemoveRedEyeIcon from "@mui/icons-material/RemoveRedEye";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
@@ -385,7 +378,7 @@ const useTask = (taskId?: string) => {
           } else if (typeof syncError === "string") {
             errorMessage = syncError;
           }
-          console.error("Ошибка автоматической синхронизации", syncError);
+          console.error("Ошибка автоматической синхронизации:", errorMessage);
         }
       }
     } catch (err: unknown) {
@@ -490,7 +483,7 @@ export const TaskPage: React.FC = () => {
     });
   }, [task]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 
@@ -710,8 +703,8 @@ export const TaskPage: React.FC = () => {
             errorMessage = syncError;
           }
           console.error(
-            "Ошибка автоматической синхронизации после загрузки отчета",
-            syncError
+            "Ошибка автоматической синхронизации после загрузки отчета:",
+            errorMessage
           );
         }
       } else {
@@ -1019,18 +1012,6 @@ export const TaskPage: React.FC = () => {
 
   // История проверок
   const [historyItems, setHistoryItems] = useState<TaskHistoryItem[]>([]);
-  const [filterModalOpen, setFilterModalOpen] = useState<string | null>(null);
-  const [filterValues, setFilterValues] = useState<
-    Record<
-      "dateFilter" | "reportDateFilter" | "parameterFilter" | "operatorFilter",
-      string | undefined
-    >
-  >({
-    dateFilter: undefined,
-    reportDateFilter: undefined,
-    parameterFilter: undefined,
-    operatorFilter: undefined,
-  });
 
   const fetchTaskHistory = useCallback(async (objectId: number) => {
     if (!objectId) {
@@ -1051,160 +1032,6 @@ export const TaskPage: React.FC = () => {
       fetchTaskHistory(task.object.id);
     }
   }, [task?.object.id, fetchTaskHistory]);
-
-  const handleOpenFilterModal = (filterKey: string) => {
-    setFilterModalOpen(filterKey);
-  };
-
-  const handleCloseFilterModal = () => {
-    setFilterModalOpen(null);
-  };
-
-  const handleApplyFilter = (
-    filterKey: keyof typeof filterValues,
-    value: string
-  ) => {
-    setFilterValues((prev) => ({
-      ...prev,
-      [filterKey]: value,
-    }));
-    handleCloseFilterModal();
-  };
-
-  const handleResetFilter = (filterKey: keyof typeof filterValues) => {
-    setFilterValues((prev) => ({
-      ...prev,
-      [filterKey]: undefined,
-    }));
-  };
-
-  const handleResetAllFilters = () => {
-    setFilterValues({
-      dateFilter: undefined,
-      reportDateFilter: undefined,
-      parameterFilter: undefined,
-      operatorFilter: undefined,
-    });
-  };
-
-  const filteredHistoryItems = useMemo(() => {
-    return historyItems.filter((item) => {
-      if (filterValues.dateFilter) {
-        const date = dayjs(item.date_time).format("DD.MM.YYYY");
-        if (date !== filterValues.dateFilter) return false;
-      }
-      if (filterValues.reportDateFilter) {
-        const reportDate = item.date_time_report_loading
-          ? dayjs(item.date_time_report_loading).format("DD.MM.YYYY")
-          : null;
-        if (reportDate !== filterValues.reportDateFilter) return false;
-      }
-      if (filterValues.operatorFilter) {
-        if (
-          !item.user_name
-            ?.toLowerCase()
-            .includes(filterValues.operatorFilter.toLowerCase())
-        )
-          return false;
-      }
-      if (filterValues.parameterFilter) {
-        const params = Object.keys(item.parameters || {});
-        if (
-          !params.some((p) =>
-            p
-              .toLowerCase()
-              .includes(filterValues.parameterFilter!.toLowerCase())
-          )
-        )
-          return false;
-      }
-      return true;
-    });
-  }, [historyItems, filterValues]);
-
-  const historyColumnDefs: ColDef<TaskHistoryItem>[] = useMemo(
-    () => [
-      {
-        headerName: "№",
-        valueGetter: (params: ValueGetterParams<TaskHistoryItem>) =>
-          params.node?.rowIndex != null ? params.node.rowIndex + 1 : "",
-        width: 60,
-      },
-      {
-        headerName: "Дата проверки",
-        field: "date_time",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
-        width: 120,
-      },
-      {
-        headerName: "Повторная проверка",
-        field: "is_repeat_inspection",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value ? "Да" : "Нет",
-        width: 120,
-      },
-      {
-        headerName: "ФИО оператора",
-        field: "user_name",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value ?? "N/A",
-        flex: 1,
-      },
-      {
-        headerName: "Дата загрузки отчета",
-        field: "date_time_report_loading",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value ? dayjs(params.value).format("DD.MM.YYYY") : "N/A",
-        width: 120,
-      },
-      {
-        headerName: "Список параметров",
-        field: "parameters",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value
-            ? Object.keys(params.value)
-                .filter((key) => params.value[key] !== null)
-                .join(", ")
-            : "N/A",
-        flex: 1,
-      },
-      {
-        headerName: "Список несоответствий",
-        field: "parameters",
-        valueFormatter: (params: ValueFormatterParams<TaskHistoryItem>) =>
-          params.value
-            ? Object.values(params.value)
-                .filter((val): val is string[] => val !== null)
-                .flat()
-                .join(", ")
-            : "N/A",
-        flex: 1,
-      },
-      {
-        headerName: "Фото",
-        field: undefined,
-        width: 80,
-        cellRenderer: (params: ICellRendererParams<TaskHistoryItem>) => (
-          <IconButton
-            onClick={() =>
-              params.data && handleOpenImageModal(params.data.id.toString())
-            }
-          >
-            <VisibilityIcon />
-          </IconButton>
-        ),
-      },
-    ],
-    []
-  );
-
-  const getHistoryRowId = useCallback(
-    (data: TaskHistoryItem | undefined | null) =>
-      data?.id?.toString() ||
-      `temp-id-${Math.random().toString(36).substr(2, 9)}`,
-    []
-  );
 
   const handleOpenImageModal = async (nonCompId: string) => {
     try {
@@ -1428,91 +1255,7 @@ export const TaskPage: React.FC = () => {
     );
   }
 
-  const parameterColumns = [
-    {
-      headerName: "№",
-      valueGetter: "node.rowIndex + 1",
-      width: 70,
-    },
-    {
-      headerName: "Параметры проверки объекта",
-      field: "name",
-      flex: 1,
-      minWidth: 250,
-    },
-    {
-      headerName: "Несоответствия",
-      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
-        params.data?.nonCompliance?.text || "Нет несоответствий",
-      width: 200,
-    },
-    {
-      headerName: "Замечания",
-      valueGetter: (params: ValueGetterParams<ParameterTableRow>) => {
-        const nonCompliance = params.data?.nonCompliance;
-        if (
-          nonCompliance &&
-          nonCompliance.finding_type_text?.trim() &&
-          nonCompliance.importance_level_text?.trim()
-        ) {
-          return "Есть";
-        }
-        return "Нет";
-      },
-      width: 150,
-    },
-    {
-      headerName: "Тип обнаружения",
-      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
-        params.data?.nonCompliance?.finding_type_text || "",
-      width: 150,
-    },
-    {
-      headerName: "Уровень важности",
-      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
-        params.data?.nonCompliance?.importance_level_text || "",
-      width: 150,
-    },
-    {
-      headerName: "Комментарий",
-      valueGetter: (params: ValueGetterParams<ParameterTableRow>) =>
-        params.data?.nonCompliance?.comment || "",
-      width: 150,
-    },
-    {
-      headerName: "Фото",
-      valueGetter: () => "",
-      cellRenderer: (params: ICellRendererParams<ParameterTableRow>) => {
-        const nonCompliance = params.data?.nonCompliance;
-        const hasRemark =
-          nonCompliance &&
-          nonCompliance.finding_type_text?.trim() &&
-          nonCompliance.importance_level_text?.trim();
-        const hasPhoto = nonCompliance && nonCompliance.photo_path?.trim();
 
-        return (
-          <Box display="flex" alignItems="center" height="100%">
-            <Button
-              variant="text"
-              color="primary"
-              size="small"
-              onClick={() =>
-                handlePhotoDialogOpen(params.data?.nonCompliance || null)
-              }
-              data-testid={`photo-button-${params.data?.nonCompliance?.id || params.data?.id}`}
-            >
-              {hasRemark && hasPhoto ? (
-                <RemoveRedEyeIcon />
-              ) : (
-                <VisibilityOffIcon />
-              )}
-            </Button>
-          </Box>
-        );
-      },
-      width: 100,
-    },
-  ];
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -1656,7 +1399,6 @@ export const TaskPage: React.FC = () => {
             <Tab label="Список параметров" {...a11yProps(0)} />
             <Tab label="Управление" {...a11yProps(1)} />
             <Tab label="История проверки" {...a11yProps(2)} />
-            <Tab label="Чат" {...a11yProps(3)} />
           </Tabs>
         </Box>
 
@@ -1677,14 +1419,249 @@ export const TaskPage: React.FC = () => {
           </Stack>
           <Box>
             {rowData.length > 0 ? (
-              <CustomTable<ParameterTableRow>
-                rowData={rowData}
-                columnDefs={parameterColumns}
-                getRowId={(row: ParameterTableRow) =>
-                  row.id.toString() +
-                  (row.nonCompliance ? `_${row.nonCompliance.id}` : "")
-                }
-              />
+              <TableContainer
+                component={Paper}
+                sx={{
+                  borderRadius: "12px",
+                  border: "1px solid #EAECF0",
+                  boxShadow:
+                    "0px 1px 3px rgba(16, 24, 40, 0.1), 0px 1px 2px rgba(16, 24, 40, 0.06)",
+                  backgroundColor: "#FFFFFF",
+                  maxHeight: "600px",
+                  overflow: "auto",
+                }}
+              >
+                <Table stickyHeader sx={{ minWidth: 1000 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          pl: 3,
+                          width: "60px",
+                        }}
+                      >
+                        №
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                        }}
+                      >
+                        Параметры проверки объекта
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          width: "220px",
+                        }}
+                      >
+                        Несоответствия
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          width: "110px",
+                        }}
+                      >
+                        Замечания
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          width: "160px",
+                        }}
+                      >
+                        Тип обнаружения
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          width: "160px",
+                        }}
+                      >
+                        Уровень важности
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          width: "160px",
+                        }}
+                      >
+                        Комментарий
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          backgroundColor: "#F9FAFB",
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          py: 2,
+                          pr: 3,
+                          width: "80px",
+                        }}
+                      >
+                        Фото
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rowData.map((row, index) => {
+                      const nonCompliance = row.nonCompliance;
+                      const hasRemark =
+                        nonCompliance &&
+                        nonCompliance.finding_type_text?.trim() &&
+                        nonCompliance.importance_level_text?.trim();
+                      const hasPhoto =
+                        nonCompliance && nonCompliance.photo_path?.trim();
+
+                      return (
+                        <TableRow
+                          key={
+                            row.id.toString() +
+                            (nonCompliance ? `_${nonCompliance.id}` : "")
+                          }
+                          hover
+                          sx={{
+                            height: "72px",
+                            "&:hover": {
+                              backgroundColor: "#F9FAFB",
+                            },
+                          }}
+                        >
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                              pl: 3,
+                            }}
+                          >
+                            {index + 1}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {row.name || "—"}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {nonCompliance?.text || "Нет несоответствий"}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {hasRemark ? "Есть" : "Нет"}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {nonCompliance?.finding_type_text || "—"}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {nonCompliance?.importance_level_text || "—"}
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              color: "#475467",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {nonCompliance?.comment || "—"}
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{
+                              borderBottom: "1px solid #EAECF0",
+                              pr: 3,
+                            }}
+                          >
+                            <IconButton
+                              color="primary"
+                              onClick={() =>
+                                handlePhotoDialogOpen(nonCompliance)
+                              }
+                              disabled={!nonCompliance}
+                              sx={{
+                                "&:hover": { backgroundColor: "#F2F4F7" },
+                                borderRadius: "8px",
+                                p: 1,
+                              }}
+                            >
+                              {hasRemark && hasPhoto ? (
+                                <RemoveRedEyeIcon />
+                              ) : (
+                                <VisibilityOffIcon sx={{ color: "#98A2B3" }} />
+                              )}
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : (
               <Typography>Нет данных для отображения</Typography>
             )}
@@ -1758,223 +1735,268 @@ export const TaskPage: React.FC = () => {
           <Typography variant="h6" mb={2}>
             История проверки
           </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-              flexWrap: "wrap",
-              gap: 1,
-            }}
-          >
-            <Button
-              variant="outlined"
-              onClick={() => handleOpenFilterModal("dateFilter")}
-              color={filterValues.dateFilter ? "primary" : "inherit"}
+          {historyItems.length > 0 ? (
+            <TableContainer
+              component={Paper}
+              sx={{
+                borderRadius: "12px",
+                border: "1px solid #EAECF0",
+                boxShadow:
+                  "0px 1px 3px rgba(16, 24, 40, 0.1), 0px 1px 2px rgba(16, 24, 40, 0.06)",
+                backgroundColor: "#FFFFFF",
+                maxHeight: "600px",
+                overflow: "auto",
+              }}
             >
-              {filterValues.dateFilter || "Дата проверки"}
-              {filterValues.dateFilter && (
-                <Badge
-                  badgeContent=""
-                  color="primary"
-                  variant="dot"
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => handleOpenFilterModal("reportDateFilter")}
-              color={filterValues.reportDateFilter ? "primary" : "inherit"}
-            >
-              {filterValues.reportDateFilter || "Дата отчета"}
-              {filterValues.reportDateFilter && (
-                <Badge
-                  badgeContent=""
-                  color="primary"
-                  variant="dot"
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => handleOpenFilterModal("parameterFilter")}
-              color={filterValues.parameterFilter ? "primary" : "inherit"}
-            >
-              {filterValues.parameterFilter || "Параметр проверки"}
-              {filterValues.parameterFilter && (
-                <Badge
-                  badgeContent=""
-                  color="primary"
-                  variant="dot"
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => handleOpenFilterModal("operatorFilter")}
-              color={filterValues.operatorFilter ? "primary" : "inherit"}
-            >
-              {filterValues.operatorFilter || "Оператор"}
-              {filterValues.operatorFilter && (
-                <Badge
-                  badgeContent=""
-                  color="primary"
-                  variant="dot"
-                  sx={{ ml: 1 }}
-                />
-              )}
-            </Button>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleResetAllFilters}
-            >
-              Сбросить фильтры
-            </Button>
-          </Box>
-          <CustomTable<TaskHistoryItem>
-            rowData={filteredHistoryItems}
-            columnDefs={historyColumnDefs}
-            getRowId={getHistoryRowId}
-            pagination={true}
-          />
-        </CustomTabPanel>
+              <Table stickyHeader sx={{ minWidth: 1000 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                        pl: 3,
+                        width: "60px",
+                      }}
+                    >
+                      №
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                        width: "130px",
+                      }}
+                    >
+                      Дата проверки
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                        width: "160px",
+                      }}
+                    >
+                      Повторная проверка
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                      }}
+                    >
+                      ФИО оператора
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                        width: "180px",
+                      }}
+                    >
+                      Дата загрузки отчета
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                      }}
+                    >
+                      Список параметров
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                      }}
+                    >
+                      Список несоответствий
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        backgroundColor: "#F9FAFB",
+                        borderBottom: "1px solid #EAECF0",
+                        color: "#475467",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        py: 2,
+                        pr: 3,
+                        width: "80px",
+                      }}
+                    >
+                      Фото
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {historyItems.map((item, index) => {
+                    const formattedDate = item.date_time
+                      ? dayjs(item.date_time).format("DD.MM.YYYY")
+                      : "N/A";
+                    const isRepeat = item.is_repeat_inspection ? "Да" : "Нет";
+                    const formattedReportDate = item.date_time_report_loading
+                      ? dayjs(item.date_time_report_loading).format(
+                          "DD.MM.YYYY"
+                        )
+                      : "N/A";
 
-        <CustomTabPanel value={currentTab} index={3}>
-          <Typography variant="h6" mb={2}>
-            Чат (Сообщения)
-          </Typography>
-          {task.manager ? (
-            <Chat
-              taskId={taskId || ""}
-              currentUserId={Number(localStorage.getItem("user_id")) || 0}
-              operatorId={task.operator.id}
-              managerId={task.manager.id}
-              operatorName={task.operator.name}
-              managerName={task.manager.name}
-              baseUrl={BASE_URL}
-            />
+                    const paramsList = item.parameters
+                      ? Object.keys(item.parameters)
+                          .filter((key) => item.parameters[key] !== null)
+                          .join(", ")
+                      : "N/A";
+
+                    const nonCompliancesList = item.parameters
+                      ? Object.values(item.parameters)
+                          .filter((val): val is string[] => val !== null)
+                          .flat()
+                          .join(", ")
+                      : "N/A";
+
+                    return (
+                      <TableRow
+                        key={item.id}
+                        hover
+                        sx={{
+                          height: "72px",
+                          "&:hover": {
+                            backgroundColor: "#F9FAFB",
+                          },
+                        }}
+                      >
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                            pl: 3,
+                          }}
+                        >
+                          {index + 1}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {formattedDate}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {isRepeat}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {item.user_name ?? "N/A"}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {formattedReportDate}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                            maxWidth: "200px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {paramsList}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            color: "#475467",
+                            fontWeight: 400,
+                            maxWidth: "200px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {nonCompliancesList}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            borderBottom: "1px solid #EAECF0",
+                            pr: 3,
+                          }}
+                        >
+                          <IconButton
+                            color="primary"
+                            onClick={() =>
+                              handleOpenImageModal(item.id.toString())
+                            }
+                            sx={{
+                              "&:hover": { backgroundColor: "#F2F4F7" },
+                              borderRadius: "8px",
+                              p: 1,
+                            }}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           ) : (
-            <Typography>
-              Информация о мастере недоступна. Чат невозможен.
-            </Typography>
+            <Typography>Нет данных для отображения</Typography>
           )}
         </CustomTabPanel>
 
-        {/* Модальные окна фильтров */}
-        <Dialog
-          open={filterModalOpen === "dateFilter"}
-          onClose={handleCloseFilterModal}
-        >
-          <DialogTitle>Фильтр по дате</DialogTitle>
-          <DialogContent>
-            <DatePicker
-              label="Дата проверки (DD.MM.YYYY)"
-              value={
-                filterValues.dateFilter
-                  ? dayjs(filterValues.dateFilter, "DD.MM.YYYY")
-                  : null
-              }
-              onChange={(date) =>
-                handleApplyFilter(
-                  "dateFilter",
-                  date ? date.format("DD.MM.YYYY") : ""
-                )
-              }
-              slotProps={{
-                textField: { fullWidth: true },
-              }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => handleResetFilter("dateFilter")}>
-              Сброс
-            </Button>
-            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={filterModalOpen === "reportDateFilter"}
-          onClose={handleCloseFilterModal}
-        >
-          <DialogTitle>Фильтр по дате отчета</DialogTitle>
-          <DialogContent>
-            <DatePicker
-              label="Дата загрузки отчета (DD.MM.YYYY)"
-              value={
-                filterValues.reportDateFilter
-                  ? dayjs(filterValues.reportDateFilter, "DD.MM.YYYY")
-                  : null
-              }
-              onChange={(date) =>
-                handleApplyFilter(
-                  "reportDateFilter",
-                  date ? date.format("DD.MM.YYYY") : ""
-                )
-              }
-              slotProps={{
-                textField: { fullWidth: true },
-              }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => handleResetFilter("reportDateFilter")}>
-              Сброс
-            </Button>
-            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={filterModalOpen === "parameterFilter"}
-          onClose={handleCloseFilterModal}
-        >
-          <DialogTitle>Фильтр по параметру</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Наименование параметра"
-              value={filterValues.parameterFilter || ""}
-              onChange={(e) =>
-                handleApplyFilter("parameterFilter", e.target.value)
-              }
-              sx={{ mt: 2 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => handleResetFilter("parameterFilter")}>
-              Сброс
-            </Button>
-            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={filterModalOpen === "operatorFilter"}
-          onClose={handleCloseFilterModal}
-        >
-          <DialogTitle>Фильтр по оператору</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Имя оператора"
-              value={filterValues.operatorFilter || ""}
-              onChange={(e) =>
-                handleApplyFilter("operatorFilter", e.target.value)
-              }
-              sx={{ mt: 2 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => handleResetFilter("operatorFilter")}>
-              Сброс
-            </Button>
-            <Button onClick={handleCloseFilterModal}>Закрыть</Button>
-          </DialogActions>
-        </Dialog>
 
         <Dialog
           open={openPhotoDialog}
@@ -2070,6 +2092,45 @@ export const TaskPage: React.FC = () => {
                 Сохранить
               </Button>
             )}
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={imageModalOpen}
+          onClose={handleCloseImageModal}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>Изображение несоответствия</DialogTitle>
+          <DialogContent
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "300px",
+            }}
+          >
+            {currentImage ? (
+              <Box
+                component="img"
+                src={
+                  currentImage.startsWith("http")
+                    ? currentImage
+                    : `${BASE_URL}/${currentImage}`
+                }
+                alt="Изображение несоответствия"
+                sx={{
+                  maxWidth: "100%",
+                  maxHeight: "60vh",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <CircularProgress />
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseImageModal}>Закрыть</Button>
           </DialogActions>
         </Dialog>
       </Paper>

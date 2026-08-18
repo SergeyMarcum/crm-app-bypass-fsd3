@@ -54,8 +54,8 @@ export const addNewTaskPayloadSchema = z
     object_id: z
       .number()
       .int()
-      .positive("ID объекта должен быть положительным числом"),
-    shift_id: z.number().min(0).max(1, "ID смены должен быть 0 или 1"),
+      .nonnegative("ID объекта должен быть неотрицательным числом"),
+    shift_id: z.number().min(0).max(2, "ID смены должен быть от 0 до 2"),
     checking_type_id: z
       .number()
       .min(0)

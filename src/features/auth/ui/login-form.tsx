@@ -47,18 +47,25 @@ export function LoginForm(): ReactElement {
     const savedDomain = storage.get("auth_domain");
     if (savedDomain && domains.some((d) => d.id === savedDomain)) {
       setValue("domain", savedDomain);
+    } else if (domains.length > 0) {
+      setValue("domain", domains[0].id);
     }
   }, [domains, setValue]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       // 🔐 Вызов логина
-      // Функция login в store.ts теперь сама сохраняет token, user, username, auth_domain
       await login(data);
-
       toast.success("Успешный вход");
-    } catch {
-      toast.error("Ошибка авторизации");
+    } catch (err: unknown) {
+      const apiError = err as {
+        response?: { data?: { detail?: string; message?: string } };
+      };
+      const errorMessage =
+        apiError?.response?.data?.detail ||
+        apiError?.response?.data?.message ||
+        "Ошибка авторизации. Проверьте логин, пароль и домен.";
+      toast.error(errorMessage);
     }
   };
 
@@ -98,7 +105,9 @@ export function LoginForm(): ReactElement {
                 label="Домен"
                 disabled={isLoading || domains.length === 0}
                 value={
-                  domains.find((d) => d.id === field.value) ? field.value : ""
+                  !isLoading && domains.some((d) => d.id === field.value)
+                    ? field.value
+                    : ""
                 }
                 onChange={(e) => {
                   const domainId = e.target.value;
