@@ -31,12 +31,21 @@ import {
   Autocomplete,
   Tooltip,
   Badge,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  InputAdornment,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import SearchIcon from "@mui/icons-material/Search";
+import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { useNavigate } from "react-router-dom";
 
 import dayjs from "dayjs";
@@ -54,6 +63,7 @@ import { api } from "@/shared/api/axios";
 import { nonComplianceApi } from "@/shared/api/task/non-compliance/client";
 import type { NonComplianceCase } from "@/shared/api/task/non-compliance/types";
 import { taskHistoryApi } from "@/shared/api/task/history";
+import { getAuthParams } from "@/shared/lib/auth";
 import type { User } from "@/shared/api/task/employee";
 import type {
   ObjectItem,
@@ -79,7 +89,7 @@ import {
   AddNewTaskPayload,
 } from "@/features/tasks/task-form/model/task-schemas";
 import { taskApi } from "@/features/tasks/task-form/api/task";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { useAuthStore } from "@/features/auth/model/store";
 import { z } from "zod";
 
@@ -160,6 +170,29 @@ export function CreateTaskPage() {
 
   const [objects, setObjects] = useState<ObjectItem[]>([]);
   const [operators, setOperators] = useState<User[]>([]);
+
+  // Стейты для модального окна выбора объекта
+  const [openObjectModal, setOpenObjectModal] = useState(false);
+  const [objectSearchQuery, setObjectSearchQuery] = useState("");
+  const [objectSortOrder, setObjectSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Отфильтрованные и отсортированные объекты для модального окна
+  const filteredAndSortedObjects = useMemo(() => {
+    let result = [...objects];
+    if (objectSearchQuery) {
+      result = result.filter((obj) =>
+        obj.name?.toLowerCase().includes(objectSearchQuery.toLowerCase())
+      );
+    }
+    result.sort((a, b) => {
+      const nameA = a.name || "";
+      const nameB = b.name || "";
+      return objectSortOrder === "asc"
+        ? nameA.localeCompare(nameB)
+        : nameB.localeCompare(nameA);
+    });
+    return result;
+  }, [objects, objectSearchQuery, objectSortOrder]);
   const [allParameters, setAllParameters] = useState<InspectionParameter[]>([]);
   const [selectedInspectionParameters, setSelectedInspectionParameters] =
     useState<InspectionParameter[]>([]);
@@ -429,8 +462,8 @@ export function CreateTaskPage() {
       // Отправка начального сообщения в чат
       const domain = localStorage.getItem("auth_domain") || "";
       const username = localStorage.getItem("username") || "";
-      const sessionCode = localStorage.getItem("session_code") || "";
-      const userId = localStorage.getItem("user_id") || "";
+      const sessionCode = localStorage.getItem("session_token") || "";
+      const userId = user ? String(user.id) : "";
       const BASE_URL = import.meta.env.VITE_API_URL || "/api";
       const selectedObject = objects.find(
         (obj) => obj.id.toString() === data.objectId
@@ -539,43 +572,51 @@ export function CreateTaskPage() {
         .filter((nc) => nc.parameter_id === currentParameterInModal.id)
         .map((nc) => nc.incongruity_id);
 
-      const storage = (await import("@/shared/lib/storage")).storage;
-      const domain = storage.get("auth_domain");
-      const username = storage.get("username");
-      const session_token = storage.get("session_token");
+      const authParams = getAuthParams();
 
-      if (!domain || !username || !session_token) {
+      if (!authParams.domain || !authParams.username || !authParams.session_code) {
         toast.error("Недостаточно данных для аутентификации");
         return;
       }
 
-      const nonComplianceIds = pendingNonCompliances
-        .filter((nc) => nc.parameter_id === currentParameterInModal.id)
-        .map((nc) => nc.incongruity_id);
-
-      const paramsNonComps = {
-        [currentParameterInModal.id]: nonComplianceIds,
-      };
+      const paramsNonComps: Record<number, number[]> = {};
+      selectedInspectionParameters.forEach((param) => {
+        let nonComps = param.nonCompliances || [];
+        if (param.id === currentParameterInModal.id) {
+          nonComps = pendingNonCompliances;
+        }
+        paramsNonComps[param.id] = nonComps.map((nc) => nc.incongruity_id || nc.id);
+      });
 
       console.log("Отправка в /task/update-parameters-and-non-compliances:", {
         id: taskId,
         params_noncomps: paramsNonComps,
       });
 
-      await api.put(
-        "/task/update-parameters-and-non-compliances",
-        {
-          id: taskId,
-          params_noncomps: paramsNonComps,
-        },
-        {
-          params: {
-            domain,
-            username,
-            session_code: session_token,
+      try {
+        await api.put(
+          "/task/update-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
           },
-        }
-      );
+          {
+            params: authParams,
+          }
+        );
+      } catch (putError) {
+        console.warn("PUT failed, trying POST fallback:", putError);
+        await api.post(
+          "/task/add-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
+          },
+          {
+            params: authParams,
+          }
+        );
+      }
 
       const newSelectedNonCompliances = selectedNonCompliances.filter(
         (nc) => nc.parameter_id !== currentParameterInModal.id
@@ -602,11 +643,13 @@ export function CreateTaskPage() {
       console.log("Обновлены несоответствия параметра:", {
         taskId,
         parameterId: currentParameterInModal.id,
-        nonComplianceIds,
+        nonComplianceIds: paramsNonComps[currentParameterInModal.id],
       });
     } catch (error) {
       console.error("Ошибка при сохранении изменений параметра:", error);
-      toast.error("Ошибка при сохранении изменений параметра.");
+      const err = error as any;
+      const serverMessage = err.response?.data?.detail || err.response?.data?.message || err.message;
+      toast.error(`Ошибка при сохранении изменений параметра: ${serverMessage}`);
     }
   };
 
@@ -629,43 +672,49 @@ export function CreateTaskPage() {
     }
 
     try {
-      const storage = (await import("@/shared/lib/storage")).storage;
-      const domain = storage.get("auth_domain");
-      const username = storage.get("username");
-      const session_token = storage.get("session_token");
+      const authParams = getAuthParams();
 
-      if (!domain || !username || !session_token) {
+      if (!authParams.domain || !authParams.username || !authParams.session_code) {
         toast.error("Недостаточно данных для аутентификации");
         return;
       }
 
-      const nonComplianceIds = pendingNonCompliances.map(
-        (nc) => nc.incongruity_id
-      );
-
-      const paramsNonComps = {
-        [newParameter.id]: nonComplianceIds,
-      };
+      const paramsNonComps: Record<number, number[]> = {};
+      selectedInspectionParameters.forEach((param) => {
+        const nonComps = param.nonCompliances || [];
+        paramsNonComps[param.id] = nonComps.map((nc) => nc.incongruity_id || nc.id);
+      });
+      paramsNonComps[newParameter.id] = pendingNonCompliances.map((nc) => nc.incongruity_id || nc.id);
 
       console.log("Отправка в /task/update-parameters-and-non-compliances:", {
         id: taskId,
         params_noncomps: paramsNonComps,
       });
 
-      await api.put(
-        "/task/update-parameters-and-non-compliances",
-        {
-          id: taskId,
-          params_noncomps: paramsNonComps,
-        },
-        {
-          params: {
-            domain,
-            username,
-            session_code: session_token,
+      try {
+        await api.put(
+          "/task/update-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
           },
-        }
-      );
+          {
+            params: authParams,
+          }
+        );
+      } catch (putError) {
+        console.warn("PUT failed, trying POST fallback:", putError);
+        await api.post(
+          "/task/add-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
+          },
+          {
+            params: authParams,
+          }
+        );
+      }
 
       const newParamWithNonCompliances = {
         ...newParameter,
@@ -699,11 +748,13 @@ export function CreateTaskPage() {
       console.log("Добавлен новый параметр:", {
         taskId,
         parameterId: newParameter.id,
-        nonComplianceIds,
+        nonComplianceIds: paramsNonComps[newParameter.id],
       });
     } catch (error) {
       console.error("Ошибка при добавлении параметра:", error);
-      toast.error("Ошибка при добавлении параметра.");
+      const err = error as any;
+      const serverMessage = err.response?.data?.detail || err.response?.data?.message || err.message;
+      toast.error(`Ошибка при добавлении параметра: ${serverMessage}`);
     }
   };
 
@@ -713,9 +764,45 @@ export function CreateTaskPage() {
       return;
     }
     try {
-      await nonComplianceApi.addParameterNonCompliance(taskId, {
-        [parameterId]: [],
-      });
+      const authParams = getAuthParams();
+      if (!authParams.domain || !authParams.username || !authParams.session_code) {
+        toast.error("Недостаточно данных для аутентификации");
+        return;
+      }
+
+      const paramsNonComps: Record<number, number[]> = {};
+      selectedInspectionParameters
+        .filter((param) => param.id !== parameterId)
+        .forEach((param) => {
+          const nonComps = param.nonCompliances || [];
+          paramsNonComps[param.id] = nonComps.map((nc) => nc.incongruity_id || nc.id);
+        });
+
+      try {
+        await api.put(
+          "/task/update-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
+          },
+          {
+            params: authParams,
+          }
+        );
+      } catch (putError) {
+        console.warn("PUT failed, trying POST fallback:", putError);
+        await api.post(
+          "/task/add-parameters-and-non-compliances",
+          {
+            id: taskId,
+            params_noncomps: paramsNonComps,
+          },
+          {
+            params: authParams,
+          }
+        );
+      }
+
       setSelectedInspectionParameters((prev) =>
         prev.filter((param) => param.id !== parameterId)
       );
@@ -725,7 +812,9 @@ export function CreateTaskPage() {
       toast.success("Параметр и связанные несоответствия удалены.");
     } catch (error) {
       console.error("Ошибка при удалении параметра:", error);
-      toast.error("Ошибка при удалении параметра.");
+      const err = error as any;
+      const serverMessage = err.response?.data?.detail || err.response?.data?.message || err.message;
+      toast.error(`Ошибка при удалении параметра: ${serverMessage}`);
     }
   };
 
@@ -1030,27 +1119,30 @@ export function CreateTaskPage() {
                     sx={{ mb: 2 }}
                     error={!!errors.objectId}
                   >
-                    <InputLabel id="object-select-label">
-                      Выбор объекта для проверки
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="object-select-label"
+                    <TextField
                       label="Выбор объекта для проверки"
-                      displayEmpty
-                      onChange={(e) => {
-                        field.onChange(e);
+                      value={selectedObject ? selectedObject.name : ""}
+                      onClick={() => {
+                        setObjectSearchQuery("");
+                        setOpenObjectModal(true);
                       }}
-                    >
-                      {objects.map((obj) => (
-                        <MenuItem key={obj.id} value={obj.id.toString()}>
-                          {obj.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.objectId && (
-                      <FormHelperText>{errors.objectId.message}</FormHelperText>
-                    )}
+                      placeholder="Выберите объект из списка"
+                      required
+                      error={!!errors.objectId}
+                      helperText={errors.objectId?.message}
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <SearchIcon sx={{ cursor: "pointer" }} />
+                          </InputAdornment>
+                        ),
+                      }}
+                      sx={{ 
+                        cursor: "pointer",
+                        "& .MuiInputBase-input": { cursor: "pointer" }
+                      }}
+                    />
                   </FormControl>
                 )}
               />
@@ -1060,31 +1152,35 @@ export function CreateTaskPage() {
                   gap: 2,
                   mb: 2,
                   flexDirection: { xs: "column", sm: "row" },
+                  alignItems: { xs: "stretch", sm: "flex-start" },
                 }}
               >
-                <Controller
-                  name="checkDate"
-                  control={control}
-                  render={({ field }) => (
-                    <DatePicker
-                      label="Дата проверки"
-                      value={field.value ? dayjs(field.value) : null}
-                      onChange={(date) => {
-                        field.onChange(date ? date.toDate() : null);
-                      }}
-                      sx={{ flex: 1 }}
-                      slotProps={{
-                        textField: {
-                          required: true,
-                          fullWidth: true,
-                          error: !!errors.checkDate,
-                          helperText: errors.checkDate?.message,
-                        },
-                      }}
-                      format="DD.MM.YYYY"
+                <Tooltip title="Дата проверки" arrow placement="top">
+                  <Box sx={{ width: { xs: "100%", sm: "190px" } }}>
+                    <Controller
+                      name="checkDate"
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          label="Дата проверки"
+                          value={field.value ? dayjs(field.value) : null}
+                          onChange={(date) => {
+                            field.onChange(date ? date.toDate() : null);
+                          }}
+                          sx={{ width: "100%" }}
+                          slotProps={{
+                            textField: {
+                              required: true,
+                              error: !!errors.checkDate,
+                              helperText: errors.checkDate?.message,
+                            },
+                          }}
+                          format="DD.MM.YYYY"
+                        />
+                      )}
                     />
-                  )}
-                />
+                  </Box>
+                </Tooltip>
                 <Box
                   sx={{
                     display: "flex",
@@ -1093,30 +1189,49 @@ export function CreateTaskPage() {
                     flex: 1,
                   }}
                 >
-                  <Controller
-                    name="checkTime"
-                    control={control}
-                    render={({ field }) => (
-                      <TimePicker
-                        label="Время начала проверки"
-                        value={field.value ? dayjs(field.value) : null}
-                        onChange={(time) => {
-                          field.onChange(time ? time.toDate() : null);
-                        }}
-                        ampm={false}
-                        sx={{ width: "100%" }}
-                        slotProps={{
-                          textField: {
-                            required: true,
-                            fullWidth: true,
-                            error: !!errors.checkTime,
-                            helperText: errors.checkTime?.message,
-                          },
-                        }}
+                  <Tooltip title="Время начала проверки" arrow placement="top">
+                    <Box sx={{ width: { xs: "100%", sm: "160px" } }}>
+                      <Controller
+                        name="checkTime"
+                        control={control}
+                        render={({ field }) => (
+                          <TimePicker
+                            label="Время начала"
+                            value={field.value ? dayjs(field.value) : null}
+                            onChange={(time) => {
+                              field.onChange(time ? time.toDate() : null);
+                            }}
+                            ampm={false}
+                            sx={{ width: "100%" }}
+                            slotProps={{
+                              textField: {
+                                required: true,
+                                error: !!errors.checkTime,
+                                helperText: errors.checkTime?.message,
+                              },
+                            }}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                  {shiftText && <Typography>{shiftText}</Typography>}
+                    </Box>
+                  </Tooltip>
+                  {shiftText && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                        fontWeight: "medium",
+                        bgcolor: "action.selected",
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: 1,
+                        alignSelf: "center",
+                        height: "fit-content",
+                      }}
+                    >
+                      {shiftText}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
               <Controller
@@ -1499,6 +1614,97 @@ export function CreateTaskPage() {
           <Button onClick={handleSaveParameterChanges} variant="contained">
             Применить
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Object Selection Modal */}
+      <Dialog
+        open={openObjectModal}
+        onClose={() => setOpenObjectModal(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ pr: 6 }}>
+          Выбор объекта для проверки
+          <IconButton
+            onClick={() => setOpenObjectModal(false)}
+            sx={{ position: "absolute", right: 8, top: 8 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", gap: 1, mb: 2, alignItems: "center" }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Поиск объекта..."
+              value={objectSearchQuery}
+              onChange={(e) => setObjectSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Tooltip title={objectSortOrder === "asc" ? "Сортировка: А-Я" : "Сортировка: Я-А"} arrow>
+              <IconButton
+                onClick={() => setObjectSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                color="primary"
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}
+              >
+                <SortByAlphaIcon />
+                {objectSortOrder === "asc" ? (
+                  <ArrowUpwardIcon fontSize="small" sx={{ ml: 0.5, fontSize: "0.8rem" }} />
+                ) : (
+                  <ArrowDownwardIcon fontSize="small" sx={{ ml: 0.5, fontSize: "0.8rem" }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <List sx={{ maxHeight: 350, overflow: "auto" }}>
+            {filteredAndSortedObjects.length > 0 ? (
+              filteredAndSortedObjects.map((obj) => (
+                <ListItemButton
+                  key={obj.id}
+                  selected={watch("objectId") === obj.id.toString()}
+                  onClick={() => {
+                    setValue("objectId", obj.id.toString(), { shouldValidate: true });
+                    setOpenObjectModal(false);
+                  }}
+                  sx={{
+                    borderRadius: 1,
+                    mb: 0.5,
+                    "&.Mui-selected": {
+                      bgcolor: "action.selected",
+                      fontWeight: "bold",
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary={obj.name}
+                    secondary={obj.address || "Адрес не указан"}
+                    primaryTypographyProps={{
+                      fontWeight: watch("objectId") === obj.id.toString() ? "bold" : "regular",
+                    }}
+                  />
+                </ListItemButton>
+              ))
+            ) : (
+              <ListItem>
+                <ListItemText
+                  primary="Объекты не найдены"
+                  sx={{ textAlign: "center", color: "text.secondary", py: 2 }}
+                />
+              </ListItem>
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenObjectModal(false)}>Закрыть</Button>
         </DialogActions>
       </Dialog>
 

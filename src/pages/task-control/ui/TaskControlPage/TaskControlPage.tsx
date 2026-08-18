@@ -1,31 +1,31 @@
 // src/pages/tasks/ui/TaskControlPage/TaskControlPage.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Typography,
   Box,
-  Button,
-  Modal,
   TextField,
   IconButton,
+  InputAdornment,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
+  Chip,
+  TablePagination,
 } from "@mui/material";
-import { AgGridReact } from "ag-grid-react";
-import type {
-  ICellRendererParams,
-  ValueFormatterParams,
-} from "ag-grid-community";
-import EmailIcon from "@mui/icons-material/Email";
-import PersonIcon from "@mui/icons-material/Person";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
-import { CustomTable } from "@/widgets/table";
 import type { JSX } from "react";
 import { getControlTasks } from "@/shared/api/task/control";
 
@@ -51,17 +51,79 @@ const mapApiToTask = (apiTask: any): Task => ({
   comment: apiTask.comment,
 });
 
-const modalStyle = {
-  position: "absolute" as "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 400,
-  bgcolor: "background.paper",
-  border: "2px solid #000",
-  boxShadow: 24,
-  p: 4,
+const renderStatusChip = (statusText: string | null) => {
+  if (!statusText) {
+    return <Chip label="—" variant="outlined" size="small" />;
+  }
+
+  const text = statusText.trim().toLowerCase();
+
+  if (text.includes("выполнено") || text.includes("завершено") || text.includes("проверено") || text.includes("успешно")) {
+    return (
+      <Chip
+        icon={
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#10B981" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path>
+          </svg>
+        }
+        label={statusText}
+        variant="outlined"
+        size="small"
+        sx={{
+          borderColor: "#A7F3D0",
+          color: "#047857",
+          backgroundColor: "#ECFDF5",
+          fontWeight: 500,
+          "& .MuiChip-label": { paddingLeft: "6px" },
+        }}
+      />
+    );
+  }
+
+  if (text.includes("просрочено") || text.includes("отменено") || text.includes("ошибка") || text.includes("замечания")) {
+    return (
+      <Chip
+        icon={
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#EF4444" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+            <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path>
+          </svg>
+        }
+        label={statusText}
+        variant="outlined"
+        size="small"
+        sx={{
+          borderColor: "#FCA5A5",
+          color: "#B91C1C",
+          backgroundColor: "#FEF2F2",
+          fontWeight: 500,
+          "& .MuiChip-label": { paddingLeft: "6px" },
+        }}
+      />
+    );
+  }
+
+  return (
+    <Chip
+      icon={
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#F59E0B" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm56,112H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48a8,8,0,0,1,0,16Z"></path>
+        </svg>
+      }
+      label={statusText}
+      variant="outlined"
+      size="small"
+      sx={{
+        borderColor: "#FDE68A",
+        color: "#B45309",
+        backgroundColor: "#FFFBEB",
+        fontWeight: 500,
+        "& .MuiChip-label": { paddingLeft: "6px" },
+      }}
+    />
+  );
 };
+
+
 
 export const TaskControlPage = (): JSX.Element => {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -69,13 +131,11 @@ export const TaskControlPage = (): JSX.Element => {
 
   const [objectFilter, setObjectFilter] = useState<string>("");
   const [operatorFilter, setOperatorFilter] = useState<string>("");
-  const [dateFilter, setDateFilter] = useState<Dayjs | null>(null);
+  const [dateFilter, setDateFilter] = useState<dayjs.Dayjs | null>(null);
 
-  const [showObjectModal, setShowObjectModal] = useState(false);
-  const [showOperatorModal, setShowOperatorModal] = useState(false);
-  const [showDateModal, setShowDateModal] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const gridRef = useRef<AgGridReact<Task>>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -120,218 +180,272 @@ export const TaskControlPage = (): JSX.Element => {
     }
 
     setFilteredTasks(currentFiltered);
+    setPage(0);
   }, [allTasks, objectFilter, operatorFilter, dateFilter]);
 
-  const handleObjectFilterApply = () => {
-    setShowObjectModal(false);
-  };
-  const handleOperatorFilterApply = () => {
-    setShowOperatorModal(false);
-  };
-  const handleDateFilterApply = () => {
-    setShowDateModal(false);
-  };
-
-  const resetAllFilters = () => {
-    setObjectFilter("");
-    setOperatorFilter("");
-    setDateFilter(null);
-  };
-
-  const columns = [
-    {
-      headerName: "Порядковый номер",
-      valueGetter: "node.rowIndex + 1",
-      width: 100,
-    },
-    {
-      headerName: "Дата проверки",
-      field: "checkDate",
-      valueFormatter: (params: ValueFormatterParams<Task, string>) => {
-        return params.value ? dayjs(params.value).format("DD.MM.YYYY") : "";
-      },
-      width: 120,
-    },
-    { headerName: "Вид проверки", field: "checkType", width: 150 },
-    {
-      headerName: "Объект",
-      field: "objectName",
-      flex: 1,
-      minWidth: 150,
-      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
-        params.value || "—",
-    },
-    {
-      headerName: "Мастер",
-      field: "masterName",
-      width: 150,
-      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
-        params.value || "—",
-    },
-    {
-      headerName: "Оператор",
-      field: "operatorName",
-      width: 150,
-      valueFormatter: (params: ValueFormatterParams<Task, string | null>) =>
-        params.value || "—",
-    },
-    { headerName: "Статус", field: "status", width: 120 },
-    {
-      headerName: "Комментарий",
-      field: "comment",
-      flex: 1,
-      minWidth: 200,
-      cellRenderer: (params: ICellRendererParams<Task>) => params.value || "—",
-    },
-    {
-      headerName: "",
-      width: 70,
-      cellRenderer: (params: ICellRendererParams<Task>) =>
-        params.data ? (
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => params.data && navigate(`/task/${params.data.id}`)}
-            title="Открыть"
-          >
-            <ArrowForwardIcon fontSize="small" />
-          </IconButton>
-        ) : null,
-    },
-  ];
+  const paginatedTasks = filteredTasks.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box p={3}>
-        <Typography variant="h4" gutterBottom>
+      <Box p={3} sx={{ backgroundColor: "#FCFDFD", minHeight: "100vh" }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, color: "#101828", mb: 0.5 }}>
           Контроль заданий по проверке объекта
         </Typography>
-        <Typography variant="subtitle1" gutterBottom>
+        <Typography variant="body1" sx={{ color: "#475467", mb: 3 }}>
           Список заданий по проверке объектов филиала
         </Typography>
 
-        <Box display="flex" gap={2} my={2}>
-          <Button
-            variant={objectFilter ? "contained" : "outlined"}
-            onClick={() =>
-              objectFilter ? setObjectFilter("") : setShowObjectModal(true)
-            }
-            startIcon={<EmailIcon />}
-          >
-            {objectFilter || "Объекты"}
-          </Button>
-          <Button
-            variant={operatorFilter ? "contained" : "outlined"}
-            onClick={() =>
-              operatorFilter
-                ? setOperatorFilter("")
-                : setShowOperatorModal(true)
-            }
-            startIcon={<PersonIcon />}
-          >
-            {operatorFilter || "Оператор"}
-          </Button>
-          <Button
-            variant={dateFilter ? "contained" : "outlined"}
-            onClick={() =>
-              dateFilter ? setDateFilter(null) : setShowDateModal(true)
-            }
-            startIcon={<CalendarTodayIcon />}
-          >
-            {dateFilter ? dateFilter.format("DD.MM.YYYY") : "Дата"}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={resetAllFilters}
-            disabled={!objectFilter && !operatorFilter && !dateFilter}
-          >
-            Сбросить фильтры
-          </Button>
+        {/* Filter inputs */}
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            mb: 3,
+            alignItems: "center",
+            flexWrap: "wrap",
+            p: 2,
+            backgroundColor: "#FFFFFF",
+            borderRadius: "12px",
+            border: "1px solid #EAECF0",
+          }}
+        >
+          <TextField
+            size="small"
+            label="Объект"
+            placeholder="Поиск по объекту..."
+            value={objectFilter}
+            onChange={(e) => setObjectFilter(e.target.value)}
+            sx={{
+              minWidth: 220,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "8px",
+              },
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                  </InputAdornment>
+                ),
+                endAdornment: objectFilter && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setObjectFilter("")}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
+          <TextField
+            size="small"
+            label="Оператор"
+            placeholder="Поиск по оператору..."
+            value={operatorFilter}
+            onChange={(e) => setOperatorFilter(e.target.value)}
+            sx={{
+              minWidth: 220,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "8px",
+              },
+            }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                  </InputAdornment>
+                ),
+                endAdornment: operatorFilter && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setOperatorFilter("")}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
+          <DatePicker
+            label="Дата"
+            value={dateFilter}
+            onChange={(newValue) => setDateFilter(newValue)}
+            format="DD.MM.YYYY"
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: {
+                  minWidth: 220,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                  },
+                },
+                placeholder: "Выберите дату...",
+              },
+            }}
+          />
         </Box>
 
-        <Modal open={showObjectModal} onClose={() => setShowObjectModal(false)}>
-          <Paper sx={modalStyle}>
-            <Typography variant="h6" component="h2">
-              Фильтрация по объектам
-            </Typography>
-            <IconButton
-              aria-label="close"
-              onClick={() => setShowObjectModal(false)}
-              sx={{ position: "absolute", right: 8, top: 8 }}
-            >
-              X
-            </IconButton>
-            <TextField
-              fullWidth
-              label="Поле ввода объекта"
-              value={objectFilter}
-              onChange={(e) => setObjectFilter(e.target.value)}
-              margin="normal"
-            />
-            <Button variant="contained" onClick={handleObjectFilterApply}>
-              Применить
-            </Button>
-          </Paper>
-        </Modal>
-
-        <Modal
-          open={showOperatorModal}
-          onClose={() => setShowOperatorModal(false)}
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: "12px",
+            border: "1px solid #EAECF0",
+            boxShadow: "0px 1px 3px rgba(16, 24, 40, 0.1), 0px 1px 2px rgba(16, 24, 40, 0.06)",
+            overflow: "hidden",
+            backgroundColor: "#FFFFFF",
+          }}
         >
-          <Paper sx={modalStyle}>
-            <Typography variant="h6" component="h2">
-              Фильтрация по оператору
-            </Typography>
-            <IconButton
-              aria-label="close"
-              onClick={() => setShowOperatorModal(false)}
-              sx={{ position: "absolute", right: 8, top: 8 }}
-            >
-              X
-            </IconButton>
-            <TextField
-              fullWidth
-              label="Поле ввода оператора"
-              value={operatorFilter}
-              onChange={(e) => setOperatorFilter(e.target.value)}
-              margin="normal"
-            />
-            <Button variant="contained" onClick={handleOperatorFilterApply}>
-              Применить
-            </Button>
-          </Paper>
-        </Modal>
+          <Table sx={{ minWidth: 650 }}>
+            <TableHead sx={{ backgroundColor: "#F9FAFB" }}>
+              <TableRow>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2, pl: 3 }}>
+                  №
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Дата проверки
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Вид проверки
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Объект
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Мастер
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Оператор
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Статус
+                </TableCell>
+                <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                  Комментарий
+                </TableCell>
+                <TableCell align="right" sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2, pr: 3 }}>
+                  Действия
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                    Задания не найдены
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTasks.map((task, index) => {
+                  const serialNumber = page * rowsPerPage + index + 1;
+                  return (
+                    <TableRow
+                      key={task.id}
+                      hover
+                      sx={{
+                        height: "72px",
+                        "&:hover": {
+                          backgroundColor: "#F9FAFB",
+                        },
+                      }}
+                    >
+                      {/* № */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400, pl: 3 }}>
+                        {serialNumber}
+                      </TableCell>
 
-        <Modal open={showDateModal} onClose={() => setShowDateModal(false)}>
-          <Paper sx={modalStyle}>
-            <Typography variant="h6" component="h2">
-              Фильтрация по дате создания задания
-            </Typography>
-            <IconButton
-              aria-label="close"
-              onClick={() => setShowDateModal(false)}
-              sx={{ position: "absolute", right: 8, top: 8 }}
-            >
-              X
-            </IconButton>
-            <DatePicker
-              label="Выберите дату"
-              value={dateFilter}
-              onChange={(newValue) => setDateFilter(newValue)}
-              slotProps={{ textField: { fullWidth: true, margin: "normal" } }}
-            />
-            <Button variant="contained" onClick={handleDateFilterApply}>
-              Применить
-            </Button>
-          </Paper>
-        </Modal>
+                      {/* Дата проверки */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                        {task.checkDate ? dayjs(task.checkDate).format("DD.MM.YYYY") : "—"}
+                      </TableCell>
 
-        <CustomTable<Task>
-          ref={gridRef}
-          rowData={filteredTasks}
-          columnDefs={columns}
-          getRowId={(row) => row.id.toString()}
-        />
+                      {/* Вид проверки */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                        {task.checkType || "—"}
+                      </TableCell>
+
+                      {/* Объект */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                        {task.objectName || "—"}
+                      </TableCell>
+
+                      {/* Мастер */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                        {task.masterName || "—"}
+                      </TableCell>
+
+                      {/* Оператор */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                        {task.operatorName || "—"}
+                      </TableCell>
+
+                      {/* Статус */}
+                      <TableCell sx={{ borderBottom: "1px solid #EAECF0" }}>
+                        {renderStatusChip(task.status)}
+                      </TableCell>
+
+                      {/* Комментарий */}
+                      <TableCell
+                        sx={{
+                          borderBottom: "1px solid #EAECF0",
+                          color: "#475467",
+                          fontWeight: 400,
+                          maxWidth: "300px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={task.comment || ""}
+                      >
+                        {task.comment || "—"}
+                      </TableCell>
+
+                      {/* Действие */}
+                      <TableCell align="right" sx={{ borderBottom: "1px solid #EAECF0", pr: 3 }}>
+                        <IconButton
+                          color="primary"
+                          size="medium"
+                          onClick={() => navigate(`/task/${task.id}`)}
+                          title="Открыть"
+                          sx={{
+                            "&:hover": { backgroundColor: "#F2F4F7" },
+                            borderRadius: "8px",
+                            p: 1,
+                          }}
+                        >
+                          <ArrowForwardIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Table Pagination */}
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={filteredTasks.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            labelRowsPerPage="Заданий на странице:"
+            labelDisplayedRows={({ from, to, count }) => `${from}–${to} из ${count}`}
+            sx={{ borderTop: "1px solid #EAECF0" }}
+          />
+        </TableContainer>
       </Box>
     </LocalizationProvider>
   );

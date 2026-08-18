@@ -6,11 +6,10 @@ import {
   Tabs,
   Tab,
   Button,
-  Avatar,
   IconButton,
 } from "@mui/material";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import { Check } from "@/features/calendar";
@@ -24,11 +23,76 @@ interface CheckModalProps {
 
 export const CheckModal = ({ open, onClose, check }: CheckModalProps) => {
   const [tabValue, setTabValue] = useState(0);
+  const [taskData, setTaskData] = useState<any>(null);
+  const [parameters, setParameters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !check) {
+      setTaskData(null);
+      setParameters([]);
+      return;
+    }
+
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        const domain = localStorage.getItem("domain");
+        const username = localStorage.getItem("username");
+        const sessionCode = localStorage.getItem("session_code");
+
+        if (!domain || !username || !sessionCode) {
+          return;
+        }
+
+        const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+
+        // Fetch task details
+        const taskUrl = `${BASE_URL}/task/get?domain=${domain}&username=${username}&session_code=${sessionCode}&task_id=${check.id}`;
+        const taskRes = await fetch(taskUrl);
+        if (taskRes.ok) {
+          const taskJson = await taskRes.json();
+          if (taskJson && taskJson.task) {
+            setTaskData(taskJson.task);
+          }
+        }
+
+        // Fetch parameters
+        const paramsUrl = `${BASE_URL}/task/parameters-and-non-compliances?domain=${domain}&username=${username}&session_code=${sessionCode}&id=${check.id}`;
+        const paramsRes = await fetch(paramsUrl);
+        if (paramsRes.ok) {
+          const paramsJson = await paramsRes.json();
+          if (paramsJson && paramsJson.parameters) {
+            setParameters(paramsJson.parameters);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching modal task details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [open, check]);
 
   if (!check) return null;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  const isRepeat = taskData
+    ? taskData.checking_type_text === "Повторная" ||
+      taskData.checking_type_id === 1
+    : false;
+
+  const getPeriodicText = (val: number | undefined | null) => {
+    if (val === 1) return "Каждая неделя";
+    if (val === 2) return "Каждый месяц";
+    if (val === 3) return "Разовая";
+    if (val === 0) return "не выбрана";
+    return "не выбрана";
   };
 
   return (
@@ -82,19 +146,66 @@ export const CheckModal = ({ open, onClose, check }: CheckModalProps) => {
               <Typography sx={{ mb: 1 }}>
                 <strong>Статус:</strong> {check.status}
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "center", mt: 2 }}>
-                <Avatar src={check.operator.avatar} sx={{ mr: 1 }} />
-                <Typography>{check.operator.fullName}</Typography>
-              </Box>
+              <Typography sx={{ mb: 1 }}>
+                <strong>Оператор:</strong> {check.operator.fullName}
+              </Typography>
+              <Typography sx={{ mb: 1 }}>
+                <strong>Мастер:</strong>{" "}
+                {taskData?.manager_name ||
+                  (loading ? "Загрузка..." : "Неизвестен")}
+              </Typography>
             </Box>
           )}
           {tabValue === 1 && (
             <Box sx={{ mt: 2 }}>
-              <Typography>
-                Дополнительные детали (например, параметры проверки, повторная
-                проверка).
-                {/* Здесь можно добавить логику для отображения дополнительных деталей */}
+              <Typography sx={{ mb: 1 }}>
+                <strong>Повторная проверка:</strong> {isRepeat ? "Да" : "Нет"}
               </Typography>
+              <Typography sx={{ mb: 1 }}>
+                <strong>Периодическая проверка:</strong>{" "}
+                {getPeriodicText(taskData?.periodic)}
+              </Typography>
+
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Список параметров проверки:
+                </Typography>
+                {parameters.length > 0 ? (
+                  <Box
+                    sx={{
+                      maxHeight: "150px",
+                      overflowY: "auto",
+                      border: "1px solid #EAECF0",
+                      borderRadius: "8px",
+                      p: 1.5,
+                      backgroundColor: "#F9FAFB",
+                    }}
+                  >
+                    {parameters.map((param, index) => (
+                      <Typography
+                        key={param.id || index}
+                        variant="body2"
+                        sx={{
+                          py: 0.5,
+                          borderBottom:
+                            index < parameters.length - 1
+                              ? "1px solid #EAECF0"
+                              : "none",
+                          color: "#344054",
+                        }}
+                      >
+                        {index + 1}. {param.text || param.name}
+                      </Typography>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    {loading
+                      ? "Загрузка параметров..."
+                      : "Параметры проверки отсутствуют"}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           )}
           <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>

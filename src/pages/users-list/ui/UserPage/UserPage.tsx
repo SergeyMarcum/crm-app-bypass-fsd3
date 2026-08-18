@@ -1,5 +1,5 @@
 // src/pages/users-list/ui/UserPage/UserPage.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Tabs,
   Tab,
@@ -9,16 +9,30 @@ import {
   Select,
   MenuItem,
   IconButton,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Checkbox,
+  Avatar,
+  Chip,
+  TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  InputAdornment,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import EmailIcon from "@mui/icons-material/Email";
-import PhoneIcon from "@mui/icons-material/Phone";
-import ApartmentIcon from "@mui/icons-material/Apartment";
-import { AgGridReact } from "ag-grid-react";
-import type { ICellRendererParams } from "ag-grid-community";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
+import CloseIcon from "@mui/icons-material/Close";
 
-import { CustomTable, FilterDefinition } from "@/widgets/table";
 import { userApi } from "@/shared/api/user";
 import { User, EditUserPayload } from "@/entities/user/types";
 import type { JSX } from "react";
@@ -51,25 +65,65 @@ const statusMap: Record<number, string> = {
   5: "Больничный",
 };
 
+// Custom SVG Icons matching the screenshot precisely
+const UncheckedCheckboxIcon = () => (
+  <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style={{ color: "#98A2B3" }}>
+    <path clipRule="evenodd" d="M8 2C4.68629 2 2 4.68629 2 8V16C2 19.3137 4.68629 22 8 22H16C19.3137 22 22 19.3137 22 16V8C22 4.68629 19.3137 2 16 2H8ZM8 4C5.79086 4 4 5.79086 4 8V16C4 18.2091 5.79086 20 8 20H16C18.2091 20 20 18.2091 20 16V8C20 5.79086 18.2091 4 16 4H8Z" fill="currentColor" fillRule="evenodd"></path>
+  </svg>
+);
+
+const CheckedCheckboxIcon = () => (
+  <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style={{ color: "#0079c2" }}>
+    <rect width="20" height="20" x="2" y="2" rx="6" fill="currentColor" />
+    <path d="M7 12L10 15L17 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const EditPencilIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256" style={{ color: "#475467" }}>
+    <path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"></path>
+  </svg>
+);
+
 export const UsersPage = (): JSX.Element => {
   const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<number | null>(null);
-  const gridRef = useRef<AgGridReact<User>>(null);
+
+  // Search input filters
+  const [emailFilter, setEmailFilter] = useState("");
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  // Selection states
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  // Editing states (Dialog based)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [editedUser, setEditedUser] = useState<Partial<User>>({});
+
+  // Bulk action states
+  const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  const [isBulkRoleOpen, setIsBulkRoleOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [newBulkStatus, setNewBulkStatus] = useState<number | "">("");
+  const [newBulkRole, setNewBulkRole] = useState<number | "">("");
 
   useEffect(() => {
     const load = async () => {
       try {
         const company = await userApi.getCompanyUsers();
-        // Приводим company.users к типу User[], преобразуя undefined в null
         const normalizedUsers: User[] = company.users.map((user) => ({
           ...user,
           id: user.id ?? null,
           status_id: user.status_id ?? null,
           domain: user.domain ?? null,
-          name: user.name ?? null, // Нормализация name
+          name: user.name ?? null,
           photo: user.photo ?? null,
         }));
         setUsers(normalizedUsers);
@@ -92,18 +146,20 @@ export const UsersPage = (): JSX.Element => {
     load();
   }, []);
 
-  const handleEdit = (user: User): void => {
-    if (user.id == null) return; // Проверяем, что id не null/undefined
+  const handleEditClick = (user: User): void => {
+    if (user.id == null) return;
     setEditingUserId(user.id);
     setEditedUser({ ...user });
+    setIsEditDialogOpen(true);
   };
 
-  const handleSave = async (userId: number): Promise<void> => {
-    const original = users.find((u) => u.id === userId);
+  const handleSaveDialog = async (): Promise<void> => {
+    if (editingUserId == null) return;
+    const original = users.find((u) => u.id === editingUserId);
     if (!original) return;
 
     const payload: EditUserPayload = {
-      user_id: userId,
+      user_id: editingUserId,
       full_name: editedUser.full_name ?? original.full_name ?? "",
       position: editedUser.position ?? original.position ?? "",
       company: editedUser.company ?? original.company ?? "",
@@ -116,237 +172,979 @@ export const UsersPage = (): JSX.Element => {
     try {
       await userApi.editUser(payload);
       setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, ...payload } : u))
+        prev.map((u) =>
+          u.id === editingUserId
+            ? {
+                ...u,
+                ...payload,
+                email: editedUser.email !== undefined ? editedUser.email : u.email,
+              }
+            : u
+        )
       );
     } catch (err) {
       console.error("Ошибка при сохранении:", err);
     }
 
+    setIsEditDialogOpen(false);
     setEditingUserId(null);
     setEditedUser({});
   };
 
-  const filterDefinitions: FilterDefinition<User>[] = [
-    { key: "email", label: "Email", icon: <EmailIcon /> },
-    { key: "phone", label: "Телефон", icon: <PhoneIcon /> },
-    { key: "department", label: "Отдел", icon: <ApartmentIcon /> },
-  ];
+  // Checkbox handlers
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const pageIds = paginatedUsers.map((u) => u.id).filter((id): id is number => id != null);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
+    } else {
+      const pageIds = paginatedUsers.map((u) => u.id);
+      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+    }
+  };
 
+  const handleSelectOne = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk Action handlers
+  const handleBulkAction = (action: string) => {
+    if (action === "change_status") {
+      setNewBulkStatus("");
+      setIsBulkStatusOpen(true);
+    } else if (action === "change_role") {
+      setNewBulkRole("");
+      setIsBulkRoleOpen(true);
+    } else if (action === "delete") {
+      setIsBulkDeleteOpen(true);
+    }
+  };
+
+  const handleBulkChangeStatus = async (): Promise<void> => {
+    if (newBulkStatus === "") return;
+    try {
+      await Promise.all(
+        selectedIds.map(async (id) => {
+          const u = users.find((user) => user.id === id);
+          if (!u) return;
+          const payload: EditUserPayload = {
+            user_id: id,
+            full_name: u.full_name || "",
+            position: u.position || "",
+            company: u.company || "",
+            department: u.department || "",
+            phone: u.phone || "",
+            role_id: u.role_id,
+            status_id: newBulkStatus,
+          };
+          await userApi.editUser(payload);
+        })
+      );
+      setUsers((prev) =>
+        prev.map((u) =>
+          selectedIds.includes(u.id || 0)
+            ? { ...u, status_id: newBulkStatus }
+            : u
+        )
+      );
+      setSelectedIds([]);
+    } catch (err) {
+      console.error("Ошибка при массовом изменении статуса:", err);
+    }
+    setIsBulkStatusOpen(false);
+  };
+
+  const handleBulkChangeRole = async (): Promise<void> => {
+    if (newBulkRole === "") return;
+    try {
+      await Promise.all(
+        selectedIds.map(async (id) => {
+          const u = users.find((user) => user.id === id);
+          if (!u) return;
+          const payload: EditUserPayload = {
+            user_id: id,
+            full_name: u.full_name || "",
+            position: u.position || "",
+            company: u.company || "",
+            department: u.department || "",
+            phone: u.phone || "",
+            role_id: newBulkRole,
+            status_id: u.status_id ?? 1,
+          };
+          await userApi.editUser(payload);
+        })
+      );
+      setUsers((prev) =>
+        prev.map((u) =>
+          selectedIds.includes(u.id || 0)
+            ? { ...u, role_id: newBulkRole }
+            : u
+        )
+      );
+      setSelectedIds([]);
+    } catch (err) {
+      console.error("Ошибка при массовом изменении прав доступа:", err);
+    }
+    setIsBulkRoleOpen(false);
+  };
+
+  const handleDeleteUsers = async (): Promise<void> => {
+    try {
+      await Promise.all(selectedIds.map((id) => userApi.dismissUser(id)));
+      setUsers((prev) => prev.filter((u) => !selectedIds.includes(u.id || 0)));
+      setSelectedIds([]);
+    } catch (err) {
+      console.error("Ошибка при удалении пользователей:", err);
+    }
+    setIsBulkDeleteOpen(false);
+  };
+
+  // Pagination handlers
+  const handlePageChange = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Filter application
   const filtered = users
-    .filter((u) =>
-      statusFilter !== null ? u.status_id === statusFilter : true
-    )
-    .sort((a, b) => (b.id ?? 0) - (a.id ?? 0)); // Обработка null/undefined для id
+    .filter((u) => (statusFilter !== null ? u.status_id === statusFilter : true))
+    .filter((u) => !emailFilter ? true : (u.email || "").toLowerCase().includes(emailFilter.toLowerCase()))
+    .filter((u) => !phoneFilter ? true : (u.phone || "").toLowerCase().includes(phoneFilter.toLowerCase()))
+    .filter((u) => !deptFilter ? true : (u.department || "").toLowerCase().includes(deptFilter.toLowerCase()))
+    .sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
 
-  const columns = [
-    { headerName: "", checkboxSelection: true, width: 40 },
-    { headerName: "#", valueGetter: "node.rowIndex + 1", width: 60 },
-    {
-      headerName: "ФИО",
-      field: "full_name",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <TextField
-            key={`${params.data!.id}-full_name`}
-            value={editedUser.full_name ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({ ...p, full_name: e.target.value }))
-            }
-            size="small"
-            fullWidth
-          />
-        ) : (
-          params.data?.full_name
-        ),
-    },
-    {
-      headerName: "Должность",
-      field: "position",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <TextField
-            key={`${params.data!.id}-position`}
-            value={editedUser.position ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({ ...p, position: e.target.value }))
-            }
-            size="small"
-            fullWidth
-          />
-        ) : (
-          params.data?.position || "—"
-        ),
-    },
-    {
-      headerName: "Email",
-      field: "email",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <TextField
-            key={`${params.data!.id}-email`}
-            value={editedUser.email ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({ ...p, email: e.target.value }))
-            }
-            size="small"
-            fullWidth
-          />
-        ) : (
-          params.data?.email
-        ),
-    },
-    {
-      headerName: "Телефон",
-      field: "phone",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <TextField
-            key={`${params.data!.id}-phone`}
-            value={editedUser.phone ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({ ...p, phone: e.target.value }))
-            }
-            size="small"
-            fullWidth
-          />
-        ) : (
-          params.data?.phone
-        ),
-    },
-    {
-      headerName: "Отдел",
-      field: "department",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <Select
-            key={`${params.data!.id}-department`}
-            value={editedUser.department ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({
-                ...p,
-                department: e.target.value as string,
-              }))
-            }
-            size="small"
-            fullWidth
-          >
-            <MenuItem value="">Не указано</MenuItem>
-            {departments.map((dep) => (
-              <MenuItem key={dep} value={dep}>
-                {dep}
-              </MenuItem>
-            ))}
-          </Select>
-        ) : (
-          (params.data?.department ?? "—")
-        ),
-    },
-    {
-      headerName: "Права доступа",
-      field: "role_id",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <Select
-            key={`${params.data!.id}-role_id`}
-            value={editedUser.role_id ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({
-                ...p,
-                role_id: Number(e.target.value),
-              }))
-            }
-            size="small"
-            fullWidth
-          >
-            {Object.entries(roleMap).map(([id, name]) => (
-              <MenuItem key={id} value={id}>
-                {name}
-              </MenuItem>
-            ))}
-          </Select>
-        ) : (
-          (roleMap[params.data?.role_id ?? 0] ?? "—")
-        ),
-    },
-    {
-      headerName: "Статус",
-      field: "status_id",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          <Select
-            key={`${params.data!.id}-status_id`}
-            value={editedUser.status_id ?? ""}
-            onChange={(e) =>
-              setEditedUser((p) => ({
-                ...p,
-                status_id: Number(e.target.value),
-              }))
-            }
-            size="small"
-            fullWidth
-          >
-            {Object.entries(statusMap).map(([id, name]) => (
-              <MenuItem key={id} value={id}>
-                {name}
-              </MenuItem>
-            ))}
-          </Select>
-        ) : (
-          (statusMap[params.data?.status_id ?? 0] ?? "—")
-        ),
-    },
-    {
-      headerName: "Действия",
-      field: "actions",
-      cellRenderer: (params: ICellRendererParams<User>) =>
-        editingUserId === params.data?.id ? (
-          params.data?.id != null ? (
-            <IconButton
-              color="primary"
-              size="small"
-              onClick={() => handleSave(params.data!.id!)}
-            >
-              <SaveIcon fontSize="small" />
-            </IconButton>
-          ) : null
-        ) : (
-          <IconButton
-            color="secondary"
-            size="small"
-            onClick={() => handleEdit(params.data!)}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        ),
-    },
-  ];
+  const paginatedUsers = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const allOnPageSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedIds.includes(u.id || 0));
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" gutterBottom>
+    <Box p={3} sx={{ backgroundColor: "#FCFDFD", minHeight: "100vh" }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, color: "#101828", mb: 0.5 }}>
         Список пользователей
       </Typography>
-      <Typography variant="subtitle1" gutterBottom>
+      <Typography variant="body1" sx={{ color: "#475467", mb: 3 }}>
         Информация по пользователям данного филиала
       </Typography>
 
+      {/* Tabs */}
       <Tabs
         value={statusFilter}
-        onChange={(_, value) => setStatusFilter(value)}
-        sx={{ my: 2 }}
+        onChange={(_, value) => {
+          setStatusFilter(value);
+          setPage(0);
+        }}
+        sx={{
+          mb: 3,
+          borderBottom: "1px solid #EAECF0",
+          "& .MuiTabs-indicator": {
+            backgroundColor: "primary.main",
+            height: "3px",
+            borderRadius: "3px 3px 0 0",
+          },
+          "& .MuiTab-root": {
+            textTransform: "none",
+            fontSize: "15px",
+            fontWeight: 500,
+            color: "#475467",
+            px: 1,
+            mx: 1.5,
+            minWidth: 0,
+            "&.Mui-selected": {
+              color: "primary.main",
+              fontWeight: 600,
+            },
+          },
+        }}
       >
         {statusTabs.map((tab) => (
           <Tab key={tab.label} label={tab.label} value={tab.value} />
         ))}
       </Tabs>
 
-      <CustomTable<User>
-        ref={gridRef}
-        rowData={filtered}
-        columnDefs={columns}
-        getRowId={(row) => (row.id ?? "0").toString()}
-        filters={filterDefinitions}
-      />
+      {/* Filter inputs */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 3,
+          alignItems: "center",
+          flexWrap: "wrap",
+          p: 2,
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+        }}
+      >
+        <TextField
+          size="small"
+          label="Email"
+          placeholder="Поиск по email..."
+          value={emailFilter}
+          onChange={(e) => {
+            setEmailFilter(e.target.value);
+            setPage(0);
+          }}
+          sx={{
+            minWidth: 220,
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "8px",
+            },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                </InputAdornment>
+              ),
+              endAdornment: emailFilter && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setEmailFilter("")}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        <TextField
+          size="small"
+          label="Телефон"
+          placeholder="Поиск по телефону..."
+          value={phoneFilter}
+          onChange={(e) => {
+            setPhoneFilter(e.target.value);
+            setPage(0);
+          }}
+          sx={{
+            minWidth: 220,
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "8px",
+            },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                </InputAdornment>
+              ),
+              endAdornment: phoneFilter && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setPhoneFilter("")}>
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <InputLabel>Отдел</InputLabel>
+          <Select
+            value={deptFilter}
+            label="Отдел"
+            onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(0);
+            }}
+            sx={{ borderRadius: "8px" }}
+          >
+            <MenuItem value="">Все отделы</MenuItem>
+            {departments.map((dep) => (
+              <MenuItem key={dep} value={dep}>
+                {dep}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {selectedIds.length > 0 && (
+          <FormControl size="small" sx={{ minWidth: 220 }}>
+            <InputLabel id="bulk-action-select-label">Действие</InputLabel>
+            <Select
+              labelId="bulk-action-select-label"
+              value=""
+              label="Действие"
+              displayEmpty
+              onChange={(e) => handleBulkAction(e.target.value as string)}
+              sx={{
+                borderRadius: "8px",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "primary.main",
+                  borderWidth: "1.5px",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "primary.dark",
+                },
+              }}
+            >
+              <MenuItem value="" disabled>
+                Выберите действие
+              </MenuItem>
+              <MenuItem value="change_status">Сменить статус</MenuItem>
+              <MenuItem value="change_role">Сменить Права доступа</MenuItem>
+              <MenuItem value="delete">Удалить пользователей</MenuItem>
+            </Select>
+          </FormControl>
+        )}
+
+        {(emailFilter || phoneFilter || deptFilter) && (
+          <Button
+            variant="text"
+            color="error"
+            size="small"
+            onClick={() => {
+              setEmailFilter("");
+              setPhoneFilter("");
+              setDeptFilter("");
+              setPage(0);
+            }}
+            sx={{ textTransform: "none", fontWeight: 600, ml: "auto" }}
+          >
+            Сбросить фильтры
+          </Button>
+        )}
+      </Box>
+
+      {/* Styled MUI Table */}
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          boxShadow: "0px 1px 3px rgba(16, 24, 40, 0.1), 0px 1px 2px rgba(16, 24, 40, 0.06)",
+          overflow: "hidden",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead sx={{ backgroundColor: "#F9FAFB" }}>
+            <TableRow>
+              <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #EAECF0", pl: 3, py: 2 }}>
+                <Checkbox
+                  icon={<UncheckedCheckboxIcon />}
+                  checkedIcon={<CheckedCheckboxIcon />}
+                  indeterminate={selectedIds.length > 0 && !allOnPageSelected}
+                  checked={allOnPageSelected}
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                ФИО сотрудника
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                Отдел
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                Должность
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                Права доступа
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                Номер телефона
+              </TableCell>
+              <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2 }}>
+                Статус
+              </TableCell>
+              <TableCell align="right" sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontSize: "12px", fontWeight: 600, py: 2, pr: 3 }}>
+                Редактировать
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {paginatedUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                  Пользователи не найдены
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedUsers.map((user) => {
+                const isSelected = selectedIds.includes(user.id || 0);
+
+                return (
+                  <TableRow
+                    key={user.id}
+                    hover
+                    selected={isSelected}
+                    sx={{
+                      height: "72px",
+                      "&.Mui-selected": {
+                        backgroundColor: "#F9FAFB",
+                      },
+                      "&.Mui-selected:hover": {
+                        backgroundColor: "#F3F4F6",
+                      },
+                    }}
+                  >
+                    {/* Checkbox */}
+                    <TableCell padding="checkbox" sx={{ borderBottom: "1px solid #EAECF0", pl: 3 }}>
+                      <Checkbox
+                        icon={<UncheckedCheckboxIcon />}
+                        checkedIcon={<CheckedCheckboxIcon />}
+                        checked={isSelected}
+                        onChange={() => handleSelectOne(user.id || 0)}
+                      />
+                    </TableCell>
+
+                    {/* ФИО сотрудника */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                        <Avatar
+                          src={user.photo || undefined}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            backgroundColor: "#F2F4F7",
+                            color: "#475467",
+                            fontSize: "14px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {user.full_name ? user.full_name[0].toUpperCase() : (user.name ? user.name[0].toUpperCase() : "?")}
+                        </Avatar>
+                        <Box>
+                          <Typography
+                            variant="subtitle2"
+                            onClick={() => handleEditClick(user)}
+                            sx={{
+                              fontWeight: 600,
+                              color: "#101828",
+                              cursor: "pointer",
+                              "&:hover": { textDecoration: "underline" },
+                            }}
+                          >
+                            {user.full_name || user.name || "—"}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: "#475467", fontWeight: 400 }}>
+                            {user.email || "—"}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+
+                    {/* Отдел */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                      {user.department || "—"}
+                    </TableCell>
+
+                    {/* Должность */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                      {user.position || "—"}
+                    </TableCell>
+
+                    {/* Права доступа */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                      {roleMap[user.role_id] || "—"}
+                    </TableCell>
+
+                    {/* Номер телефона */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0", color: "#475467", fontWeight: 400 }}>
+                      {user.phone || "—"}
+                    </TableCell>
+
+                    {/* Статус */}
+                    <TableCell sx={{ borderBottom: "1px solid #EAECF0" }}>
+                      {(() => {
+                        const statusLabel = user.status_id ? statusMap[user.status_id] || "Неизвестно" : "Неизвестно";
+                        if (user.status_id === 1) {
+                          return (
+                            <Chip
+                              icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#10B981" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+                                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"></path>
+                                </svg>
+                              }
+                              label={statusLabel}
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                borderColor: "#A7F3D0",
+                                color: "#047857",
+                                backgroundColor: "#ECFDF5",
+                                fontWeight: 500,
+                                "& .MuiChip-label": { paddingLeft: "6px" },
+                              }}
+                            />
+                          );
+                        }
+                        if (user.status_id === 2) {
+                          return (
+                            <Chip
+                              icon={
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#EF4444" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+                                  <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"></path>
+                                </svg>
+                              }
+                              label={statusLabel}
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                borderColor: "#FCA5A5",
+                                color: "#B91C1C",
+                                backgroundColor: "#FEF2F2",
+                                fontWeight: 500,
+                                "& .MuiChip-label": { paddingLeft: "6px" },
+                              }}
+                            />
+                          );
+                        }
+                        // Default warning status for vacation, sickness, trip
+                        return (
+                          <Chip
+                            icon={
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#F59E0B" viewBox="0 0 256 256" style={{ marginLeft: 8 }}>
+                                <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm56,112H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48a8,8,0,0,1,0,16Z"></path>
+                              </svg>
+                            }
+                            label={statusLabel}
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              borderColor: "#FDE68A",
+                              color: "#B45309",
+                              backgroundColor: "#FFFBEB",
+                              fontWeight: 500,
+                              "& .MuiChip-label": { paddingLeft: "6px" },
+                            }}
+                          />
+                        );
+                      })()}
+                    </TableCell>
+
+                    {/* Редактировать */}
+                    <TableCell align="right" sx={{ borderBottom: "1px solid #EAECF0", pr: 3 }}>
+                      <IconButton
+                        size="medium"
+                        onClick={() => handleEditClick(user)}
+                        sx={{
+                          "&:hover": { backgroundColor: "#F2F4F7" },
+                          borderRadius: "8px",
+                          p: 1,
+                        }}
+                      >
+                        <EditPencilIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+
+        {/* Table Pagination */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filtered.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handlePageChange}
+          onRowsPerPageChange={handleRowsPerPageChange}
+          sx={{
+            borderTop: "1px solid #EAECF0",
+            color: "#475467",
+            fontSize: "14px",
+            "& .MuiTablePagination-selectLabel": {
+              color: "#475467",
+            },
+            "& .MuiTablePagination-displayedRows": {
+              color: "#475467",
+            },
+          }}
+        />
+      </TableContainer>
+
+      {/* Premium Edit Dialog */}
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              boxShadow: "0px 20px 24px -4px rgba(16, 24, 40, 0.08), 0px 8px 8px -4px rgba(16, 24, 40, 0.03)",
+              p: 1.5,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Редактирование пользователя
+          </Typography>
+          <IconButton onClick={() => setIsEditDialogOpen(false)} size="small" sx={{ color: "#98A2B3" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ borderColor: "#F2F4F7" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: 2.5,
+              mt: 0.5,
+            }}
+          >
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <TextField
+                fullWidth
+                label="ФИО"
+                size="medium"
+                value={editedUser.full_name ?? ""}
+                onChange={(e) => setEditedUser((p) => ({ ...p, full_name: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box>
+              <TextField
+                fullWidth
+                label="Должность"
+                size="medium"
+                value={editedUser.position ?? ""}
+                onChange={(e) => setEditedUser((p) => ({ ...p, position: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box>
+              <TextField
+                fullWidth
+                label="Компания"
+                size="medium"
+                value={editedUser.company ?? ""}
+                onChange={(e) => setEditedUser((p) => ({ ...p, company: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box>
+              <TextField
+                fullWidth
+                label="Email"
+                size="medium"
+                value={editedUser.email ?? ""}
+                onChange={(e) => setEditedUser((p) => ({ ...p, email: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box>
+              <TextField
+                fullWidth
+                label="Телефон"
+                size="medium"
+                value={editedUser.phone ?? ""}
+                onChange={(e) => setEditedUser((p) => ({ ...p, phone: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box>
+              <FormControl fullWidth size="medium">
+                <InputLabel shrink>Отдел</InputLabel>
+                <Select
+                  notched
+                  value={editedUser.department ?? ""}
+                  label="Отдел"
+                  onChange={(e) => setEditedUser((p) => ({ ...p, department: e.target.value }))}
+                >
+                  <MenuItem value="">Не указано</MenuItem>
+                  {departments.map((dep) => (
+                    <MenuItem key={dep} value={dep}>
+                      {dep}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box>
+              <FormControl fullWidth size="medium">
+                <InputLabel shrink>Права доступа</InputLabel>
+                <Select
+                  notched
+                  value={editedUser.role_id ?? ""}
+                  label="Права доступа"
+                  onChange={(e) => setEditedUser((p) => ({ ...p, role_id: Number(e.target.value) }))}
+                >
+                  {Object.entries(roleMap).map(([id, name]) => (
+                    <MenuItem key={id} value={id}>
+                      {name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
+              <FormControl fullWidth size="medium">
+                <InputLabel shrink>Статус</InputLabel>
+                <Select
+                  notched
+                  value={editedUser.status_id ?? ""}
+                  label="Статус"
+                  onChange={(e) => setEditedUser((p) => ({ ...p, status_id: Number(e.target.value) }))}
+                >
+                  {Object.entries(statusMap).map(([id, name]) => (
+                    <MenuItem key={id} value={id}>
+                      {name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2, gap: 1.5 }}>
+          <Button
+            onClick={() => setIsEditDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: "8px",
+              borderColor: "#D0D5DD",
+              color: "#344054",
+              textTransform: "none",
+              fontWeight: 600,
+              px: 2.5,
+              py: 1,
+              "&:hover": {
+                borderColor: "#D0D5DD",
+                backgroundColor: "#F9FAFB",
+              },
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleSaveDialog}
+            variant="contained"
+            sx={{
+              borderRadius: "8px",
+              backgroundColor: "primary.main",
+              textTransform: "none",
+              fontWeight: 600,
+              px: 2.5,
+              py: 1,
+              "&:hover": {
+                backgroundColor: "primary.dark",
+              },
+            }}
+          >
+            Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Change Status Dialog */}
+      <Dialog
+        open={isBulkStatusOpen}
+        onClose={() => setIsBulkStatusOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              boxShadow: "0px 20px 24px -4px rgba(16, 24, 40, 0.08)",
+              p: 1.5,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Сменить статус ({selectedIds.length})
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, pt: 1 }}>
+          <FormControl fullWidth size="medium" sx={{ mt: 1 }}>
+            <InputLabel>Новый статус</InputLabel>
+            <Select
+              value={newBulkStatus}
+              label="Новый статус"
+              onChange={(e) => setNewBulkStatus(Number(e.target.value))}
+            >
+              {Object.entries(statusMap).map(([id, name]) => (
+                <MenuItem key={id} value={id}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1.5 }}>
+          <Button
+            onClick={() => setIsBulkStatusOpen(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: "8px",
+              borderColor: "#D0D5DD",
+              color: "#344054",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleBulkChangeStatus}
+            variant="contained"
+            disabled={newBulkStatus === ""}
+            sx={{
+              borderRadius: "8px",
+              backgroundColor: "primary.main",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "primary.dark",
+              },
+            }}
+          >
+            Применить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Change Access Rights Dialog */}
+      <Dialog
+        open={isBulkRoleOpen}
+        onClose={() => setIsBulkRoleOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              boxShadow: "0px 20px 24px -4px rgba(16, 24, 40, 0.08)",
+              p: 1.5,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Сменить права доступа ({selectedIds.length})
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, pt: 1 }}>
+          <FormControl fullWidth size="medium" sx={{ mt: 1 }}>
+            <InputLabel>Новые права доступа</InputLabel>
+            <Select
+              value={newBulkRole}
+              label="Новые права доступа"
+              onChange={(e) => setNewBulkRole(Number(e.target.value))}
+            >
+              {Object.entries(roleMap).map(([id, name]) => (
+                <MenuItem key={id} value={id}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1.5 }}>
+          <Button
+            onClick={() => setIsBulkRoleOpen(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: "8px",
+              borderColor: "#D0D5DD",
+              color: "#344054",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleBulkChangeRole}
+            variant="contained"
+            disabled={newBulkRole === ""}
+            sx={{
+              borderRadius: "8px",
+              backgroundColor: "primary.main",
+              textTransform: "none",
+              fontWeight: 600,
+              "&:hover": {
+                backgroundColor: "primary.dark",
+              },
+            }}
+          >
+            Применить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirm Dialog */}
+      <Dialog
+        open={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              boxShadow: "0px 20px 24px -4px rgba(16, 24, 40, 0.08)",
+              p: 1.5,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#101828" }}>
+            Удалить пользователей ({selectedIds.length})
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 2, pt: 1 }}>
+          <Typography variant="body1" sx={{ color: "#475467" }}>
+            Вы действительно хотите удалить выбранных пользователей ({selectedIds.length} сотр.)? Это действие нельзя отменить.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1.5 }}>
+          <Button
+            onClick={() => setIsBulkDeleteOpen(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: "8px",
+              borderColor: "#D0D5DD",
+              color: "#344054",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            onClick={handleDeleteUsers}
+            variant="contained"
+            color="error"
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
+          >
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
+

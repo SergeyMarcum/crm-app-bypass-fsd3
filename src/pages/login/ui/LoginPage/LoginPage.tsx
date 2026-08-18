@@ -5,11 +5,7 @@ import { LoginForm } from "@features/auth/ui/login-form";
 import { useAuth } from "@features/auth/hooks/use-auth";
 
 export function LoginPage(): ReactElement {
-  const { isSessionChecking, initAuth } = useAuth();
-
-  useEffect(() => {
-    initAuth(); // Проверка токена при монтировании
-  }, [initAuth]);
+  const { isSessionChecking } = useAuth();
 
   if (isSessionChecking) {
     return (

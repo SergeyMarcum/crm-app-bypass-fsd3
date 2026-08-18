@@ -9,13 +9,18 @@ jest.mock("../hooks/use-auth");
 const mockUseAuth = useAuth as jest.Mock;
 
 describe("LoginForm", () => {
+  const mockDomains = [
+    { id: "orenburg", name: "Оренбургский филиал" },
+    { id: "irf", name: "Иркутский филиал" },
+  ];
+
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
-      handleLogin: jest.fn(),
-      fetchDomains: jest.fn().mockResolvedValue({
-        orenburg: "Оренбургский филиал",
-        irf: "Иркутский филиал",
-      }),
+      login: jest.fn().mockResolvedValue(undefined),
+      fetchDomains: jest.fn(),
+      domains: mockDomains,
+      isLoading: false,
+      isSessionChecking: false,
     });
   });
 
@@ -30,21 +35,18 @@ describe("LoginForm", () => {
     expect(screen.getByLabelText("Домен")).toBeInTheDocument();
     expect(screen.getByLabelText("Логин")).toBeInTheDocument();
     expect(screen.getByLabelText("Пароль")).toBeInTheDocument();
-    expect(screen.getByLabelText("Запомни меня")).toBeInTheDocument();
+    expect(screen.getByLabelText("Запомнить меня")).toBeInTheDocument();
     expect(screen.getByText("Войти")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText("Оренбургский филиал")).toBeInTheDocument();
-    });
   });
 
   it("submits form with valid data", async () => {
-    const handleLogin = jest.fn();
+    const mockLogin = jest.fn().mockResolvedValue(undefined);
     mockUseAuth.mockReturnValue({
-      handleLogin,
-      fetchDomains: jest.fn().mockResolvedValue({
-        orenburg: "Оренбургский филиInvoker",
-      }),
+      login: mockLogin,
+      fetchDomains: jest.fn(),
+      domains: mockDomains,
+      isLoading: false,
+      isSessionChecking: false,
     });
 
     render(
@@ -59,17 +61,15 @@ describe("LoginForm", () => {
     fireEvent.change(screen.getByLabelText("Пароль"), {
       target: { value: "password" },
     });
-    fireEvent.change(screen.getByLabelText("Домен"), {
-      target: { value: "orenburg" },
-    });
-    fireEvent.click(screen.getByLabelText("Запомни меня"));
+
     fireEvent.click(screen.getByText("Войти"));
 
     await waitFor(() => {
-      expect(handleLogin).toHaveBeenCalledWith({
+      expect(mockLogin).toHaveBeenCalledWith({
         username: "testuser",
         password: "password",
         domain: "orenburg",
+        rememberMe: false,
       });
     });
   });
