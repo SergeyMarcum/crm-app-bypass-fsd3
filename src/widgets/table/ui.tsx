@@ -45,6 +45,7 @@ type Props<TRow extends object> = {
   filters?: FilterDefinition<TRow>[];
   onSelectionChanged?: AgGridReactProps["onSelectionChanged"];
   loading?: boolean; // Добавляем пропс loading
+  hideResetButton?: boolean; // Добавляем пропс для сокрытия кнопки сброса
 };
 
 function CustomTableInner<T extends object>(
@@ -57,6 +58,7 @@ function CustomTableInner<T extends object>(
     pageSize = 20,
     onSelectionChanged,
     loading = false, // Значение по умолчанию
+    hideResetButton = false,
   }: Props<T>,
   ref: ForwardedRef<AgGridReact>
 ): JSX.Element {
@@ -134,30 +136,34 @@ function CustomTableInner<T extends object>(
           <CircularProgress />
         </Box>
       )}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        {filters.map((filter) => {
-          const isActive = !!globalFilters[filter.key as string];
-          return (
+      {(filters.length > 0 || !hideResetButton) && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          {filters.map((filter) => {
+            const isActive = !!globalFilters[filter.key as string];
+            return (
+              <Button
+                key={String(filter.key)}
+                onClick={() => handleFilterClick(filter.key)}
+                variant={isActive ? "outlined" : "contained"}
+                size="medium"
+                startIcon={filter.icon}
+              >
+                {filter.label}
+              </Button>
+            );
+          })}
+          {!hideResetButton && (
             <Button
-              key={String(filter.key)}
-              onClick={() => handleFilterClick(filter.key)}
-              variant={isActive ? "outlined" : "contained"}
+              onClick={onResetFilters}
+              variant="outlined"
+              color="secondary"
               size="medium"
-              startIcon={filter.icon}
             >
-              {filter.label}
+              Сбросить фильтры
             </Button>
-          );
-        })}
-        <Button
-          onClick={onResetFilters}
-          variant="outlined"
-          color="secondary"
-          size="medium"
-        >
-          Сбросить фильтры
-        </Button>
-      </div>
+          )}
+        </div>
+      )}
 
       <Dialog open={filterField !== null} onClose={() => setFilterField(null)}>
         <DialogTitle>

@@ -71,9 +71,21 @@ export const CalendarPage: React.FC = () => {
           mb: 4,
           flexWrap: "wrap",
           alignItems: "center",
+          p: 2,
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          border: "1px solid #EAECF0",
+          boxShadow:
+            "0px 1px 3px rgba(16, 24, 40, 0.1), 0px 1px 2px rgba(16, 24, 40, 0.06)",
         }}
       >
-        <FormControl sx={{ minWidth: 150 }}>
+        <FormControl
+          size="small"
+          sx={{
+            minWidth: 220,
+            "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+          }}
+        >
           <InputLabel id="status-filter-label">Статус</InputLabel>
           <Select
             labelId="status-filter-label"
@@ -94,7 +106,13 @@ export const CalendarPage: React.FC = () => {
           </Select>
         </FormControl>
 
-        <FormControl sx={{ minWidth: 150 }}>
+        <FormControl
+          size="small"
+          sx={{
+            minWidth: 220,
+            "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+          }}
+        >
           <InputLabel id="object-filter-label">Объект</InputLabel>
           <Select<string | number>
             labelId="object-filter-label"
@@ -112,7 +130,13 @@ export const CalendarPage: React.FC = () => {
           </Select>
         </FormControl>
 
-        <FormControl sx={{ minWidth: 150 }}>
+        <FormControl
+          size="small"
+          sx={{
+            minWidth: 220,
+            "& .MuiOutlinedInput-root": { borderRadius: "8px" },
+          }}
+        >
           <InputLabel id="operator-filter-label">Оператор</InputLabel>
           <Select<string | number>
             labelId="operator-filter-label"
@@ -132,8 +156,14 @@ export const CalendarPage: React.FC = () => {
 
         <Button
           variant="outlined"
+          color="secondary"
           onClick={resetFilters}
-          sx={{ alignSelf: "center" }}
+          sx={{
+            height: "40px",
+            borderRadius: "8px",
+            textTransform: "none",
+            fontWeight: 500,
+          }}
         >
           Сбросить фильтры
         </Button>

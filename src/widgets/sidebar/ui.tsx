@@ -18,7 +18,6 @@ import {
   Assignment as AssignmentIcon,
   People as PeopleIcon,
   ListAlt as ListAltIcon,
-  Message as MessageIcon,
   Help as HelpIcon,
   PermContactCalendar as PermContactCalendarIcon,
   Logout as LogoutIcon,
@@ -208,7 +207,6 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
             </List>
           </Collapse>
 
-          <NavItem to="/chat" icon={<MessageIcon />} text="Сообщения" />
         </List>
       </Box>
 
@@ -222,7 +220,6 @@ export function SidebarNav({ isOpen }: SidebarProps): React.ReactElement {
             icon={<PermContactCalendarIcon />}
             text="Профиль"
           />
-          <NavItem to="/help" icon={<HelpIcon />} text="Нужна помощь?" />
           <ListItemButton
             onClick={handleLogout}
             sx={{ justifyContent: isOpen ? "initial" : "center" }}
